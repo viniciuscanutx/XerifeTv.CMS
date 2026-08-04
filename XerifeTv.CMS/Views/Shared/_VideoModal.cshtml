@@ -20,6 +20,16 @@
                        controls>
                 </video>
             </div>
+            <div class="modal-footer justify-content-center" id="videoLangSwitcher" style="display: none;">
+                <div class="btn-group" role="group" aria-label="Seleção de idioma do vídeo">
+                    <button type="button" class="btn btn-sm btn-outline-primary active" id="btnDub" data-lang="dub">
+                        <i class="fa-solid fa-volume-high"></i> Dublado
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="btnLeg" data-lang="leg">
+                        <i class="fa-solid fa-closed-captioning"></i> Legendado
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -27,6 +37,36 @@
 <script defer>
     const modal = document.getElementById('videoModal')
     let player = undefined
+    let currentDubResolver = null
+    let currentLegResolver = null
+    let currentLang = 'dub'
+
+    async function resolveAndPlay(resolverUrl, lang) {
+        try {
+            const response = await fetch(resolverUrl)
+            if (!response.ok) throw new Error('Erro ao resolver URL')
+
+            const data = await response.json()
+            const url = data.url || data.Url
+            let streamFormat = data.streamFormat || data.StreamFormat
+
+            const mimeTypes = {
+                mp4: 'video/mp4',
+                hls: 'application/x-mpegURL',
+                m3u8: 'application/x-mpegURL'
+            }
+
+            streamFormat = mimeTypes[streamFormat] ?? 'application/x-mpegURL'
+
+            player.src({
+                src: url,
+                type: streamFormat
+            })
+        }
+        catch (err) {
+            console.error('Erro ao carregar vídeo:', err)
+        }
+    }
 
     if (modal) {
         modal.addEventListener('show.bs.modal', async event => {
@@ -53,38 +93,35 @@
                 })
             }
 
-            const resolverUrl = button.getAttribute('data-bs-video-resolver')
+            currentDubResolver = button.getAttribute('data-bs-video-resolver')
+            currentLegResolver = button.getAttribute('data-bs-video-alternative-resolver')
+            currentLang = 'dub'
 
-            try {
-                const response = await fetch(resolverUrl)
-                if (!response.ok) throw new Error('Erro ao resolver URL')
+            const langSwitcher = document.getElementById('videoLangSwitcher')
+            const btnDub = document.getElementById('btnDub')
+            const btnLeg = document.getElementById('btnLeg')
 
-                const data = await response.json()
-                const url = data.url || data.Url
-                let streamFormat = data.streamFormat || data.StreamFormat
+            if (currentLegResolver && currentLegResolver.trim() !== '') {
+                langSwitcher.style.display = 'flex'
 
-                streamFormat = streamFormat === 'mp4'
-                    ? 'video/mp4'
-                    : 'application/x-mpegURL'
+                btnDub.classList.remove('active')
+                btnLeg.classList.remove('active')
+                btnDub.classList.add('active')
+            } else {
+                langSwitcher.style.display = 'none'
+            }
 
-                player.src({
-                    src: url,
-                    type: streamFormat
-                })
+            await resolveAndPlay(currentDubResolver, currentLang)
 
-                const subtitle = button.getAttribute('data-bs-video-subtitle')
+            const subtitle = button.getAttribute('data-bs-video-subtitle')
 
-                if (subtitle) {
-                    player.addRemoteTextTrack({
-                        kind: 'captions',
-                        src: subtitle,
-                        srclang: 'pt',
-                        label: 'Português'
-                    }, false)
-                }
-            } 
-            catch (err) {
-                console.error('Erro ao carregar vídeo:', err)
+            if (subtitle) {
+                player.addRemoteTextTrack({
+                    kind: 'captions',
+                    src: subtitle,
+                    srclang: 'pt',
+                    label: 'Português'
+                }, false)
             }
         })
 
@@ -95,4 +132,32 @@
             }
         })
     }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const btnDub = document.getElementById('btnDub')
+        const btnLeg = document.getElementById('btnLeg')
+
+        async function switchLang(lang) {
+            if (lang === currentLang) return
+
+            const btnDub = document.getElementById('btnDub')
+            const btnLeg = document.getElementById('btnLeg')
+
+            btnDub.classList.remove('active')
+            btnLeg.classList.remove('active')
+
+            if (lang === 'dub') {
+                btnDub.classList.add('active')
+                currentLang = 'dub'
+                if (currentDubResolver) await resolveAndPlay(currentDubResolver, lang)
+            } else {
+                btnLeg.classList.add('active')
+                currentLang = 'leg'
+                if (currentLegResolver) await resolveAndPlay(currentLegResolver, lang)
+            }
+        }
+
+        btnDub?.addEventListener('click', () => switchLang('dub'))
+        btnLeg?.addEventListener('click', () => switchLang('leg'))
+    })
 </script>

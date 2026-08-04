@@ -10,6 +10,7 @@ public class MovieEntity : MediaContent
     public ICollection<string> Categories { get; set; } = [];
     public float Review { get; set; } = 0;
     public Video? Video { get; set; }
+    public string? AlternativeVideoUrl { get; set; }
     public string? MediaDeliveryProfileId { get; set; }
     public string? MediaRoute { get; set; }
     public string? TrailerVideoYoutubeId { get; set; }

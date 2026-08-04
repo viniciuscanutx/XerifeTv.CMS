@@ -2,6 +2,6 @@
 
 public class StreamFormatsHelper
 {
-    public static string[] Streaming => ["hls", "mpeg-dash", "rtsp"];
-    public static string[] Vod => ["mp4", "hls", "webm", "mkv", "mov"];
+    public static string[] Streaming => ["m3u8", "hls", "mpeg-dash", "rtsp"];
+    public static string[] Vod => ["mp4", "m3u8", "hls", "webm", "mkv", "mov"];
 }

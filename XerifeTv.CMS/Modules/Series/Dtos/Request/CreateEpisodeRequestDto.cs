@@ -10,6 +10,7 @@ public class CreateEpisodeRequestDto
     public int Number { get; init; }
     public int Season { get; init; }
     public string VideoUrl { get; init; } = string.Empty;
+    public string? AlternativeVideoUrl { get; init; }
     public long VideoDuration { get; init; }
     public string VideoStreamFormat { get; init; } = string.Empty;
     public string? VideoSubtitle { get; init; }
@@ -26,6 +27,7 @@ public class CreateEpisodeRequestDto
             Number = Number,
             Season = Season,
             Video = new Video(VideoUrl, VideoDuration, VideoStreamFormat, VideoSubtitle),
+            AlternativeVideoUrl = string.IsNullOrWhiteSpace(AlternativeVideoUrl) ? null : AlternativeVideoUrl,
             MediaDeliveryProfileId = MediaDeliveryProfileId,
             MediaRoute = MediaRoute,
             Disabled = IsDisabled ?? false

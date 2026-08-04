@@ -18,6 +18,7 @@ public class MovieContentV2ResponseDto
     public string Duration { get; private set; } = string.Empty;
     public long DurationSeconds { get; private set; }
     public string VideoResolverURL { get; private set; } = string.Empty;
+    public string? AlternativeVideoResolverURL { get; private set; }
     public string? SubtitleURL { get; private set; }
     public string? TrailerVideoYoutubeId { get; private set; }
 
@@ -38,6 +39,14 @@ public class MovieContentV2ResponseDto
             videoResolverPath = $"/ResolveUrlFx?uf={Uri.EscapeDataString(uf)}&sf={Uri.EscapeDataString(sf)}";
         }
 
+        string? altResolverPath = null;
+        if (!string.IsNullOrWhiteSpace(entity.AlternativeVideoUrl))
+        {
+            string auf = CryptographyHelper.Encrypt(entity.AlternativeVideoUrl, encryptKey);
+            string asf = CryptographyHelper.Encrypt(entity.Video?.StreamFormat ?? "hls", encryptKey);
+            altResolverPath = $"/MediaDeliveryProfiles/ResolveUrlFx?uf={Uri.EscapeDataString(auf)}&sf={Uri.EscapeDataString(asf)}";
+        }
+
         return new()
         {
             Id = entity.Id,
@@ -52,6 +61,7 @@ public class MovieContentV2ResponseDto
             Duration = DateTimeHelper.ConvertSecondsToHHmm(entity.Video?.Duration ?? 0),
             DurationSeconds = entity.Video?.Duration ?? 0,
             VideoResolverURL = $"/MediaDeliveryProfiles{videoResolverPath}",
+            AlternativeVideoResolverURL = altResolverPath,
             SubtitleURL = entity.Video?.Subtitle,
             TrailerVideoYoutubeId = entity.TrailerVideoYoutubeId
         };

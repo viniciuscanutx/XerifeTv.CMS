@@ -226,6 +226,19 @@
 
             <div class="row mb-4">
                 <div class="col-12">
+                    <label for="alternativeVideoUrl" class="form-label">Link Legendado (URL)</label>
+                    <input type="text"
+                           class="form-control"
+                           id="alternativeVideoUrl"
+                           name="alternativeVideoUrl"
+                           placeholder="https://video.com/video-legendado.m3u8"
+                           value="@Model?.MovieDto?.AlternativeVideoUrl">
+                    <small class="text-muted">Insira o link do vídeo legendado (Caso exista)</small>
+                </div>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-12">
                     <label for="trailerVideoYoutubeId" class="form-label">Trailer (YouTube Video ID)</label>
                     <input type="text"
                            class="form-control"

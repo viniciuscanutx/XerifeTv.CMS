@@ -12,10 +12,12 @@ public class Episode : BaseEntity
     public int Number { get; set; }
     public int Season { get; set; }
     public Video? Video { get; set; }
+    public string? AlternativeVideoUrl { get; set; }
     public string? MediaDeliveryProfileId { get; set; }
     public string? MediaRoute { get; set; }
     public bool Disabled { get; set; } = false;
     public string? UrlResolverPath { get; private set; }
+    public string? AlternativeUrlResolverPath { get; private set; }
 
     public void SetUrlResolverPath(string encryptKey)
     {
@@ -35,5 +37,13 @@ public class Episode : BaseEntity
         }
 
         UrlResolverPath = $"/MediaDeliveryProfiles{videoResolverPath}";
+
+        if (!string.IsNullOrWhiteSpace(AlternativeVideoUrl))
+        {
+            string auf = CryptographyHelper.Encrypt(AlternativeVideoUrl, encryptKey);
+            string asf = CryptographyHelper.Encrypt(Video?.StreamFormat ?? "hls", encryptKey);
+            string altResolverPath = $"/ResolveUrlFx?uf={Uri.EscapeDataString(auf)}&sf={Uri.EscapeDataString(asf)}";
+            AlternativeUrlResolverPath = $"/MediaDeliveryProfiles{altResolverPath}";
+        }
     }
 }

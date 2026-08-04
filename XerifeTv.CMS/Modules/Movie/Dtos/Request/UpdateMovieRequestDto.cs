@@ -16,6 +16,7 @@ public class UpdateMovieRequestDto
     public int ParentalRating { get; init; }
     public float Review { get; init; }
     public string VideoUrl { get; init; } = string.Empty;
+    public string? AlternativeVideoUrl { get; init; }
     public long VideoDuration { get; init; }
     public string VideoStreamFormat { get; init; } = string.Empty;
     public string? VideoSubtitle { get; init; }
@@ -45,6 +46,7 @@ public class UpdateMovieRequestDto
             ParentalRating = ParentalRating,
             Review = Review,
             Video = new Video(VideoUrl, VideoDuration, VideoStreamFormat, VideoSubtitle),
+            AlternativeVideoUrl = string.IsNullOrWhiteSpace(AlternativeVideoUrl) ? null : AlternativeVideoUrl,
             Disabled = Disabled,
             MediaRoute = MediaRoute,
             MediaDeliveryProfileId = MediaDeliveryProfileId,

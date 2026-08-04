@@ -18,6 +18,7 @@ public sealed class GetMovieResponseDto
     public float Review { get; private set; }
     public DateTime RegistrationDate { get; private set; }
     public Video? Video { get; private set; }
+    public string? AlternativeVideoUrl { get; private set; }
     public string? MediaDeliveryProfileId { get; private set; }
     public string? MediaRoute { get; private set; }
     public string? TrailerVideoYoutubeId { get; private set; }
@@ -28,6 +29,11 @@ public sealed class GetMovieResponseDto
         => !string.IsNullOrWhiteSpace(MediaDeliveryProfileId)
             ? $"/MediaDeliveryProfiles/ResolveUrl?mediaDeliveryProfileId={MediaDeliveryProfileId}&mediaPath={Uri.EscapeDataString(MediaRoute ?? "")}&isCached=false"
             : $"/MediaDeliveryProfiles/ResolveUrlFixed?urlFixed={Uri.EscapeDataString(Video?.Url ?? "")}&streamFormat={Video?.StreamFormat}&isCached=false";
+
+    public string? AlternativeUrlResolverPath
+        => !string.IsNullOrWhiteSpace(AlternativeVideoUrl)
+            ? $"/MediaDeliveryProfiles/ResolveUrlFixed?urlFixed={Uri.EscapeDataString(AlternativeVideoUrl)}&streamFormat={Video?.StreamFormat ?? "hls"}&isCached=false"
+            : null;
 
     public static GetMovieResponseDto FromEntity(MovieEntity entity)
     {
@@ -46,6 +52,7 @@ public sealed class GetMovieResponseDto
             Review = entity.Review,
             RegistrationDate = entity.CreateAt,
             Video = entity.Video,
+            AlternativeVideoUrl = entity.AlternativeVideoUrl,
             Disabled = entity.Disabled,
             MediaRoute = entity.MediaRoute,
             MediaDeliveryProfileId = entity.MediaDeliveryProfileId,

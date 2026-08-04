@@ -1,5 +1,6 @@
 ﻿@using XerifeTv.CMS.Modules.Movie.Dtos.Response
 @using XerifeTv.CMS.Modules.Movie.Enums
+@using XerifeTv.CMS.Extensions
 
 @model IEnumerable<GetMovieResponseDto>;
 
@@ -103,10 +104,29 @@
                 </div>
 
                 <div class="card-body">
-                    <h5 class="card-title text-nowrap overflow-hidden text-truncate">@movie?.Title</h5>
-                    <p class="card-text">@movie?.Categories.Split(",").Select(x => x.Trim()).FirstOrDefault()</p>
+                    <h5 class="card-title text-nowrap overflow-hidden text-truncate text-center">@movie?.Title</h5>
 
-                    <div class="d-flex gap-1">
+                    @if (!string.IsNullOrEmpty(@movie?.AlternativeVideoUrl))
+                    {
+                        <h6 class="card-title text-nowrap overflow-hidden text-truncate text-muted text-center">@movie?.ReleaseYear | Multiaudio </h6>
+                    }
+                    else
+                    {
+                        <h6 class="card-title text-nowrap overflow-hidden text-truncate text-muted text-center">@movie?.ReleaseYear</h6>
+                    }
+
+
+                    <p class="badge bg-primary mb-3 mt-2 d-flex justify-content-center align-items-center">
+                        <span class="text-nowrap overflow-hidden text-truncate text-center mt-1">
+                            @((movie?.Categories?
+                                .Split(',')
+                                .Select(x => x.Trim())
+                                .FirstOrDefault() ?? string.Empty)
+                                .CapitalizeFirstLetter())
+                        </span>
+                    </p>
+
+                    <div class="d-flex gap-1 justify-content-center">
                         <a class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#movielDetailsModal-@movie?.Id">
                             <i class="fa-solid fa-eye"></i>
                         </a>
@@ -127,7 +147,8 @@
                                data-bs-title="@movie?.Title"
                                data-bs-banner="@movie?.BannerUrl"
                                data-bs-video-subtitle="@movie?.Video?.Subtitle"
-                               data-bs-video-resolver="@movie?.UrlResolverPath">
+                               data-bs-video-resolver="@movie?.UrlResolverPath"
+                               data-bs-video-alternative-resolver="@movie?.AlternativeUrlResolverPath">
                             <i class="fa-solid fa-play"></i>
                         </a>
                     </div>

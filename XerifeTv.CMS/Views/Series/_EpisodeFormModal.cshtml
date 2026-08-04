@@ -136,6 +136,19 @@
                     StreamFormats = StreamFormatsHelper.Vod
                 })
 
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <label for="alternativeVideoUrl-@Model?.Episode?.Id" class="form-label">Link Legendado (URL)</label>
+                        <input type="text"
+                               class="form-control"
+                               id="alternativeVideoUrl-@Model?.Episode?.Id"
+                               name="alternativeVideoUrl"
+                               placeholder="https://video.com/video-legendado.m3u8"
+                               value="@Model?.Episode?.AlternativeVideoUrl">
+                        <small class="text-muted">Link primário acima = Dublado. Este link = Legendado.</small>
+                    </div>
+                </div>
+
                 @if (!string.IsNullOrEmpty(Model?.Episode?.Id))
                 {
                     <div class="row">

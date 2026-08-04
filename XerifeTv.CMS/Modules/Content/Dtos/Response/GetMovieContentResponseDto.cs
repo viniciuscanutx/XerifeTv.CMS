@@ -21,6 +21,8 @@ public class GetMovieContentResponseDto
     public string? MediaRoute { get; private set; }
     public string DurationHHmm => DateTimeHelper.ConvertSecondsToHHmm(Video?.Duration ?? 0);
     public string? UrlResolverPath { get; private set; }
+    public string? AlternativeVideoUrl { get; private set; }
+    public string? AlternativeUrlResolverPath { get; private set; }
 
     public static GetMovieContentResponseDto FromEntity(MovieEntity entity, string encryptKey)
     {
@@ -39,6 +41,14 @@ public class GetMovieContentResponseDto
             videoResolverPath = $"/ResolveUrlFx?uf={Uri.EscapeDataString(uf)}&sf={Uri.EscapeDataString(sf)}";
         }
 
+        string? altResolverPath = null;
+        if (!string.IsNullOrWhiteSpace(entity.AlternativeVideoUrl))
+        {
+            string auf = CryptographyHelper.Encrypt(entity.AlternativeVideoUrl, encryptKey);
+            string asf = CryptographyHelper.Encrypt(entity.Video?.StreamFormat ?? "hls", encryptKey);
+            altResolverPath = $"/MediaDeliveryProfiles/ResolveUrlFx?uf={Uri.EscapeDataString(auf)}&sf={Uri.EscapeDataString(asf)}";
+        }
+
         return new GetMovieContentResponseDto
         {
             Id = entity.Id,
@@ -51,6 +61,8 @@ public class GetMovieContentResponseDto
             ParentalRating = entity.ParentalRating,
             Review = entity.Review,
             Video = entity.Video,
+            AlternativeVideoUrl = entity.AlternativeVideoUrl,
+            AlternativeUrlResolverPath = altResolverPath,
             MediaDeliveryProfileId = entity.MediaDeliveryProfileId,
             MediaRoute = entity.MediaRoute,
             UrlResolverPath = $"/MediaDeliveryProfiles{videoResolverPath}"

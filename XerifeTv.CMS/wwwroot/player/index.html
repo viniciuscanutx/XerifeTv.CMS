@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>XerifeTv - Player</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <header>
+    <div class="logo"><img src="../assets/logo.png" onerror="this.style.display='none'" /> XerifeTv</div>
+    <nav>
+      <button class="nav-btn active" data-tab="home">Inicio</button>
+      <button class="nav-btn" data-tab="movies">Filmes</button>
+      <button class="nav-btn" data-tab="series">Series</button>
+    </nav>
+    <div class="search-box">
+      <input type="text" id="searchInput" placeholder="Buscar filmes e series..." />
+      <button id="searchBtn">&#128269;</button>
+    </div>
+  </header>
+
+  <main id="content">
+    <div id="loading" class="loading">Carregando...</div>
+    <!-- Featured Banner -->
+    <section id="featuredSection" class="featured hidden">
+      <div class="featured-bg" id="featuredBg"></div>
+      <div class="featured-info">
+        <h1 id="featuredTitle"></h1>
+        <div class="featured-meta">
+          <span id="featuredYear"></span>
+          <span id="featuredRating"></span>
+          <span id="featuredDuration"></span>
+        </div>
+        <p id="featuredSynopsis"></p>
+        <button id="featuredPlayBtn" class="play-btn">&#9658; Assistir</button>
+      </div>
+    </section>
+
+    <div id="categorySections"></div>
+  </main>
+
+  <footer>
+    <p>Desenvolvido com base na API do XerifeTv.CMS</p>
+  </footer>
+
+  <!-- Movie Modal -->
+  <div id="movieModal" class="modal hidden">
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-content movie-modal">
+      <button class="close-btn" data-close>&times;</button>
+      <div class="player-wrapper">
+        <video id="videoPlayer" controls autoplay width="100%"></video>
+      </div>
+      <div class="movie-detail">
+        <h2 id="modalTitle"></h2>
+        <div class="meta-row">
+          <span id="modalYear"></span>
+          <span id="modalRating"></span>
+          <span id="modalDuration"></span>
+          <span id="modalParental"></span>
+        </div>
+        <p id="modalSynopsis"></p>
+        <div class="categories" id="modalCategories"></div>
+        <div id="modalTrailer"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Series Modal -->
+  <div id="seriesModal" class="modal hidden">
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-content series-modal">
+      <button class="close-btn" data-close>&times;</button>
+      <div class="series-detail">
+        <img id="seriesPoster" class="poster-img" src="" alt="" />
+        <div class="series-info">
+          <h2 id="seriesTitle"></h2>
+          <div class="meta-row">
+            <span id="seriesYear"></span>
+            <span id="seriesRating"></span>
+            <span id="seriesSeasons"></span>
+            <span id="seriesParental"></span>
+          </div>
+          <p id="seriesSynopsis"></p>
+          <div class="categories" id="seriesCategories"></div>
+        </div>
+      </div>
+      <div id="seasonsBar" class="seasons-bar"></div>
+      <div id="episodesList" class="episodes-list"></div>
+      <div class="player-wrapper hidden" id="episodePlayerWrapper">
+        <button class="close-btn small" id="closeEpisodePlayer">&times;</button>
+        <video id="episodeVideoPlayer" controls autoplay width="100%"></video>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search Modal -->
+  <div id="searchModal" class="modal hidden">
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-content search-modal">
+      <button class="close-btn" data-close>&times;</button>
+      <h2>Resultados para "<span id="searchTerm"></span>"</h2>
+      <div id="searchResults" class="search-results"></div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

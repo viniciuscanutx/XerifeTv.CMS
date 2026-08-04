@@ -15,15 +15,15 @@ public class ContentV2Controller(
 {
     [HttpGet]
     [Route("movies")]
-    public async Task<IActionResult> Movies()
+    public async Task<IActionResult> Movies([FromQuery] int limit = 0)
     {
         _logger.LogInformation("Request Content API v2 /movies");
 
-        var cacheKey = "content_v2_movies";
+        var cacheKey = $"content_v2_movies_{limit}";
         var responseCache = _cacheService.GetValue<object>(cacheKey);
         if (responseCache != null) return Ok(responseCache);
 
-        var response = await _service.GetMoviesAsync(10);
+        var response = await _service.GetMoviesAsync(limit);
 
         if (response.IsSuccess)
         {
@@ -34,6 +34,7 @@ public class ContentV2Controller(
         return BadRequest();
     }
 
+    
     [HttpGet]
     [Route("series")]
     public async Task<IActionResult> Series()
