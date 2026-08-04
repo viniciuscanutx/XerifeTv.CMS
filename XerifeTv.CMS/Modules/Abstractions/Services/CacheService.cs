@@ -21,4 +21,12 @@ public sealed class CacheService(IMemoryCache _cache) : ICacheService
 
     public void Remove(string key)
       => _cache.Remove(key);
+
+    public void Clear()
+    {
+        if (_cache is MemoryCache memoryCache)
+        {
+            memoryCache.Clear();
+        }
+    }
 }

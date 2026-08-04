@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Options;
 using System.Linq.Expressions;
 using MongoDB.Driver;
 using MongoDB.Driver.Linq;
@@ -47,21 +47,46 @@ public sealed class ChannelRepository(IOptions<DBSettings> options)
     public async Task<IEnumerable<ItemsByCategory<ChannelEntity>>> GetGroupByCategoryAsync(GetGroupByCategoryRequestDto dto)
     {
         List<ItemsByCategory<ChannelEntity>> result = [];
-        List<string> uniqueChannelIds = [];
 
-        foreach (var category in dto.Categories)
+        var categories = dto.Categories;
+        if (categories == null || !categories.Any())
+        {
+            var allCategoryDocs = await _collection
+              .Find(r => !r.Disabled || dto.IsIncludeDisabled)
+              .Project(r => r.Categories)
+              .ToListAsync();
+
+            categories = allCategoryDocs
+              .SelectMany(x => x)
+              .Where(x => !string.IsNullOrWhiteSpace(x))
+              .Distinct(StringComparer.OrdinalIgnoreCase)
+              .ToList();
+        }
+
+        foreach (var category in categories)
         {
             var channelsByCategory = await _collection
-              .Find(r => r.Categories.Any(x => x.Equals(category)) && !uniqueChannelIds.Contains(r.Id) && (!r.Disabled || dto.IsIncludeDisabled))
+              .Find(r => r.Categories.Any(x => x.Equals(category, StringComparison.OrdinalIgnoreCase)) && (!r.Disabled || dto.IsIncludeDisabled))
               .SortByDescending(x => x.CreateAt)
               .Skip(dto.LimitResults * (dto.CurrentPage - 1))
               .Limit(dto.LimitResults)
               .ToListAsync();
 
-            uniqueChannelIds.AddRange(channelsByCategory.Select(x => x.Id));
-
             if (channelsByCategory.Any())
                 result.Add(new ItemsByCategory<ChannelEntity>(category, channelsByCategory));
+        }
+
+        if (dto.Categories == null || !dto.Categories.Any())
+        {
+            var uncategorizedChannels = await _collection
+              .Find(r => (r.Categories == null || !r.Categories.Any()) && (!r.Disabled || dto.IsIncludeDisabled))
+              .SortByDescending(x => x.CreateAt)
+              .Skip(dto.LimitResults * (dto.CurrentPage - 1))
+              .Limit(dto.LimitResults)
+              .ToListAsync();
+
+            if (uncategorizedChannels.Any())
+                result.Add(new ItemsByCategory<ChannelEntity>("Geral", uncategorizedChannels));
         }
 
         return result;

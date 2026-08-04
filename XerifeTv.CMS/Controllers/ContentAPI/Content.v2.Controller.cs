@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using System.Net;
 using XerifeTv.CMS.Modules.Abstractions.Interfaces;
 using XerifeTv.CMS.Modules.Content.Dtos.Response;
@@ -54,6 +54,38 @@ public class ContentV2Controller(
         }
 
         return BadRequest();
+    }
+
+    [HttpGet]
+    [Route("channels")]
+    public async Task<IActionResult> Channels([FromQuery] int limit = 200)
+    {
+        _logger.LogInformation("Request Content API v2 /channels limit={limit}", limit);
+
+        var cacheKey = $"content_v2_channels_{limit}";
+        var responseCache = _cacheService.GetValue<object>(cacheKey);
+        if (responseCache != null) return Ok(responseCache);
+
+        var response = await _service.GetChannelsAsync(limit);
+
+        if (response.IsSuccess)
+        {
+            _cacheService.SetValue(cacheKey, response.Data);
+            return Ok(response.Data);
+        }
+
+        return BadRequest();
+    }
+
+    [HttpPost]
+    [Route("cache/clear")]
+    public IActionResult ClearCache()
+    {
+        _logger.LogInformation("Request Content API v2 /cache/clear");
+
+        _cacheService.Clear();
+
+        return Ok(new { message = "Cache da API limpo com sucesso." });
     }
 
     [HttpGet]

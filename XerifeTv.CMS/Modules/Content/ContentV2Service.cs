@@ -1,4 +1,4 @@
-﻿using XerifeTv.CMS.Modules.Common;
+using XerifeTv.CMS.Modules.Common;
 using XerifeTv.CMS.Modules.Content.Dtos.Response;
 using XerifeTv.CMS.Modules.Content.Interfaces;
 using XerifeTv.CMS.Modules.Movie;
@@ -7,14 +7,42 @@ using XerifeTv.CMS.Modules.Movie.Interfaces;
 using XerifeTv.CMS.Modules.Series;
 using XerifeTv.CMS.Modules.Series.Enums;
 using XerifeTv.CMS.Modules.Series.Interfaces;
+using XerifeTv.CMS.Modules.Channel.Dtos.Request;
+using XerifeTv.CMS.Modules.Channel.Enums;
+using XerifeTv.CMS.Modules.Channel.Interfaces;
+using XerifeTv.CMS.Modules.Common.Dtos;
 
 namespace XerifeTv.CMS.Modules.Content;
 
 public class ContentV2Service(
     IMovieRepository _movieRepository,
     ISeriesRepository _seriesRepository,
+    IChannelRepository _channelRepository,
     IConfiguration _configuration) : IContentV2Service
 {
+    public async Task<Result<IEnumerable<GetChannelContentResponseDto>>> GetChannelsAsync(int limit)
+    {
+        try
+        {
+            var filterDto = new GetChannelsByFilterRequestDto(
+                filter: EChannelSearchFilter.TITLE,
+                search: string.Empty,
+                limitResults: limit > 0 ? limit : 200,
+                currentPage: 1,
+                isIncludeDisabled: false);
+
+            var channelsPaged = await _channelRepository.GetByFilterAsync(filterDto);
+
+            var result = channelsPaged.Items.Select(
+                i => GetChannelContentResponseDto.FromEntity(i, _configuration["SecuritySettings:ContentEncryptionKey"]!));
+
+            return Result<IEnumerable<GetChannelContentResponseDto>>.Success(result);
+        }
+        catch (Exception ex)
+        {
+            return Result<IEnumerable<GetChannelContentResponseDto>>.Failure(new("500", ex.Message));
+        }
+    }
     public async Task<Result<IEnumerable<MovieContentV2ResponseDto>>> GetMoviesAsync(int limit)
     {
         try

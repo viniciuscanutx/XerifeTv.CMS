@@ -120,6 +120,20 @@
                 </button>
             }
 
+            @if (User.IsInRole("admin"))
+            {
+                <button class="nav-link d-flex align-items-center justify-content-start gap-2 ps-4"
+                        id="v-pills-cache-tab"
+                        data-bs-toggle="pill"
+                        data-bs-target="#v-pills-cache"
+                        type="button"
+                        role="tab"
+                        aria-selected="false">
+                    <i class="fa-solid fa-database"></i>
+                    <span>Cache</span>
+                </button>
+            }
+
 
         </div>
 
@@ -324,6 +338,41 @@
 
                         </div>
 
+                    </div>
+                </div>
+            }
+
+            @if (User.IsInRole("admin"))
+            {
+                <div class="tab-pane fade"
+                     id="v-pills-cache"
+                     role="tabpanel"
+                     aria-labelledby="v-pills-cache-tab">
+
+                    <div class="row">
+                        <div class="col-12 col-md-8 col-lg-7">
+                            <div class="card bg-dark text-light border-secondary mb-4">
+                                <div class="card-header border-secondary d-flex align-items-center gap-2">
+                                    <i class="fa-solid fa-database text-primary fs-5"></i>
+                                    <h5 class="card-title mb-0">Gerenciamento de Cache da API</h5>
+                                </div>
+                                <div class="card-body">
+                                    <p class="card-text text-secondary mb-3">
+                                        O cache armazena temporariamente os dados de filmes, séries e canais em memória para otimizar o tempo de resposta da API de Conteúdo e reduzir a carga no servidor.
+                                    </p>
+                                    <p class="card-text text-secondary mb-4">
+                                        Ao adicionar, alterar ou remover dados e desejar que as modificações apareçam imediatamente no aplicativo cliente, utilize o botão abaixo para limpar todo o cache em memória.
+                                    </p>
+
+                                    <form asp-controller="Settings" asp-action="ClearCache" method="post" onsubmit="return confirm('Tem certeza que deseja limpar todo o cache da API de Conteúdo?');">
+                                        <button type="submit" class="btn btn-warning d-inline-flex align-items-center gap-2 fw-semibold px-4 py-2">
+                                            <i class="fa-solid fa-broom"></i>
+                                            Limpar Cache da API
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             }

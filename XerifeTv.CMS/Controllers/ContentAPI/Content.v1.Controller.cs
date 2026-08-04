@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using XerifeTv.CMS.Modules.Abstractions.Interfaces;
 using XerifeTv.CMS.Modules.Common;
 using XerifeTv.CMS.Modules.Common.Dtos;
@@ -141,21 +141,25 @@ public class ContentV1Controller(
 	[HttpGet]
 	[Route("Channels")]
 	public async Task<ActionResult<IEnumerable<ItemsByCategory<GetChannelContentResponseDto>>>> Channels(
-		string categories = "noticias, esporte", 
+		string? categories = null, 
 		int? currentPage = 1, 
-		int? limit = 10)
+		int? limit = 200)
 	{
 		_logger.LogInformation("Request Content API /Channels");
 
-        var cacheKey = $"channelsGroupByCategory-{NormalizeCsv(categories)}-{currentPage}-{limit}";
+        var cacheKey = $"channelsGroupByCategory-{NormalizeCsv(categories ?? "")}-{currentPage}-{limit}";
         var responseCache = _cacheService.GetValue<IEnumerable<ItemsByCategory<GetChannelContentResponseDto>>>(cacheKey);
 
         if (responseCache != null) return Ok(responseCache);
 
+        var categoriesList = string.IsNullOrWhiteSpace(categories)
+            ? new List<string>()
+            : categories.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+
         var _dto = new GetGroupByCategoryRequestDto(
-		  [.. categories.Split(',').Select(x => x.Trim())],
+		  categoriesList,
 		  currentPage ?? 1,
-		  limit ?? 5);
+		  limit ?? 200);
 
 		var response = await _service.GetChannelsGroupByCategoryAsync(_dto);
 

@@ -1,4 +1,4 @@
-﻿using XerifeTv.CMS.Modules.Common;
+using XerifeTv.CMS.Modules.Common;
 using XerifeTv.CMS.Modules.Content.Dtos.Response;
 
 namespace XerifeTv.CMS.Modules.Content.Interfaces;
@@ -7,6 +7,7 @@ public interface IContentV2Service
 {
     Task<Result<IEnumerable<MovieContentV2ResponseDto>>> GetMoviesAsync(int limit);
     Task<Result<IEnumerable<SeriesSummaryContentV2ResponseDto>>> GetSeriesAsync(int limit);
+    Task<Result<IEnumerable<GetChannelContentResponseDto>>> GetChannelsAsync(int limit = 200);
     Task<Result<MovieContentV2ResponseDto?>> GetMovieByIdAsync(string id);
     Task<Result<SeriesSummaryContentV2ResponseDto?>> GetSeriesByIdAsync(string id);
     Task<Result<IEnumerable<EpisodeContentV2ResponseDto>>> GetEpisodesBySeriesIdAndSeasonAsync(string seriesId, int seasonNumber);

@@ -21,6 +21,7 @@ public class SettingsController(
     IWebhookService _webhookService,
     IMediaDeliveryProfileService _mediaDeliveryProfileService,
     ISystemSettingsService _systemSettingsService,
+    ICacheService _cacheService,
     ILogger<SettingsController> _logger) : Controller
 {
     [Authorize]
@@ -144,5 +145,18 @@ public class SettingsController(
           : MessageViewHelper.SuccessJson("Webhook deletado com sucesso");
 
         return Redirect(Url.Action("Index") + "#webhook");
+    }
+
+    [HttpPost]
+    [Authorize(Roles = "admin")]
+    public IActionResult ClearCache()
+    {
+        _cacheService.Clear();
+
+        TempData["Notification"] = MessageViewHelper.SuccessJson("Cache da API limpo com sucesso!");
+
+        _logger.LogInformation($"{User.Identity?.Name} cleared the API cache");
+
+        return Redirect(Url.Action("Index") + "#v-pills-cache");
     }
 }
