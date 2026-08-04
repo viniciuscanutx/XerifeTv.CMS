@@ -1,0 +1,142 @@
+@using XerifeTv.CMS.Shared.Helpers
+
+<div class="modal fade"
+     id="batchMoviesModal"
+     data-bs-backdrop="static"
+     data-bs-keyboard="false"
+     tabindex="-1"
+     aria-labelledby="batchMoviesModalLabel"
+     aria-hidden="true">
+
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <form class="modal-content"
+              asp-controller="Movies"
+              asp-action="BatchAddMovies">
+
+            <div class="modal-header">
+                <h1 class="modal-title fs-5" id="batchMoviesModalLabel">
+                    Cadastrar / Atualizar Filmes em Lote
+                </h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body">
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <label for="batch_movie_defaultParentalRating" class="form-label">Classificação Indicativa Padrão</label>
+                        <select id="batch_movie_defaultParentalRating"
+                                name="defaultParentalRating"
+                                class="form-select"
+                                required>
+                            @foreach (var rating in ParentalRatingHelper.ParentalRatingList)
+                            {
+                                if (rating == 18)
+                                {
+                                    <option value="@rating" selected>@rating Anos</option>
+                                }
+                                else if (rating == 0)
+                                {
+                                    <option value="@rating">Livre (L)</option>
+                                }
+                                else
+                                {
+                                    <option value="@rating">@rating Anos</option>
+                                }
+                            }
+                        </select>
+                    </div>
+
+                    <div class="col-6">
+                        <label for="batch_movie_videoStreamFormat" class="form-label">Formato da Mídia</label>
+                        <select id="batch_movie_videoStreamFormat"
+                                name="videoStreamFormat"
+                                class="form-select"
+                                required>
+                            @foreach (var format in StreamFormatsHelper.Vod)
+                            {
+                                <option value="@format">@format</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <div class="form-check">
+                            <input name="highQuality"
+                                   id="batch_movie_highQuality"
+                                   class="form-check-input"
+                                   type="checkbox"
+                                   value="true">
+                            <label for="batch_movie_highQuality" class="form-check-label">
+                                Marcar filmes como 4K (Alta Qualidade)
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <label for="batch_imdbIdsText" class="form-label fw-bold">IDs do IMDB (Um ID por linha)</label>
+                        <textarea id="batch_imdbIdsText"
+                                  name="imdbIdsText"
+                                  class="form-control"
+                                  rows="4"
+                                  placeholder="tt1084242&#10;tt14905854&#10;3443597"
+                                  required></textarea>
+                        <small class="text-muted">A linha 1 corresponderá ao Filme 1, linha 2 ao Filme 2, e assim por diante.</small>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <label for="batch_parentalRatingsText" class="form-label fw-bold">Classificação Indicativa por Linha (Opcional - Um por linha)</label>
+                        <textarea id="batch_parentalRatingsText"
+                                  name="parentalRatingsText"
+                                  class="form-control"
+                                  rows="3"
+                                  placeholder="18&#10;14&#10;16"></textarea>
+                        <small class="text-muted">Se deixado em branco para algum filme, utilizará a Classificação Indicativa Padrão selecionada acima.</small>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <label for="batch_movie_videoUrlsText" class="form-label fw-bold">Links Primários dos Filmes (Um link por linha)</label>
+                        <textarea id="batch_movie_videoUrlsText"
+                                  name="videoUrlsText"
+                                  class="form-control"
+                                  rows="5"
+                                  placeholder="https://servidor.com/filme1.mp4&#10;https://servidor.com/filme2.mp4"
+                                  required></textarea>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <label for="batch_movie_alternativeVideoUrlsText" class="form-label fw-bold">Segundo Link / Legendado (Opcional - Um link por linha)</label>
+                        <textarea id="batch_movie_alternativeVideoUrlsText"
+                                  name="alternativeVideoUrlsText"
+                                  class="form-control"
+                                  rows="4"
+                                  placeholder="https://servidor.com/filme1-leg.mp4&#10;https://servidor.com/filme2-leg.mp4"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer d-flex justify-content-between align-items-center">
+                <div class="form-check">
+                    <input class="form-check-input shadow-sm" type="checkbox" id="isBackgroundJobBatchMovies" name="isBackgroundJob" value="true">
+                    <label class="form-check-label" for="isBackgroundJobBatchMovies" style="font-weight: 500; font-size: 14px;">Processar em segundo plano</label>
+                </div>
+
+                <div>
+                    <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fa-solid fa-cloud-arrow-up me-1"></i> Processar Filmes em Lote
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>

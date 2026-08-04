@@ -1,4 +1,4 @@
-﻿using XerifeTv.CMS.Modules.Common;
+using XerifeTv.CMS.Modules.Common;
 using XerifeTv.CMS.Modules.Movie.Dtos.Request;
 using XerifeTv.CMS.Modules.Movie.Dtos.Response;
 
@@ -13,4 +13,5 @@ public interface IMovieService
     Task<Result<string>> UpdateAsync(UpdateMovieRequestDto dto);
     Task<Result<bool>> DeleteAsync(string id);
     Task<Result<PagedList<GetMovieResponseDto>>> GetByFilterAsync(GetMoviesByFilterRequestDto dto);
+    Task<Result<int>> BatchAddMoviesAsync(BatchMoviesRequestDto dto);
 }

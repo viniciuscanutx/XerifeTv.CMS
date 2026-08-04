@@ -2,6 +2,8 @@
 @using XerifeTv.CMS.Shared.Helpers
 @using XerifeTv.CMS.Views.Movies.Models
 @using XerifeTv.CMS.Views.Shared.Models
+@using XerifeTv.CMS.Modules.Abstractions.Interfaces
+@inject ISystemSettingsService SystemSettingsService
 
 @model MovieFormModelView
 
@@ -11,8 +13,11 @@
     bool isMediaDeliveryProfileSelected = !string.IsNullOrWhiteSpace(Model?.MovieDto?.MediaDeliveryProfileId);
 }
 
-@await Html.PartialAsync("_ImportFromExcelModal")
-@await Html.PartialAsync("_ImportFromExcelSimplifiedModal")
+@if (SystemSettingsService.IsMoviesSpreadsheetImportEnabled())
+{
+    @await Html.PartialAsync("_ImportFromExcelModal")
+}
+@await Html.PartialAsync("_BatchMoviesModal")
 
 <div class="container">
     <header>
@@ -31,15 +36,18 @@
                 <div class="d-none d-lg-flex align-items-center gap-2">
                     <button class="btn btn-sm btn-outline-success d-flex justify-content-center align-items-center gap-2 shadow-none"
                             data-bs-toggle="modal"
-                            data-bs-target="#importFromExcelSimplifiedModal">
-                        <i class="fa-solid fa-file-excel"></i> Importar Vários Filmes
+                            data-bs-target="#batchMoviesModal">
+                        <i class="fa-solid fa-link"></i> Adicionar Vários Filmes
                     </button>
 
-                    <button class="btn btn-sm btn-success d-flex justify-content-center align-items-center gap-2 shadow-none"
-                            data-bs-toggle="modal"
-                            data-bs-target="#importFromExcelModal">
-                        <i class="fa-regular fa-file-excel"></i> Importar (Completo)
-                    </button>
+                    @if (SystemSettingsService.IsMoviesSpreadsheetImportEnabled())
+                    {
+                        <button class="btn btn-sm btn-success d-flex justify-content-center align-items-center gap-2 shadow-none"
+                                data-bs-toggle="modal"
+                                data-bs-target="#importFromExcelModal">
+                            <i class="fa-regular fa-file-excel"></i> Importar Planilha
+                        </button>
+                    }
                 </div>
             }
         </div>

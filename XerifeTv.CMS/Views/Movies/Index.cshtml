@@ -1,6 +1,8 @@
 @using XerifeTv.CMS.Modules.Movie.Dtos.Response
 @using XerifeTv.CMS.Modules.Movie.Enums
 @using XerifeTv.CMS.Extensions
+@using XerifeTv.CMS.Modules.Abstractions.Interfaces
+@inject ISystemSettingsService SystemSettingsService
 
 @model IEnumerable<GetMovieResponseDto>;
 
@@ -17,8 +19,11 @@
 }
 
 <div class="container">
-    @await Html.PartialAsync("_ImportFromExcelModal")
-    @await Html.PartialAsync("_ImportFromExcelSimplifiedModal")
+    @if (SystemSettingsService.IsMoviesSpreadsheetImportEnabled())
+    {
+        @await Html.PartialAsync("_ImportFromExcelModal")
+    }
+    @await Html.PartialAsync("_BatchMoviesModal")
 
     <header>
         <div class="d-flex align-items-center justify-content-between gap-4">
@@ -29,9 +34,18 @@
                 <div class="d-flex align-items-center gap-2">
                     <button class="btn btn-outline-success shadow-none"
                             data-bs-toggle="modal"
-                            data-bs-target="#importFromExcelSimplifiedModal">
-                        <i class="fa-solid fa-file-excel me-1"></i> Importar Vários Filmes
+                            data-bs-target="#batchMoviesModal">
+                        <i class="fa-solid fa-link me-1"></i> Adicionar Vários Filmes
                     </button>
+
+                    @if (SystemSettingsService.IsMoviesSpreadsheetImportEnabled())
+                    {
+                        <button class="btn btn-success shadow-none"
+                                data-bs-toggle="modal"
+                                data-bs-target="#importFromExcelModal">
+                            <i class="fa-regular fa-file-excel me-1"></i> Importar Planilha
+                        </button>
+                    }
 
                     <a class="btn btn-primary" asp-controller="Movies" asp-action="Form">
                         <i class="fa-solid fa-plus"></i> Cadastrar

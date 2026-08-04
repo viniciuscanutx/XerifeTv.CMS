@@ -69,7 +69,7 @@ public class MoviesSpreadsheetImporter(
 			using var stream = new MemoryStream();
 			file.CopyTo(stream);
 
-			string[] expectedColluns = expectedSimplifiedColluns;
+			string[] expectedColluns = expectedFullColluns;
 			try
 			{
 				using var tempPkg = new OfficeOpenXml.ExcelPackage(stream);
@@ -77,14 +77,13 @@ public class MoviesSpreadsheetImporter(
 				if (ws != null)
 				{
 					var col3Header = ws.Cells[1, 3].Text?.Trim() ?? string.Empty;
-					if (col3Header.Contains("PROFILE", StringComparison.OrdinalIgnoreCase) ||
-					    col3Header.Contains("PATH", StringComparison.OrdinalIgnoreCase))
+					if (col3Header.Contains("LINK", StringComparison.OrdinalIgnoreCase))
 					{
-						expectedColluns = expectedFullColluns;
+						expectedColluns = expectedSimplifiedColluns;
 					}
 					else
 					{
-						expectedColluns = expectedSimplifiedColluns;
+						expectedColluns = expectedFullColluns;
 					}
 				}
 			}

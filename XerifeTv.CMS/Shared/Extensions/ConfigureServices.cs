@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.OpenApi;
 using XerifeTv.CMS.Modules.Abstractions.Interfaces;
 using XerifeTv.CMS.Modules.Abstractions.Services;
@@ -73,6 +73,7 @@ public static class ConfigureServices
 		services.AddScoped<ITokenService, TokenService>();
 		services.AddScoped<IAuthService, AuthService>();
 		services.AddSingleton<ICacheService, CacheService>();
+		services.AddSingleton<ISystemSettingsService, SystemSettingsService>();
 		services.AddScoped<IStorageFilesService, StorageFilesService>();
 		services.AddScoped<ISpreadsheetReaderService, SpreadsheetReaderService>();
 		services.AddScoped<IHashPassword, HashPassword>();

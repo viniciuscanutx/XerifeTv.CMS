@@ -290,11 +290,24 @@ public class SeriesController(
 	[HttpPost]
 	public async Task<IActionResult> BatchAddEpisodeLinks(BatchEpisodeLinksRequestDto dto)
 	{
+		if (dto.IsBackgroundJob)
+		{
+			_ = Task.Run(async () =>
+			{
+				await _service.BatchAddEpisodeLinksAsync(dto);
+			});
+
+			TempData["Notification"] = MessageViewHelper
+				.SuccessJson("Processamento em lote de episódios iniciado em segundo plano com sucesso!");
+
+			return RedirectToAction("Episodes", new { id = dto.SerieId, seasonFilter = dto.Season });
+		}
+
 		var response = await _service.BatchAddEpisodeLinksAsync(dto);
 
 		TempData["Notification"] = response.IsFailure
 		  ? MessageViewHelper.ErrorJson(response.Error.Description ?? string.Empty)
-		  : MessageViewHelper.SuccessJson($"{response.Data} episódios atualizados/cadastrados com sucesso");
+		  : MessageViewHelper.SuccessJson($"{response.Data} episódio(s) atualizado(s)/cadastrado(s) com sucesso!");
 
 		_logger.LogInformation($"{User.Identity?.Name} batch added links for season {dto.Season} of serie {dto.SerieId}");
 

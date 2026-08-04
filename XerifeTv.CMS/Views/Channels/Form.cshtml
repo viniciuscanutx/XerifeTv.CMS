@@ -1,7 +1,9 @@
-﻿@using XerifeTv.CMS.Modules.Channel.Dtos.Response
+@using XerifeTv.CMS.Modules.Channel.Dtos.Response
 @using XerifeTv.CMS.Shared.Helpers
 @using XerifeTv.CMS.Views.Channels.Models
 @using XerifeTv.CMS.Views.Shared.Models
+@using XerifeTv.CMS.Modules.Abstractions.Interfaces
+@inject ISystemSettingsService SystemSettingsService
 
 @model ChannelFormModelView
 
@@ -11,7 +13,10 @@
     bool isMediaDeliveryProfileSelected = !string.IsNullOrWhiteSpace(Model?.ChannelDto?.MediaDeliveryProfileId);
 }
 
-@await Html.PartialAsync("_ImportFromExcelModal")
+@if (SystemSettingsService.IsChannelsSpreadsheetImportEnabled())
+{
+    @await Html.PartialAsync("_ImportFromExcelModal")
+}
 
 <div class="container">
     <header>
@@ -25,7 +30,7 @@
                 </span>
             </div>
 
-            @if (Model?.ChannelDto is null)
+            @if (Model?.ChannelDto is null && SystemSettingsService.IsChannelsSpreadsheetImportEnabled())
             {
                 <div class="d-none d-lg-flex align-items-center gap-3">
                     <button class="btn btn-sm btn-success d-flex justify-content-center align-items-center gap-2 shadow-none"

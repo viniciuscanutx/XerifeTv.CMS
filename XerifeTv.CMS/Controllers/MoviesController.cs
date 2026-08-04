@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using XerifeTv.CMS.Modules.Abstractions.Interfaces;
 using XerifeTv.CMS.Modules.Movie.Enums;
@@ -180,5 +180,33 @@ public class MoviesController(
             return Ok(response.Data);
 
         return BadRequest(response.Error.Description ?? string.Empty);
+    }
+
+    [Authorize(Roles = "admin, common")]
+    [HttpPost]
+    public async Task<IActionResult> BatchAddMovies(BatchMoviesRequestDto dto)
+    {
+        if (dto.IsBackgroundJob)
+        {
+            _ = Task.Run(async () =>
+            {
+                await _service.BatchAddMoviesAsync(dto);
+            });
+
+            TempData["Notification"] = MessageViewHelper
+                .SuccessJson("Processamento em lote de filmes iniciado em segundo plano com sucesso!");
+
+            return RedirectToAction("Index");
+        }
+
+        var response = await _service.BatchAddMoviesAsync(dto);
+
+        TempData["Notification"] = response.IsFailure
+            ? MessageViewHelper.ErrorJson(response.Error?.Description ?? string.Empty)
+            : MessageViewHelper.SuccessJson($"{response.Data} filme(s) cadastrado(s)/atualizado(s) com sucesso!");
+
+        _logger.LogInformation($"{User.Identity?.Name} batch processed {response.Data} movies");
+
+        return RedirectToAction("Index");
     }
 }

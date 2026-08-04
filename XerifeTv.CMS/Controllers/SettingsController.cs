@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using XerifeTv.CMS.Modules.Common.Enums;
 using XerifeTv.CMS.Modules.Integrations.Webhook;
@@ -12,12 +12,15 @@ using XerifeTv.CMS.Modules.User.Interfaces;
 using XerifeTv.CMS.Shared.Helpers;
 using XerifeTv.CMS.Views.Settings.Models;
 
+using XerifeTv.CMS.Modules.Abstractions.Interfaces;
+
 namespace XerifeTv.CMS.Controllers;
 
 public class SettingsController(
     IUserService _userService,
     IWebhookService _webhookService,
     IMediaDeliveryProfileService _mediaDeliveryProfileService,
+    ISystemSettingsService _systemSettingsService,
     ILogger<SettingsController> _logger) : Controller
 {
     [Authorize]
@@ -32,9 +35,32 @@ public class SettingsController(
         var mediaDeliveryProfilesResponse = await _mediaDeliveryProfileService.GetAllAsync(isIncludeDisabled: true);
         if (mediaDeliveryProfilesResponse.IsFailure) return RedirectToAction("Index", "Home");
 
+        ViewBag.EnableMoviesSpreadsheetImport = _systemSettingsService.IsMoviesSpreadsheetImportEnabled();
+        ViewBag.EnableSeriesSpreadsheetImport = _systemSettingsService.IsSeriesSpreadsheetImportEnabled();
+        ViewBag.EnableChannelsSpreadsheetImport = _systemSettingsService.IsChannelsSpreadsheetImportEnabled();
+
         SettingsModelView model = new(userResponse.Data!, webhooksResponse.Data?.Items ?? [], mediaDeliveryProfilesResponse.Data ?? []);
 
         return View(model);
+    }
+
+    [HttpPost]
+    [Authorize(Roles = "admin")]
+    public IActionResult UpdateImportSettings(
+        bool enableMoviesSpreadsheetImport = false,
+        bool enableSeriesSpreadsheetImport = false,
+        bool enableChannelsSpreadsheetImport = false)
+    {
+        _systemSettingsService.SetSpreadsheetImportSettings(
+            enableMoviesSpreadsheetImport,
+            enableSeriesSpreadsheetImport,
+            enableChannelsSpreadsheetImport);
+
+        TempData["Notification"] = MessageViewHelper.SuccessJson("Configurações de importação atualizadas com sucesso!");
+
+        _logger.LogInformation($"{User.Identity?.Name} updated import settings (Movies:{enableMoviesSpreadsheetImport}, Series:{enableSeriesSpreadsheetImport}, Channels:{enableChannelsSpreadsheetImport})");
+
+        return Redirect(Url.Action("Index") + "#v-pills-import");
     }
 
     [HttpPost]

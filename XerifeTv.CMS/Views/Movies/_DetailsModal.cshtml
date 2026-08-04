@@ -60,8 +60,14 @@
         <div class="w-100 d-flex gap-1 justify-content-center">
           <div class="d-none d-md-block" style="min-width: 30%">
             <div style="margin-top: 55%;" class="text-center">
-              <span class="text-warning"><i class="fa-solid fa-star"></i></span>
-              <span class="fst-italic">@Model.Review.ToString("0.0")</span>
+              <div>
+                <i class="fa-brands fa-imdb"></i>
+                <span>@Model.ImdbId</span>
+              </div>
+              <div>
+                <span class="text-warning"><i class="fa-solid fa-star"></i></span>
+                <span class="fst-italic">@Model.Review.ToString("0.0")</span>
+              </div>
             </div>
           </div>
           <div style="width: 70%; margin-top: 1rem;">

@@ -1,4 +1,4 @@
-﻿@using XerifeTv.CMS.Views.Settings.Models
+@using XerifeTv.CMS.Views.Settings.Models
 
 @model SettingsModelView
 
@@ -75,8 +75,24 @@
                 <span>Usuário</span>
             </button>
 
+
             @if (User.IsInRole("admin"))
             {
+                <button class="nav-link d-flex align-items-center justify-content-start gap-2 ps-4"
+                        id="v-pills-import-tab"
+                        data-bs-toggle="pill"
+                        data-bs-target="#v-pills-import"
+                        type="button"
+                        role="tab"
+                        aria-selected="true">
+                    <i class="fa-solid fa-file-import"></i>
+                    <span>Importação</span>
+                </button>
+            }
+
+            @if (User.IsInRole("admin"))
+            {
+
                 <button class="nav-link d-flex align-items-center justify-content-start gap-2 ps-4"
                         id="v-pills-integration-tab"
                         data-bs-toggle="pill"
@@ -87,6 +103,7 @@
                     <i class="fa-solid fa-circle-nodes"></i>
                     <span>Integrações</span>
                 </button>
+                
             }
 
             @if (User.IsInRole("admin"))
@@ -157,6 +174,87 @@
 
                 </div>
             </div>
+
+            @if (User.IsInRole("admin"))
+            {
+                <div class="tab-pane fade"
+                     id="v-pills-import"
+                     role="tabpanel"
+                     aria-labelledby="v-pills-import-tab">
+
+                    <ul class="nav nav-tabs mb-4" id="importTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active"
+                                    id="import-config-tab"
+                                    data-bs-toggle="tab"
+                                    data-bs-target="#import-config"
+                                    type="button"
+                                    role="tab"
+                                    aria-selected="true">
+                                Configuração de Importação
+                            </button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content" id="importTabsContent">
+                        <div class="tab-pane fade show active"
+                             id="import-config"
+                             role="tabpanel"
+                             aria-labelledby="import-config-tab">
+
+                            <form asp-controller="Settings" asp-action="UpdateImportSettings" method="post" class="card p-4 shadow-sm border-0 bg-body-tertiary">
+                                <h5 class="fw-bold mb-3"><i class="fa-solid fa-file-excel me-2 text-success"></i>Importação via Planilha (Excel)</h5>
+                                <p class="text-muted fs-6 mb-4">Escolha em quais módulos você deseja habilitar ou ocultar os recursos de importação via planilha Excel.</p>
+
+                                <div class="form-check form-switch fs-5 mb-3">
+                                    <input class="form-check-input shadow-none"
+                                           type="checkbox"
+                                           role="switch"
+                                           id="enableMoviesSpreadsheetImport"
+                                           name="enableMoviesSpreadsheetImport"
+                                           value="true"
+                                           @(ViewBag.EnableMoviesSpreadsheetImport == true ? "checked" : "")>
+                                    <label class="form-check-label fs-6 fw-semibold ms-2" for="enableMoviesSpreadsheetImport">
+                                        <i class="fa-solid fa-film me-2 text-primary"></i> Habilitar importação por planilha para <span class="fw-bold">Filmes</span>
+                                    </label>
+                                </div>
+
+                                <div class="form-check form-switch fs-5 mb-3">
+                                    <input class="form-check-input shadow-none"
+                                           type="checkbox"
+                                           role="switch"
+                                           id="enableSeriesSpreadsheetImport"
+                                           name="enableSeriesSpreadsheetImport"
+                                           value="true"
+                                           @(ViewBag.EnableSeriesSpreadsheetImport == true ? "checked" : "")>
+                                    <label class="form-check-label fs-6 fw-semibold ms-2" for="enableSeriesSpreadsheetImport">
+                                        <i class="fa-solid fa-tv me-2 text-info"></i> Habilitar importação por planilha para <span class="fw-bold">Séries</span>
+                                    </label>
+                                </div>
+
+                                <div class="form-check form-switch fs-5 mb-4">
+                                    <input class="form-check-input shadow-none"
+                                           type="checkbox"
+                                           role="switch"
+                                           id="enableChannelsSpreadsheetImport"
+                                           name="enableChannelsSpreadsheetImport"
+                                           value="true"
+                                           @(ViewBag.EnableChannelsSpreadsheetImport == true ? "checked" : "")>
+                                    <label class="form-check-label fs-6 fw-semibold ms-2" for="enableChannelsSpreadsheetImport">
+                                        <i class="fa-solid fa-tower-cell me-2 text-warning"></i> Habilitar importação por planilha para <span class="fw-bold">Canais</span>
+                                    </label>
+                                </div>
+
+                                <div>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fa-solid fa-floppy-disk me-1"></i> Salvar Configuração
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            }
 
             @if (User.IsInRole("admin"))
             {
