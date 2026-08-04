@@ -1,25 +1,22 @@
-# Step 1: Build the application
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build-env
-WORKDIR /app
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
 
-# Copy .csproj files and restore dependencies
-COPY *.csproj ./
-RUN dotnet restore
+COPY . .
 
-# Copy the rest of the files and build the application
-COPY . ./
-RUN dotnet publish -c Release -o out
+RUN dotnet restore XerifeTv.CMS.sln
 
-# Step 2: Setting up the runtime environment
+RUN dotnet publish XerifeTv.CMS/XerifeTv.CMS.csproj \
+    -c Release \
+    -o /app/publish \
+    --no-restore
+
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y ca-certificates
 
-COPY --from=build-env /app/out .
+COPY --from=build /app/publish .
 
-# Expose port 88 to the container
 EXPOSE 88
 
-# Application startup command
-ENTRYPOINT ["dotnet", "XerifeTv.CMS.dll"]
+ENTRYPOINT ["dotnet","XerifeTv.CMS.dll"]
