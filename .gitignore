@@ -78,3 +78,7 @@ _[Ss]cripts
 env.js
 /XerifeTv.CMS/appsettings.Development.json
 /.idea
+
+/XerifeTVWeb
+
+XerifeTVWeb/
