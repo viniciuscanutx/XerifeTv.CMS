@@ -1,4 +1,4 @@
-﻿using XerifeTv.CMS.Modules.Abstractions.ValueObjects;
+using XerifeTv.CMS.Modules.Abstractions.ValueObjects;
 
 namespace XerifeTv.CMS.Modules.Series.Dtos.Request;
 
@@ -16,6 +16,7 @@ public class CreateEpisodeRequestDto
     public string? VideoSubtitle { get; init; }
     public string? MediaDeliveryProfileId { get; init; }
     public string? MediaRoute { get; init; }
+    public bool HighQuality { get; init; } = false;
     public bool? IsDisabled { get; init; } = false;
 
     public Episode ToEntity()
@@ -30,6 +31,7 @@ public class CreateEpisodeRequestDto
             AlternativeVideoUrl = string.IsNullOrWhiteSpace(AlternativeVideoUrl) ? null : AlternativeVideoUrl,
             MediaDeliveryProfileId = MediaDeliveryProfileId,
             MediaRoute = MediaRoute,
+            HighQuality = HighQuality,
             Disabled = IsDisabled ?? false
         };
     }

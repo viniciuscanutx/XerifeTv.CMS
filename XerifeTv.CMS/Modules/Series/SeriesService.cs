@@ -1,4 +1,4 @@
-﻿using MongoDB.Driver.Linq;
+using MongoDB.Driver.Linq;
 using XerifeTv.CMS.Modules.Common;
 using XerifeTv.CMS.Modules.Franchise.Interfaces;
 using XerifeTv.CMS.Modules.Integrations.Webhook.Enums;
@@ -279,6 +279,93 @@ public class SeriesService(
         {
             var error = new Error("500", ex.InnerException?.Message ?? ex.Message);
             return Result<bool>.Failure(error);
+        }
+    }
+
+    public async Task<Result<int>> BatchAddEpisodeLinksAsync(BatchEpisodeLinksRequestDto dto)
+    {
+        try
+        {
+            var seriesResponse = await _repository.GetAsync(dto.SerieId);
+            if (seriesResponse is null)
+                return Result<int>.Failure(new Error("404", "Série não encontrada"));
+
+            var videoUrls = (dto.VideoUrlsText ?? string.Empty)
+                .Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+
+            var altVideoUrls = (dto.AlternativeVideoUrlsText ?? string.Empty)
+                .Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+
+            if (videoUrls.Length == 0)
+                return Result<int>.Failure(new Error("400", "Nenhum link fornecido"));
+
+            var existingEpisodesResult = await GetEpisodesBySeasonAsync(dto.SerieId, dto.Season, includeDisabled: true);
+            var existingEpisodes = existingEpisodesResult.IsSuccess && existingEpisodesResult.Data?.Episodes != null
+                ? existingEpisodesResult.Data.Episodes.ToList()
+                : [];
+
+            int updatedCount = 0;
+
+            for (int i = 0; i < videoUrls.Length; i++)
+            {
+                int episodeNumber = i + 1;
+                string url = videoUrls[i];
+                string? altUrl = i < altVideoUrls.Length ? altVideoUrls[i] : null;
+
+                var existingEpisode = existingEpisodes.FirstOrDefault(e => e.Season == dto.Season && e.Number == episodeNumber);
+
+                if (existingEpisode != null)
+                {
+                    var updateDto = new UpdateEpisodeRequestDto
+                    {
+                        Id = existingEpisode.Id,
+                        SerieId = dto.SerieId,
+                        Title = existingEpisode.Title,
+                        BannerUrl = existingEpisode.BannerUrl,
+                        Number = existingEpisode.Number,
+                        Season = existingEpisode.Season,
+                        VideoUrl = url,
+                        AlternativeVideoUrl = !string.IsNullOrWhiteSpace(altUrl) ? altUrl : existingEpisode.AlternativeVideoUrl,
+                        VideoDuration = existingEpisode.Video?.Duration ?? 0,
+                        VideoStreamFormat = dto.VideoStreamFormat,
+                        VideoSubtitle = existingEpisode.Video?.Subtitle,
+                        MediaDeliveryProfileId = existingEpisode.MediaDeliveryProfileId,
+                        MediaRoute = existingEpisode.MediaRoute,
+                        HighQuality = dto.HighQuality,
+                        Disabled = false
+                    };
+
+                    var updateResult = await UpdateEpisodeAsync(updateDto);
+                    if (updateResult.IsSuccess) updatedCount++;
+                }
+                else
+                {
+                    var createDto = new CreateEpisodeRequestDto
+                    {
+                        SerieId = dto.SerieId,
+                        Title = $"Episódio {episodeNumber}",
+                        BannerUrl = seriesResponse.BannerUrl,
+                        Number = episodeNumber,
+                        Season = dto.Season,
+                        VideoUrl = url,
+                        AlternativeVideoUrl = altUrl,
+                        VideoDuration = 0,
+                        VideoStreamFormat = dto.VideoStreamFormat,
+                        HighQuality = dto.HighQuality,
+                        IsDisabled = false
+                    };
+
+                    var createResult = await CreateEpisodeAsync(createDto);
+                    if (createResult.IsSuccess) updatedCount++;
+                }
+            }
+
+            return Result<int>.Success(updatedCount);
+        }
+        catch (Exception ex)
+        {
+            var error = new Error("500", ex.InnerException?.Message ?? ex.Message);
+            return Result<int>.Failure(error);
         }
     }
 }

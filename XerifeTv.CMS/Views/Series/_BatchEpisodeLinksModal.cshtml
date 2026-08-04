@@ -1,0 +1,109 @@
+@using XerifeTv.CMS.Shared.Helpers
+
+<div class="modal fade"
+     id="batchEpisodeLinksModal"
+     data-bs-backdrop="static"
+     data-bs-keyboard="false"
+     tabindex="-1"
+     aria-labelledby="batchEpisodeLinksModalLabel"
+     aria-hidden="true">
+
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <form class="modal-content"
+              asp-controller="Series"
+              asp-action="BatchAddEpisodeLinks">
+
+            <input type="hidden" name="serieId" value="@ViewBag.SerieId" />
+
+            <div class="modal-header">
+                <h1 class="modal-title fs-5" id="batchEpisodeLinksModalLabel">
+                    Adicionar Vários Links de Episódios em Lote
+                </h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body">
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <label for="batch_season" class="form-label">Temporada</label>
+                        <select class="form-select"
+                                id="batch_season"
+                                name="season"
+                                required>
+                            @for (var i = 1; i <= (ViewBag.NumberSeasons ?? 1); i++)
+                            {
+                                if (i == ViewBag.SeasonFilter)
+                                {
+                                    <option value="@i" selected>@i ª Temporada</option>
+                                }
+                                else
+                                {
+                                    <option value="@i">@i ª Temporada</option>
+                                }
+                            }
+                        </select>
+                    </div>
+
+                    <div class="col-6">
+                        <label for="batch_videoStreamFormat" class="form-label">Formato da Mídia</label>
+                        <select id="batch_videoStreamFormat"
+                                name="videoStreamFormat"
+                                class="form-select"
+                                required>
+                            @foreach (var format in StreamFormatsHelper.Vod)
+                            {
+                                <option value="@format">@format</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <div class="form-check">
+                            <input name="highQuality"
+                                   id="batch_highQuality"
+                                   class="form-check-input"
+                                   type="checkbox"
+                                   value="true">
+                            <label for="batch_highQuality" class="form-check-label">
+                                Marcar episódios como 4K (Alta Qualidade)
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <label for="videoUrlsText" class="form-label fw-bold">Links Primários (Um link por linha)</label>
+                        <textarea id="videoUrlsText"
+                                  name="videoUrlsText"
+                                  class="form-control"
+                                  rows="6"
+                                  placeholder="https://servidor.com/video-ep1.m3u8&#10;https://servidor.com/video-ep2.m3u8&#10;https://servidor.com/video-ep3.m3u8"
+                                  required></textarea>
+                        <small class="text-muted">A linha 1 corresponderá ao Episódio 1, linha 2 ao Episódio 2, e assim por diante.</small>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <label for="alternativeVideoUrlsText" class="form-label fw-bold">Segundo Link / Legendado (Opcional - Um link por linha)</label>
+                        <textarea id="alternativeVideoUrlsText"
+                                  name="alternativeVideoUrlsText"
+                                  class="form-control"
+                                  rows="4"
+                                  placeholder="https://servidor.com/video-ep1-legendado.m3u8&#10;https://servidor.com/video-ep2-legendado.m3u8"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer d-flex justify-content-between">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-success">
+                    <i class="fa-solid fa-cloud-arrow-up me-1"></i> Processar Links em Lote
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

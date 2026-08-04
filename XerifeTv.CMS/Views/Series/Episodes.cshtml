@@ -1,4 +1,4 @@
-﻿@using XerifeTv.CMS.Modules;
+@using XerifeTv.CMS.Modules;
 @using XerifeTv.CMS.Modules.Series;
 @using XerifeTv.CMS.Modules.Series.Dtos.Response;
 @using XerifeTv.CMS.Shared.Helpers
@@ -22,6 +22,7 @@
 
 <div class="container">
     @await Html.PartialAsync("_VideoModal")
+    @await Html.PartialAsync("_BatchEpisodeLinksModal")
     @await Html.PartialAsync("_EpisodeFormModal", new EpisodeFormModelView(episodeEmpty, Model?.MediaDeliveryProfiles ?? []))
 
     <header>
@@ -40,6 +41,10 @@
                 <div class="d-flex justify-content-center align-items-center gap-3">
                     <button id="btn-import-episodes" class="btn btn-success d-none d-md-block shadow-none">
                         <i class="fa-solid fa-cloud-arrow-down me-1"></i> <span>Importar episódios via IMDB</span>
+                    </button>
+
+                    <button class="btn btn-outline-success d-none d-md-block shadow-none" data-bs-toggle="modal" data-bs-target="#batchEpisodeLinksModal">
+                        <i class="fa-solid fa-link me-1"></i> Adicionar Vários Links
                     </button>
 
                     <button id="btn-register" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#episodeFormModal-@episodeEmpty.Id">
@@ -155,6 +160,7 @@
           $(e.target).val(convertHHmmToSeconds(e.target.value)))
 
         $('.disabled').change(e => e.target.value = e.target.checked);
+        $('.highQuality').change(e => e.target.value = e.target.checked);
 
         function remove(id) {
           if (!confirm('Deseja realmento excluir o episódio?')) return;

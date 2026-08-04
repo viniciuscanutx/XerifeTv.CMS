@@ -1,4 +1,4 @@
-﻿using XerifeTv.CMS.Modules.Abstractions.Exceptions;
+using XerifeTv.CMS.Modules.Abstractions.Exceptions;
 using XerifeTv.CMS.Modules.Abstractions.Interfaces;
 using XerifeTv.CMS.Modules.Common;
 using XerifeTv.CMS.Modules.Common.Dtos;
@@ -45,20 +45,51 @@ public class MoviesSpreadsheetImporter(
 	{
 		try
 		{
-			string[] expectedColluns =
+			string[] expectedFullColluns =
 			[
 				"IMDB ID (REQUIRED)",
 				"PARENTAL RATING (REQUIRED)",
-                "MEDIA DELIVERY PROFILE NAME",
-                "MEDIA PATH",
-                "URL VIDEO FIXED",
+				"MEDIA DELIVERY PROFILE NAME",
+				"MEDIA PATH",
+				"URL VIDEO FIXED",
 				"STREAM FORMAT",
 				"URL SUBTITLES",
 				"TRAILER YOUTUBE VIDEO ID"
 			];
 
+			string[] expectedSimplifiedColluns =
+			[
+				"IMDB ID (REQUIRED)",
+				"PARENTAL RATING (REQUIRED)",
+				"LINK (REQUIRED)",
+				"FORMATO DA MIDIA (REQUIRED)",
+				"SEGUNDO LINK"
+			];
+
 			using var stream = new MemoryStream();
 			file.CopyTo(stream);
+
+			string[] expectedColluns = expectedSimplifiedColluns;
+			try
+			{
+				using var tempPkg = new OfficeOpenXml.ExcelPackage(stream);
+				var ws = tempPkg.Workbook.Worksheets.FirstOrDefault();
+				if (ws != null)
+				{
+					var col3Header = ws.Cells[1, 3].Text?.Trim() ?? string.Empty;
+					if (col3Header.Contains("PROFILE", StringComparison.OrdinalIgnoreCase) ||
+					    col3Header.Contains("PATH", StringComparison.OrdinalIgnoreCase))
+					{
+						expectedColluns = expectedFullColluns;
+					}
+					else
+					{
+						expectedColluns = expectedSimplifiedColluns;
+					}
+				}
+			}
+			catch { }
+			stream.Position = 0;
 
 			int successCount = 0;
 			int failCount = 0;
@@ -114,16 +145,6 @@ public class MoviesSpreadsheetImporter(
 					movieItem.MediaDeliveryProfileId = mediaProfileResponse.Data!.Id;
                 }
 
-				var movieImdbAPIResponse = await _imdbService.GetMovieByImdbIdAsync(movieItem.ImdbId);
-
-				if (movieImdbAPIResponse.IsFailure)
-				{
-					failCount++;
-                    errorList.Add($"[{movieItem.ImdbId}] {movieImdbAPIResponse.Error?.Description ?? string.Empty}");
-                    UpdateProgress();
-					continue;
-				}
-
 				var movieByImdbIdResponse = await _service.GetByImdbIdAsync(movieItem.ImdbId);
 
 				Result<string>? responseCreateOrUpdate = null;
@@ -142,19 +163,31 @@ public class MoviesSpreadsheetImporter(
 						ReleaseYear = movieByImdbIdResponse.Data!.ReleaseYear,
 						Review = movieByImdbIdResponse.Data!.Review,
 						ParentalRating = movieItem.ParentalRating,
-						VideoUrl = movieItem.Video?.Url ?? string.Empty,
+						VideoUrl = !string.IsNullOrWhiteSpace(movieItem.Video?.Url) ? movieItem.Video.Url : (movieByImdbIdResponse.Data!.Video?.Url ?? string.Empty),
+						AlternativeVideoUrl = movieItem.AlternativeVideoUrl ?? movieByImdbIdResponse.Data!.AlternativeVideoUrl,
 						VideoDuration = movieByImdbIdResponse.Data!.Video?.Duration ?? 0,
-						VideoStreamFormat = movieItem.Video?.StreamFormat ?? string.Empty,
-						VideoSubtitle = movieItem.Video?.Subtitle,
-						MediaDeliveryProfileId = movieItem.MediaDeliveryProfileId,
-						MediaRoute = movieItem.MediaRoute,
-						TrailerVideoYoutubeId = movieItem.TrailerVideoYoutubeId
+						VideoStreamFormat = !string.IsNullOrWhiteSpace(movieItem.Video?.StreamFormat) ? movieItem.Video.StreamFormat : (movieByImdbIdResponse.Data!.Video?.StreamFormat ?? string.Empty),
+						VideoSubtitle = movieItem.Video?.Subtitle ?? movieByImdbIdResponse.Data!.Video?.Subtitle,
+						MediaDeliveryProfileId = movieItem.MediaDeliveryProfileId ?? movieByImdbIdResponse.Data!.MediaDeliveryProfileId,
+						MediaRoute = movieItem.MediaRoute ?? movieByImdbIdResponse.Data!.MediaRoute,
+						TrailerVideoYoutubeId = movieItem.TrailerVideoYoutubeId ?? movieByImdbIdResponse.Data!.TrailerVideoYoutubeId,
+						HighQuality = movieByImdbIdResponse.Data!.HighQuality
                     };
 
 					responseCreateOrUpdate = await _service.UpdateAsync(updateMovieDto);									
 				}
 				else
 				{
+					var movieImdbAPIResponse = await _imdbService.GetMovieByImdbIdAsync(movieItem.ImdbId);
+
+					if (movieImdbAPIResponse.IsFailure)
+					{
+						failCount++;
+						errorList.Add($"[{movieItem.ImdbId}] {movieImdbAPIResponse.Error?.Description ?? string.Empty}");
+						UpdateProgress();
+						continue;
+					}
+
 					var createMovieDto = new CreateMovieRequestDto
 					{
 						ImdbId = movieItem.ImdbId,
@@ -167,6 +200,7 @@ public class MoviesSpreadsheetImporter(
 						Review = movieImdbAPIResponse?.Data?.VoteAverage ?? 0,
 						ParentalRating = movieItem.ParentalRating,
 						VideoUrl = movieItem.Video?.Url ?? string.Empty,
+						AlternativeVideoUrl = movieItem.AlternativeVideoUrl,
 						VideoDuration = movieImdbAPIResponse?.Data?.DurationInSeconds ?? 0,
 						VideoStreamFormat = movieItem.Video?.StreamFormat ?? string.Empty,
 						VideoSubtitle = movieItem.Video?.Subtitle,

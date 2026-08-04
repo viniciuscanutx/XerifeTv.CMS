@@ -1,4 +1,4 @@
-﻿@using XerifeTv.CMS.Modules.Movie.Dtos.Response
+@using XerifeTv.CMS.Modules.Movie.Dtos.Response
 @using XerifeTv.CMS.Shared.Helpers
 @using XerifeTv.CMS.Views.Movies.Models
 @using XerifeTv.CMS.Views.Shared.Models
@@ -12,6 +12,7 @@
 }
 
 @await Html.PartialAsync("_ImportFromExcelModal")
+@await Html.PartialAsync("_ImportFromExcelSimplifiedModal")
 
 <div class="container">
     <header>
@@ -27,11 +28,17 @@
 
             @if (Model?.MovieDto is null)
             {
-                <div class="d-none d-lg-flex align-items-center gap-3">
+                <div class="d-none d-lg-flex align-items-center gap-2">
+                    <button class="btn btn-sm btn-outline-success d-flex justify-content-center align-items-center gap-2 shadow-none"
+                            data-bs-toggle="modal"
+                            data-bs-target="#importFromExcelSimplifiedModal">
+                        <i class="fa-solid fa-file-excel"></i> Importar Vários Filmes
+                    </button>
+
                     <button class="btn btn-sm btn-success d-flex justify-content-center align-items-center gap-2 shadow-none"
                             data-bs-toggle="modal"
                             data-bs-target="#importFromExcelModal">
-                        <i class="fa-regular fa-file-excel"></i> Importar
+                        <i class="fa-regular fa-file-excel"></i> Importar (Completo)
                     </button>
                 </div>
             }
@@ -249,9 +256,23 @@
                 </div>
             </div>
 
-            @if (Model?.MovieDto is GetMovieResponseDto movie)
-            {
-                <div class="row mb-4">
+            <div class="row mb-4">
+                <div class="col-6">
+                    <div class="form-check">
+                        <input id="highQuality"
+                               name="highQuality"
+                               class="form-check-input"
+                               type="checkbox"
+                               value="@(Model?.MovieDto?.HighQuality == true ? "true" : "false")"
+                        @(Model?.MovieDto?.HighQuality == true ? "checked" : "")>
+                        <label class="form-check-label" for="highQuality">
+                            Conteúdo em 4K (Alta Qualidade)
+                        </label>
+                    </div>
+                </div>
+
+                @if (Model?.MovieDto is GetMovieResponseDto movie)
+                {
                     <div class="col-6">
                         <div class="form-check">
                             <input id="disabled"
@@ -265,8 +286,8 @@
                             </label>
                         </div>
                     </div>
-                </div>
-            }
+                }
+            </div>
 
             <hr />
             <div class="d-flex align-items-center justify-content-between">
@@ -328,6 +349,7 @@
         });
 
         $('#disabled').change(e => e.target.value = e.target.checked);
+        $('#highQuality').change(e => e.target.value = e.target.checked);
 
         $('#videoDuration').keyup(e =>
           $('#videoDuration').val(convertHHmmToSeconds(e.target.value)));

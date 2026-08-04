@@ -1,4 +1,4 @@
-﻿using XerifeTv.CMS.Modules.Abstractions.ValueObjects;
+using XerifeTv.CMS.Modules.Abstractions.ValueObjects;
 using XerifeTv.CMS.Shared.Helpers;
 
 namespace XerifeTv.CMS.Modules.Movie.Dtos.Response;
@@ -22,6 +22,7 @@ public sealed class GetMovieResponseDto
     public string? MediaDeliveryProfileId { get; private set; }
     public string? MediaRoute { get; private set; }
     public string? TrailerVideoYoutubeId { get; private set; }
+    public bool HighQuality { get; private set; } = false;
     public string DurationHHmm => DateTimeHelper.ConvertSecondsToHHmm(Video?.Duration ?? 0);
     public bool Disabled { get; private set; } = false;
 
@@ -56,7 +57,8 @@ public sealed class GetMovieResponseDto
             Disabled = entity.Disabled,
             MediaRoute = entity.MediaRoute,
             MediaDeliveryProfileId = entity.MediaDeliveryProfileId,
-            TrailerVideoYoutubeId = entity.TrailerVideoYoutubeId
+            TrailerVideoYoutubeId = entity.TrailerVideoYoutubeId,
+            HighQuality = entity.HighQuality
         };
     }
 }

@@ -1,4 +1,4 @@
-﻿using XerifeTv.CMS.Modules.Abstractions.ValueObjects;
+using XerifeTv.CMS.Modules.Abstractions.ValueObjects;
 
 namespace XerifeTv.CMS.Modules.Movie.Dtos.Request;
 
@@ -22,6 +22,7 @@ public class CreateMovieRequestDto
     public string? MediaDeliveryProfileId { get; set; }
     public string? MediaRoute { get; set; }
     public string? TrailerVideoYoutubeId { get; init; }
+    public bool HighQuality { get; init; } = false;
 
     public MovieEntity ToEntity()
     {
@@ -46,7 +47,8 @@ public class CreateMovieRequestDto
             AlternativeVideoUrl = string.IsNullOrWhiteSpace(AlternativeVideoUrl) ? null : AlternativeVideoUrl,
             MediaRoute = MediaRoute,
             MediaDeliveryProfileId = MediaDeliveryProfileId,
-            TrailerVideoYoutubeId = TrailerVideoYoutubeId
+            TrailerVideoYoutubeId = TrailerVideoYoutubeId,
+            HighQuality = HighQuality
         };
     }
 }

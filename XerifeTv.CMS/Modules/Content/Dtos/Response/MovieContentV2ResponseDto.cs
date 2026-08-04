@@ -1,4 +1,4 @@
-﻿using System.Security.Cryptography.Xml;
+using System.Security.Cryptography.Xml;
 using XerifeTv.CMS.Modules.Movie;
 using XerifeTv.CMS.Shared.Helpers;
 
@@ -21,6 +21,7 @@ public class MovieContentV2ResponseDto
     public string? AlternativeVideoResolverURL { get; private set; }
     public string? SubtitleURL { get; private set; }
     public string? TrailerVideoYoutubeId { get; private set; }
+    public bool HighQuality { get; private set; }
 
     public static MovieContentV2ResponseDto FromEntity(MovieEntity entity, string encryptKey)
     {
@@ -63,7 +64,8 @@ public class MovieContentV2ResponseDto
             VideoResolverURL = $"/MediaDeliveryProfiles{videoResolverPath}",
             AlternativeVideoResolverURL = altResolverPath,
             SubtitleURL = entity.Video?.Subtitle,
-            TrailerVideoYoutubeId = entity.TrailerVideoYoutubeId
+            TrailerVideoYoutubeId = entity.TrailerVideoYoutubeId,
+            HighQuality = entity.HighQuality
         };
     }
 }

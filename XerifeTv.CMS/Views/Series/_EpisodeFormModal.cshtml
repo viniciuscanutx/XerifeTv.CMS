@@ -1,4 +1,4 @@
-﻿@using XerifeTv.CMS.Modules.Series
+@using XerifeTv.CMS.Modules.Series
 @using XerifeTv.CMS.Shared.Helpers
 @using XerifeTv.CMS.Views.Series.Models
 @using XerifeTv.CMS.Views.Shared.Models
@@ -149,9 +149,23 @@
                     </div>
                 </div>
 
-                @if (!string.IsNullOrEmpty(Model?.Episode?.Id))
-                {
-                    <div class="row">
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <div class="form-check">
+                            <input name="highQuality"
+                                   id="episode_@(Model?.Episode?.Id)_highQuality"
+                                   class="form-check-input highQuality"
+                                   type="checkbox"
+                                   value="@(Model?.Episode?.HighQuality == true ? "true" : "false")"
+                                   @(Model?.Episode?.HighQuality == true ? "checked" : "")>
+                            <label for="episode_@(Model?.Episode?.Id)_highQuality" class="form-check-label">
+                                Conteúdo em 4K (Alta Qualidade)
+                            </label>
+                        </div>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(Model?.Episode?.Id))
+                    {
                         <div class="col-6">
                             <div class="form-check">
                                 <input name="disabled"
@@ -165,8 +179,8 @@
                                 </label>
                             </div>
                         </div>
-                    </div>
-                }
+                    }
+                </div>
             </div>
 
             <div class="modal-footer d-flex justify-content-between">

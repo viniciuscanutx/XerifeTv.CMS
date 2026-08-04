@@ -1,4 +1,4 @@
-﻿using XerifeTv.CMS.Modules.Abstractions.ValueObjects;
+using XerifeTv.CMS.Modules.Abstractions.ValueObjects;
 
 namespace XerifeTv.CMS.Modules.Movie.Dtos.Request;
 
@@ -23,6 +23,7 @@ public class UpdateMovieRequestDto
     public string? MediaDeliveryProfileId { get; init; }
     public string? MediaRoute { get; init; }
     public string? TrailerVideoYoutubeId { get; init; }
+    public bool HighQuality { get; init; } = false;
     public bool Disabled { get; init; } = false;
 
     public MovieEntity ToEntity()
@@ -50,7 +51,8 @@ public class UpdateMovieRequestDto
             Disabled = Disabled,
             MediaRoute = MediaRoute,
             MediaDeliveryProfileId = MediaDeliveryProfileId,
-            TrailerVideoYoutubeId = TrailerVideoYoutubeId
+            TrailerVideoYoutubeId = TrailerVideoYoutubeId,
+            HighQuality = HighQuality
         };
     }
 }

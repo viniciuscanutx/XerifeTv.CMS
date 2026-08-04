@@ -1,4 +1,4 @@
-﻿using XerifeTv.CMS.Modules.Series;
+using XerifeTv.CMS.Modules.Series;
 using XerifeTv.CMS.Shared.Helpers;
 
 namespace XerifeTv.CMS.Modules.Content.Dtos.Response;
@@ -13,6 +13,7 @@ public class EpisodeContentV2ResponseDto
     public string SubtitleURL { get; private set; } = string.Empty;
     public string VideoResolverURL { get; private set; } = string.Empty;
     public string? AlternativeVideoResolverURL { get; private set; }
+    public bool HighQuality { get; private set; }
 
     public static EpisodeContentV2ResponseDto FromEntity(Episode entity, string encryptKey)
     {
@@ -48,7 +49,8 @@ public class EpisodeContentV2ResponseDto
             DurationSeconds = entity.Video?.Duration ?? 0,
             SubtitleURL = entity.Video?.Subtitle ?? string.Empty,
             VideoResolverURL = $"/MediaDeliveryProfiles{videoResolverPath}",
-            AlternativeVideoResolverURL = altResolverPath
+            AlternativeVideoResolverURL = altResolverPath,
+            HighQuality = entity.HighQuality
         };
     }
 }

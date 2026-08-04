@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using XerifeTv.CMS.Modules.Abstractions.Interfaces;
 using XerifeTv.CMS.Modules.Common;
@@ -281,5 +281,20 @@ public class SeriesController(
 			return Ok(response.Data);
 
 		return BadRequest(response.Error.Description ?? string.Empty);
+	}
+
+	[Authorize(Roles = "admin, common")]
+	[HttpPost]
+	public async Task<IActionResult> BatchAddEpisodeLinks(BatchEpisodeLinksRequestDto dto)
+	{
+		var response = await _service.BatchAddEpisodeLinksAsync(dto);
+
+		TempData["Notification"] = response.IsFailure
+		  ? MessageViewHelper.ErrorJson(response.Error.Description ?? string.Empty)
+		  : MessageViewHelper.SuccessJson($"{response.Data} episódios atualizados/cadastrados com sucesso");
+
+		_logger.LogInformation($"{User.Identity?.Name} batch added links for season {dto.Season} of serie {dto.SerieId}");
+
+		return RedirectToAction("Episodes", new { id = dto.SerieId, seasonFilter = dto.Season });
 	}
 }

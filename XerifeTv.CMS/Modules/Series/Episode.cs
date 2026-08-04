@@ -1,4 +1,5 @@
-﻿using SharpCompress.Common;
+using MongoDB.Bson.Serialization.Attributes;
+using SharpCompress.Common;
 using XerifeTv.CMS.Modules.Abstractions.Entities;
 using XerifeTv.CMS.Modules.Abstractions.ValueObjects;
 using XerifeTv.CMS.Shared.Helpers;
@@ -15,6 +16,8 @@ public class Episode : BaseEntity
     public string? AlternativeVideoUrl { get; set; }
     public string? MediaDeliveryProfileId { get; set; }
     public string? MediaRoute { get; set; }
+    [BsonElement("high_quality")]
+    public bool HighQuality { get; set; } = false;
     public bool Disabled { get; set; } = false;
     public string? UrlResolverPath { get; private set; }
     public string? AlternativeUrlResolverPath { get; private set; }
