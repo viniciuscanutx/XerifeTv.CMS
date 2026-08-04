@@ -1,4 +1,4 @@
-﻿namespace XerifeTv.CMS.Modules.Series.Dtos.Response;
+namespace XerifeTv.CMS.Modules.Series.Dtos.Response;
 
 public class GetSeriesResponseDto
 {
@@ -16,6 +16,7 @@ public class GetSeriesResponseDto
     public DateTime RegistrationDate { get; private set; }
     public int NumberSeasons { get; private set; }
     public bool Disabled { get; private set; } = false;
+    public bool HighQuality { get; private set; } = false;
 
     public static GetSeriesResponseDto FromEntity(SeriesEntity entity)
     {
@@ -34,7 +35,8 @@ public class GetSeriesResponseDto
             Review = entity.Review,
             RegistrationDate = entity.CreateAt,
             NumberSeasons = entity.NumberSeasons,
-            Disabled = entity.Disabled
+            Disabled = entity.Disabled,
+            HighQuality = entity.Episodes?.Any(e => e.HighQuality) ?? false
         };
     }
 }

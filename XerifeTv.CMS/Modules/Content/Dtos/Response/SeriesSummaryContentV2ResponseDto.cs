@@ -1,4 +1,4 @@
-﻿using XerifeTv.CMS.Modules.Series;
+using XerifeTv.CMS.Modules.Series;
 
 namespace XerifeTv.CMS.Modules.Content.Dtos.Response;
 
@@ -15,6 +15,7 @@ public class SeriesSummaryContentV2ResponseDto
     public string Synopsis { get; private set; } = string.Empty;
     public int TotalSeasons { get; private set; }
     public bool HasSubtitles { get; private set; }
+    public bool HighQuality { get; private set; }
 
     public static SeriesSummaryContentV2ResponseDto FromEntity(SeriesEntity entity)
     {
@@ -30,7 +31,8 @@ public class SeriesSummaryContentV2ResponseDto
             RatingImdb = entity.Review,
             Synopsis = entity.Synopsis,
             TotalSeasons = entity.NumberSeasons,
-            HasSubtitles = false
+            HasSubtitles = false,
+            HighQuality = entity.Episodes?.Any(e => e.HighQuality) ?? false
         };
     }
 }

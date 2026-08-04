@@ -1,4 +1,4 @@
-﻿@using XerifeTv.CMS.Modules.Series.Dtos.Response
+@using XerifeTv.CMS.Modules.Series.Dtos.Response
 @using XerifeTv.CMS.Modules.Series.Enums
 
 @model IEnumerable<GetSeriesResponseDto>;
@@ -82,6 +82,14 @@
                          alt="@serie.Title"
                          loading="lazy"
                          style="height: 14rem;">
+
+                    @if (serie.HighQuality)
+                    {
+                        <span class="position-absolute rounded-1 fw-bolder px-2 py-1 bg-warning text-dark border border-dark"
+                              style="top: 6px; right: 6px; font-size: 11px; z-index: 2;">
+                            4K
+                        </span>
+                    }
 
                     @if (@serie.Disabled)
                     {

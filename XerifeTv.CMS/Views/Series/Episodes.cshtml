@@ -93,6 +93,14 @@
                                  alt="@episode.Title"
                                  style="max-height: 188px;">
 
+                            @if (episode.HighQuality)
+                            {
+                                <span class="position-absolute rounded-1 fw-bolder px-2 py-1 bg-warning text-dark border border-dark"
+                                      style="top: 6px; right: 6px; font-size: 11px; z-index: 2;">
+                                    4K
+                                </span>
+                            }
+
                             @if (@episode.Disabled)
                             {
                                 <span class="position-absolute text-danger"
