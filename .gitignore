@@ -82,3 +82,7 @@ env.js
 /XerifeTVWeb
 
 XerifeTVWeb/
+
+.vscode/
+
+/.vscode
