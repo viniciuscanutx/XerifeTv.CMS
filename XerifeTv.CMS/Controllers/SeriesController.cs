@@ -150,6 +150,9 @@ public class SeriesController(
 		if (response.IsSuccess)
 		{
 			ViewBag.NumberSeasons = response.Data?.NumberSeasons;
+			ViewBag.MaxEpisodeNumber = response.Data?.Episodes?.Any() == true
+				? response.Data.Episodes.Max(e => e.Number)
+				: 1;
 			_logger.LogInformation($"{User.Identity?.Name} accessed the series episodes with id = {id}");
 
             IEnumerable<GetMediaDeliveryProfileResponseDto> mediaDeliveryProfiles = [];

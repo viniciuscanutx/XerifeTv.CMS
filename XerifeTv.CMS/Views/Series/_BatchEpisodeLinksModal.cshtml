@@ -24,7 +24,7 @@
 
             <div class="modal-body">
                 <div class="row mb-3">
-                    <div class="col-6">
+                    <div class="col-4">
                         <label for="batch_season" class="form-label">Temporada</label>
                         <select class="form-select"
                                 id="batch_season"
@@ -44,7 +44,20 @@
                         </select>
                     </div>
 
-                    <div class="col-6">
+                    <div class="col-4">
+                        <label for="batch_startEpisodeNumber" class="form-label">Episódio Inicial</label>
+                        <input type="number"
+                               id="batch_startEpisodeNumber"
+                               name="startEpisodeNumber"
+                               class="form-control"
+                               value="1"
+                               min="1"
+                               max="@(ViewBag.MaxEpisodeNumber ?? 1)"
+                               required />
+                        <small class="text-muted" style="font-size: 11px;">Máx: @(ViewBag.MaxEpisodeNumber ?? 1)</small>
+                    </div>
+
+                    <div class="col-4">
                         <label for="batch_videoStreamFormat" class="form-label">Formato da Mídia</label>
                         <select id="batch_videoStreamFormat"
                                 name="videoStreamFormat"
@@ -59,7 +72,19 @@
                 </div>
 
                 <div class="row mb-3">
-                    <div class="col-12">
+                    <div class="col-12 d-flex flex-column gap-2">
+                        <div class="form-check">
+                            <input name="onlyExistingEpisodes"
+                                   id="batch_onlyExistingEpisodes"
+                                   class="form-check-input"
+                                   type="checkbox"
+                                   value="true"
+                                   checked>
+                            <label for="batch_onlyExistingEpisodes" class="form-check-label">
+                                Limitar atualização aos episódios existentes (ignorar links excedentes)
+                            </label>
+                        </div>
+
                         <div class="form-check">
                             <input name="highQuality"
                                    id="batch_highQuality"
@@ -82,9 +107,34 @@
                                   rows="6"
                                   placeholder="https://servidor.com/video-ep1.m3u8&#10;https://servidor.com/video-ep2.m3u8&#10;https://servidor.com/video-ep3.m3u8"
                                   required></textarea>
-                        <small class="text-muted">A linha 1 corresponderá ao Episódio 1, linha 2 ao Episódio 2, e assim por diante.</small>
+                        <small id="batch_ep_info" class="text-muted">A linha 1 corresponderá ao Episódio 1, linha 2 ao Episódio 2, e assim por diante.</small>
                     </div>
                 </div>
+
+                <script>
+                    document.addEventListener("DOMContentLoaded", function () {
+                        const startEpInput = document.getElementById("batch_startEpisodeNumber");
+                        const infoSmall = document.getElementById("batch_ep_info");
+                        if (startEpInput && infoSmall) {
+                            const maxEp = parseInt(startEpInput.getAttribute("max")) || 1;
+                            const updateInfo = function () {
+                                let val = parseInt(startEpInput.value) || 1;
+                                const onlyExistingChecked = document.getElementById("batch_onlyExistingEpisodes")?.checked;
+                                if (onlyExistingChecked && val > maxEp) {
+                                    val = maxEp;
+                                    startEpInput.value = maxEp;
+                                }
+                                if (val < 1) {
+                                    val = 1;
+                                    startEpInput.value = 1;
+                                }
+                                infoSmall.textContent = `A linha 1 corresponderá ao Episódio ${val}, linha 2 ao Episódio ${val + 1}, e assim por diante.`;
+                            };
+                            startEpInput.addEventListener("input", updateInfo);
+                            startEpInput.addEventListener("change", updateInfo);
+                        }
+                    });
+                </script>
 
                 <div class="row mb-3">
                     <div class="col-12">

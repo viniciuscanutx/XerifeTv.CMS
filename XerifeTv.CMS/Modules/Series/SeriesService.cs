@@ -305,10 +305,17 @@ public class SeriesService(
                 : [];
 
             int updatedCount = 0;
+            int maxEpisodeNumber = existingEpisodes.Any() ? existingEpisodes.Max(e => e.Number) : 1;
+            int startNumber = dto.StartEpisodeNumber > 0 ? dto.StartEpisodeNumber : 1;
+
+            if (dto.OnlyExistingEpisodes && startNumber > maxEpisodeNumber)
+            {
+                startNumber = maxEpisodeNumber;
+            }
 
             for (int i = 0; i < videoUrls.Length; i++)
             {
-                int episodeNumber = i + 1;
+                int episodeNumber = startNumber + i;
                 string url = videoUrls[i];
                 string? altUrl = i < altVideoUrls.Length ? altVideoUrls[i] : null;
 
@@ -338,7 +345,7 @@ public class SeriesService(
                     var updateResult = await UpdateEpisodeAsync(updateDto);
                     if (updateResult.IsSuccess) updatedCount++;
                 }
-                else
+                else if (!dto.OnlyExistingEpisodes)
                 {
                     var createDto = new CreateEpisodeRequestDto
                     {
