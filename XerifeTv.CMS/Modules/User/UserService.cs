@@ -1,4 +1,4 @@
-﻿using XerifeTv.CMS.Modules.Common;
+using XerifeTv.CMS.Modules.Common;
 using XerifeTv.CMS.Modules.User.Dtos.Request;
 using XerifeTv.CMS.Modules.User.Dtos.Response;
 using XerifeTv.CMS.Modules.User.Interfaces;
@@ -126,6 +126,9 @@ public sealed class UserService(
 			user.UserName = dto.UserName ?? user.UserName;
 			user.Role = dto.Role ?? user.Role;
 			user.Blocked = dto.Blocked ?? user.Blocked;
+			user.EnableMoviesSpreadsheetImport = dto.EnableMoviesSpreadsheetImport ?? user.EnableMoviesSpreadsheetImport;
+			user.EnableSeriesSpreadsheetImport = dto.EnableSeriesSpreadsheetImport ?? user.EnableSeriesSpreadsheetImport;
+			user.EnableChannelsSpreadsheetImport = dto.EnableChannelsSpreadsheetImport ?? user.EnableChannelsSpreadsheetImport;
 
 			await _repository.UpdateAsync(user);
 

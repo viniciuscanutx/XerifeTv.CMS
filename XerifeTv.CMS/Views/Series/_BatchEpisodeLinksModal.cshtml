@@ -24,7 +24,59 @@
 
             <div class="modal-body">
                 <div class="row mb-3">
-                    <div class="col-4">
+                    <div class="col-12">
+                        <label class="form-label fw-bold">Modo de Operação</label>
+                        <div class="btn-group w-100" role="group" aria-label="Modo de Operação">
+                            <input type="radio" class="btn-check" name="mode" id="batch_mode_add" value="add" checked autocomplete="off">
+                            <label class="btn btn-outline-success fw-semibold" for="batch_mode_add">
+                                <i class="fa-solid fa-plus me-1"></i> Adicionar / Atualizar Links
+                            </label>
+
+                            <input type="radio" class="btn-check" name="mode" id="batch_mode_remove" value="remove" autocomplete="off">
+                            <label class="btn btn-outline-danger fw-semibold" for="batch_mode_remove">
+                                <i class="fa-solid fa-trash-can me-1"></i> Limpar Links
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="removeOptionsContainer" class="card p-3 mb-3 border-danger bg-danger-subtle d-none">
+                    <h6 class="fw-bold text-danger mb-2">
+                        <i class="fa-solid fa-eraser me-1"></i> Selecione o que deseja limpar:
+                    </h6>
+                    <div class="d-flex flex-column gap-2 mb-2">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" id="removeTargetDublado" name="removeTarget" value="dublado">
+                            <label class="form-check-label fw-semibold text-danger-emphasis" for="removeTargetDublado">
+                                Limpar apenas links dublados (Link Primário)
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" id="removeTargetLegendado" name="removeTarget" value="legendado">
+                            <label class="form-check-label fw-semibold text-danger-emphasis" for="removeTargetLegendado">
+                                Limpar apenas links legendados (Segundo Link)
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" id="removeTargetBoth" name="removeTarget" value="both" checked>
+                            <label class="form-check-label fw-semibold text-danger-emphasis" for="removeTargetBoth">
+                                Limpar ambos (dublado e legendado)
+                            </label>
+                        </div>
+                    </div>
+                    <div class="row g-2 mt-2 pt-2 border-top border-danger-subtle align-items-start">
+                        <div class="col-6" id="remove_start_ep_slot">
+                            <!-- Episódio Inicial will be moved here in remove mode -->
+                        </div>
+                        <div class="col-6">
+                            <label for="removeEpisodesCount" class="form-label mb-1 fw-bold text-danger-emphasis" style="font-size: 13px;">Quantidade de Episódios a Limpar:</label>
+                            <input type="number" id="removeEpisodesCount" name="removeEpisodesCount" class="form-control form-control-sm" value="1" min="1">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-3" id="batch_main_row">
+                    <div class="col-4" id="batch_season_col">
                         <label for="batch_season" class="form-label">Temporada</label>
                         <select class="form-select"
                                 id="batch_season"
@@ -44,8 +96,8 @@
                         </select>
                     </div>
 
-                    <div class="col-4">
-                        <label for="batch_startEpisodeNumber" class="form-label">Episódio Inicial</label>
+                    <div class="col-4" id="batch_startEpisode_col">
+                        <label for="batch_startEpisodeNumber" class="form-label" id="batch_startEpisode_label">Episódio Inicial</label>
                         <input type="number"
                                id="batch_startEpisodeNumber"
                                name="startEpisodeNumber"
@@ -54,10 +106,10 @@
                                min="1"
                                max="@(ViewBag.MaxEpisodeNumber ?? 1)"
                                required />
-                        <small class="text-muted" style="font-size: 11px;">Máx: @(ViewBag.MaxEpisodeNumber ?? 1)</small>
+                        <small class="text-muted" style="font-size: 11px;" id="batch_startEpisode_small">Máx: @(ViewBag.MaxEpisodeNumber ?? 1)</small>
                     </div>
 
-                    <div class="col-4">
+                    <div class="col-4" id="batch_format_container">
                         <label for="batch_videoStreamFormat" class="form-label">Formato da Mídia</label>
                         <select id="batch_videoStreamFormat"
                                 name="videoStreamFormat"
@@ -71,7 +123,7 @@
                     </div>
                 </div>
 
-                <div class="row mb-3">
+                <div class="row mb-3" id="batch_checkboxes_container">
                     <div class="col-12 d-flex flex-column gap-2">
                         <div class="form-check">
                             <input name="onlyExistingEpisodes"
@@ -98,15 +150,14 @@
                     </div>
                 </div>
 
-                <div class="row mb-3">
+                <div class="row mb-3" id="batch_primary_links_container">
                     <div class="col-12">
-                        <label for="videoUrlsText" class="form-label fw-bold">Links Primários (Um link por linha)</label>
+                        <label for="videoUrlsText" class="form-label fw-bold">Links Primários (Opcional - Um link por linha)</label>
                         <textarea id="videoUrlsText"
                                   name="videoUrlsText"
                                   class="form-control"
                                   rows="6"
-                                  placeholder="https://servidor.com/video-ep1.m3u8&#10;https://servidor.com/video-ep2.m3u8&#10;https://servidor.com/video-ep3.m3u8"
-                                  required></textarea>
+                                  placeholder="https://servidor.com/video-ep1.m3u8&#10;https://servidor.com/video-ep2.m3u8&#10;https://servidor.com/video-ep3.m3u8"></textarea>
                         <small id="batch_ep_info" class="text-muted">A linha 1 corresponderá ao Episódio 1, linha 2 ao Episódio 2, e assim por diante.</small>
                     </div>
                 </div>
@@ -136,7 +187,7 @@
                     });
                 </script>
 
-                <div class="row mb-3">
+                <div class="row mb-3" id="batch_secondary_links_container">
                     <div class="col-12">
                         <label for="alternativeVideoUrlsText" class="form-label fw-bold">Segundo Link / Legendado (Opcional - Um link por linha)</label>
                         <textarea id="alternativeVideoUrlsText"
@@ -156,7 +207,7 @@
 
                 <div>
                     <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-success">
+                    <button type="submit" id="batch_submit_btn" class="btn btn-success">
                         <i class="fa-solid fa-cloud-arrow-up me-1"></i> Processar Links em Lote
                     </button>
                 </div>
@@ -164,3 +215,107 @@
         </form>
     </div>
 </div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const modeAddRadio = document.getElementById("batch_mode_add");
+        const modeRemoveRadio = document.getElementById("batch_mode_remove");
+        const removeContainer = document.getElementById("removeOptionsContainer");
+        const submitBtn = document.getElementById("batch_submit_btn");
+        const modalTitle = document.getElementById("batchEpisodeLinksModalLabel");
+
+        const formatContainer = document.getElementById("batch_format_container");
+        const formatSelect = document.getElementById("batch_videoStreamFormat");
+        const checkboxesContainer = document.getElementById("batch_checkboxes_container");
+        const primaryLinksContainer = document.getElementById("batch_primary_links_container");
+        const secondaryLinksContainer = document.getElementById("batch_secondary_links_container");
+        const seasonCol = document.getElementById("batch_season_col");
+        const startEpCol = document.getElementById("batch_startEpisode_col");
+        const startEpLabel = document.getElementById("batch_startEpisode_label");
+        const startEpInput = document.getElementById("batch_startEpisodeNumber");
+        const removeStartEpSlot = document.getElementById("remove_start_ep_slot");
+        const mainRow = document.getElementById("batch_main_row");
+
+        function updateModeUI() {
+            if (modeRemoveRadio && modeRemoveRadio.checked) {
+                if (removeContainer) removeContainer.classList.remove("d-none");
+                if (formatContainer) formatContainer.classList.add("d-none");
+                if (checkboxesContainer) checkboxesContainer.classList.add("d-none");
+                if (primaryLinksContainer) primaryLinksContainer.classList.add("d-none");
+                if (secondaryLinksContainer) secondaryLinksContainer.classList.add("d-none");
+
+                if (formatSelect) {
+                    formatSelect.removeAttribute("required");
+                    formatSelect.disabled = true;
+                }
+
+                // Move Episódio Inicial into removeOptionsContainer slot
+                if (startEpCol && removeStartEpSlot) {
+                    startEpCol.className = "col-12";
+                    removeStartEpSlot.appendChild(startEpCol);
+                }
+                if (startEpLabel) {
+                    startEpLabel.className = "form-label mb-1 fw-bold text-danger-emphasis";
+                    startEpLabel.style.fontSize = "13px";
+                }
+                if (startEpInput) {
+                    startEpInput.className = "form-control form-control-sm";
+                }
+
+                if (seasonCol) seasonCol.className = "col-12";
+
+                if (submitBtn) {
+                    submitBtn.className = "btn btn-danger";
+                    submitBtn.innerHTML = '<i class="fa-solid fa-trash-can me-1"></i> Limpar Links em Lote';
+                }
+                if (modalTitle) {
+                    modalTitle.textContent = "Limpar Links de Episódios em Lote";
+                }
+            } else {
+                if (removeContainer) removeContainer.classList.add("d-none");
+                if (formatContainer) formatContainer.classList.remove("d-none");
+                if (checkboxesContainer) checkboxesContainer.classList.remove("d-none");
+                if (primaryLinksContainer) primaryLinksContainer.classList.remove("d-none");
+                if (secondaryLinksContainer) secondaryLinksContainer.classList.remove("d-none");
+
+                if (formatSelect) {
+                    formatSelect.setAttribute("required", "required");
+                    formatSelect.disabled = false;
+                }
+
+                // Move Episódio Inicial back into main row
+                if (startEpCol && mainRow && formatContainer) {
+                    startEpCol.className = "col-4";
+                    mainRow.insertBefore(startEpCol, formatContainer);
+                }
+                if (startEpLabel) {
+                    startEpLabel.className = "form-label";
+                    startEpLabel.style.fontSize = "";
+                }
+                if (startEpInput) {
+                    startEpInput.className = "form-control";
+                }
+
+                if (seasonCol) seasonCol.className = "col-4";
+
+                if (submitBtn) {
+                    submitBtn.className = "btn btn-success";
+                    submitBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up me-1"></i> Processar Links em Lote';
+                }
+                if (modalTitle) {
+                    modalTitle.textContent = "Adicionar / Atualizar Vários Links de Episódios";
+                }
+            }
+        }
+
+        if (modeAddRadio) modeAddRadio.addEventListener("change", updateModeUI);
+        if (modeRemoveRadio) modeRemoveRadio.addEventListener("change", updateModeUI);
+
+        updateModeUI();
+
+        const modalEl = document.getElementById("batchEpisodeLinksModal");
+        if (modalEl) {
+            modalEl.addEventListener("show.bs.modal", updateModeUI);
+        }
+    });
+</script>

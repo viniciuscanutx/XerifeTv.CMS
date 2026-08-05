@@ -11,6 +11,9 @@ public class GetUserResponseDto
     public string RoleName => GetRoleName(Role);
     public bool Blocked { get; private set; } = false;
     public int FailedLoginAttempts { get; private set; }
+    public bool EnableMoviesSpreadsheetImport { get; private set; } = true;
+    public bool EnableSeriesSpreadsheetImport { get; private set; } = true;
+    public bool EnableChannelsSpreadsheetImport { get; private set; } = true;
 
     public static GetUserResponseDto FromEntity(UserEntity entity)
     {
@@ -21,7 +24,10 @@ public class GetUserResponseDto
             Email = entity.Email,
             Role = entity.Role,
 			Blocked = entity.Blocked,
-            FailedLoginAttempts = entity.FailedLoginAttempts 
+            FailedLoginAttempts = entity.FailedLoginAttempts,
+            EnableMoviesSpreadsheetImport = entity.EnableMoviesSpreadsheetImport,
+            EnableSeriesSpreadsheetImport = entity.EnableSeriesSpreadsheetImport,
+            EnableChannelsSpreadsheetImport = entity.EnableChannelsSpreadsheetImport
 		};
     }
 

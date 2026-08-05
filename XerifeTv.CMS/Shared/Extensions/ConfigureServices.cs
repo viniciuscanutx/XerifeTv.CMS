@@ -62,6 +62,7 @@ public static class ConfigureServices
 
 	private static IServiceCollection AddServices(this IServiceCollection services)
 	{
+		services.AddHttpContextAccessor();
 		services.AddScoped<IMovieService, MovieService>();
 		services.AddScoped<ISeriesService, SeriesService>();
 		services.AddScoped<IChannelService, ChannelService>();

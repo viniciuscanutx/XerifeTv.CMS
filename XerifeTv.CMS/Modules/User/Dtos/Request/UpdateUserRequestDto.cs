@@ -1,4 +1,4 @@
-﻿using XerifeTv.CMS.Modules.User.Enums;
+using XerifeTv.CMS.Modules.User.Enums;
 
 namespace XerifeTv.CMS.Modules.User.Dtos.Request;
 
@@ -9,6 +9,9 @@ public class UpdateUserRequestDto
     public string Email { get; init; } = string.Empty;
     public EUserRole? Role { get; init; }
     public bool? Blocked { get; set; } = false;
+    public bool? EnableMoviesSpreadsheetImport { get; set; }
+    public bool? EnableSeriesSpreadsheetImport { get; set; }
+    public bool? EnableChannelsSpreadsheetImport { get; set; }
 
     public UserEntity ToEntity()
     {
@@ -18,7 +21,10 @@ public class UpdateUserRequestDto
             UserName = UserName,
             Email = Email,
             Role = Role ?? EUserRole.VISITOR,
-            Blocked = Blocked ?? false
+            Blocked = Blocked ?? false,
+            EnableMoviesSpreadsheetImport = EnableMoviesSpreadsheetImport ?? true,
+            EnableSeriesSpreadsheetImport = EnableSeriesSpreadsheetImport ?? true,
+            EnableChannelsSpreadsheetImport = EnableChannelsSpreadsheetImport ?? true
         };
     }
 }

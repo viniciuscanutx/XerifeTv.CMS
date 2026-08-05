@@ -1,4 +1,4 @@
-﻿using XerifeTv.CMS.Modules.Abstractions.Entities;
+using XerifeTv.CMS.Modules.Abstractions.Entities;
 using XerifeTv.CMS.Modules.User.Enums;
 using XerifeTv.CMS.Shared.Helpers;
 
@@ -27,4 +27,7 @@ public class UserEntity : BaseEntity
     public DateTimeOffset? ResetPasswordGuidExpires { get; set; }
     public bool Blocked { get; set; } = false;
     public int FailedLoginAttempts { get; set; }
+    public bool EnableMoviesSpreadsheetImport { get; set; } = true;
+    public bool EnableSeriesSpreadsheetImport { get; set; } = true;
+    public bool EnableChannelsSpreadsheetImport { get; set; } = true;
 }

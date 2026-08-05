@@ -36,9 +36,9 @@ public class SettingsController(
         var mediaDeliveryProfilesResponse = await _mediaDeliveryProfileService.GetAllAsync(isIncludeDisabled: true);
         if (mediaDeliveryProfilesResponse.IsFailure) return RedirectToAction("Index", "Home");
 
-        ViewBag.EnableMoviesSpreadsheetImport = _systemSettingsService.IsMoviesSpreadsheetImportEnabled();
-        ViewBag.EnableSeriesSpreadsheetImport = _systemSettingsService.IsSeriesSpreadsheetImportEnabled();
-        ViewBag.EnableChannelsSpreadsheetImport = _systemSettingsService.IsChannelsSpreadsheetImportEnabled();
+        ViewBag.EnableMoviesSpreadsheetImport = userResponse.Data?.EnableMoviesSpreadsheetImport ?? _systemSettingsService.IsMoviesSpreadsheetImportEnabled();
+        ViewBag.EnableSeriesSpreadsheetImport = userResponse.Data?.EnableSeriesSpreadsheetImport ?? _systemSettingsService.IsSeriesSpreadsheetImportEnabled();
+        ViewBag.EnableChannelsSpreadsheetImport = userResponse.Data?.EnableChannelsSpreadsheetImport ?? _systemSettingsService.IsChannelsSpreadsheetImportEnabled();
 
         SettingsModelView model = new(userResponse.Data!, webhooksResponse.Data?.Items ?? [], mediaDeliveryProfilesResponse.Data ?? []);
 
@@ -47,7 +47,7 @@ public class SettingsController(
 
     [HttpPost]
     [Authorize(Roles = "admin")]
-    public IActionResult UpdateImportSettings(
+    public async Task<IActionResult> UpdateImportSettings(
         bool enableMoviesSpreadsheetImport = false,
         bool enableSeriesSpreadsheetImport = false,
         bool enableChannelsSpreadsheetImport = false)
@@ -56,6 +56,23 @@ public class SettingsController(
             enableMoviesSpreadsheetImport,
             enableSeriesSpreadsheetImport,
             enableChannelsSpreadsheetImport);
+
+        var userResponse = await _userService.GetByUsernameAsync(User.Identity?.Name ?? string.Empty);
+        if (userResponse.IsSuccess && userResponse.Data != null)
+        {
+            var updateUserDto = new UpdateUserRequestDto
+            {
+                Id = userResponse.Data.Id,
+                Email = userResponse.Data.Email,
+                UserName = userResponse.Data.UserName,
+                Role = userResponse.Data.Role,
+                Blocked = userResponse.Data.Blocked,
+                EnableMoviesSpreadsheetImport = enableMoviesSpreadsheetImport,
+                EnableSeriesSpreadsheetImport = enableSeriesSpreadsheetImport,
+                EnableChannelsSpreadsheetImport = enableChannelsSpreadsheetImport
+            };
+            await _userService.UpdateAsync(updateUserDto);
+        }
 
         TempData["Notification"] = MessageViewHelper.SuccessJson("Configurações de importação atualizadas com sucesso!");
 

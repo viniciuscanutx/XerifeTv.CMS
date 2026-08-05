@@ -1,22 +1,53 @@
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 using XerifeTv.CMS.Modules.Abstractions.Interfaces;
+using XerifeTv.CMS.Modules.User.Interfaces;
 
 namespace XerifeTv.CMS.Modules.Abstractions.Services;
 
 public class SystemSettingsService : ISystemSettingsService
 {
-    private static readonly string SettingsFilePath = Path.Combine(AppContext.BaseDirectory, "system_settings.json");
+    private static readonly string SettingsFileName = "system_settings.json";
+    private static string SettingsFilePath =>
+        File.Exists(Path.Combine(Directory.GetCurrentDirectory(), SettingsFileName))
+            ? Path.Combine(Directory.GetCurrentDirectory(), SettingsFileName)
+            : Path.Combine(AppContext.BaseDirectory, SettingsFileName);
+
     private static bool _enableMoviesSpreadsheetImport = true;
     private static bool _enableSeriesSpreadsheetImport = true;
     private static bool _enableChannelsSpreadsheetImport = true;
     private static readonly object _lock = new();
 
-    static SystemSettingsService()
+    private readonly IHttpContextAccessor? _httpContextAccessor;
+    private readonly IServiceProvider? _serviceProvider;
+
+    public SystemSettingsService(IHttpContextAccessor httpContextAccessor, IServiceProvider serviceProvider)
+    {
+        _httpContextAccessor = httpContextAccessor;
+        _serviceProvider = serviceProvider;
+
+        lock (_lock)
+        {
+            LoadSettingsFromDisk();
+        }
+    }
+
+    public SystemSettingsService()
+    {
+        lock (_lock)
+        {
+            LoadSettingsFromDisk();
+        }
+    }
+
+    private static void LoadSettingsFromDisk()
     {
         try
         {
-            if (File.Exists(SettingsFilePath))
+            var filePath = SettingsFilePath;
+            if (File.Exists(filePath))
             {
-                var json = File.ReadAllText(SettingsFilePath);
+                var json = File.ReadAllText(filePath);
                 using var doc = System.Text.Json.JsonDocument.Parse(json);
                 if (doc.RootElement.TryGetProperty("EnableMoviesSpreadsheetImport", out var p1))
                     _enableMoviesSpreadsheetImport = p1.GetBoolean();
@@ -27,13 +58,68 @@ public class SystemSettingsService : ISystemSettingsService
                 if (doc.RootElement.TryGetProperty("EnableChannelsSpreadsheetImport", out var p3))
                     _enableChannelsSpreadsheetImport = p3.GetBoolean();
             }
+            else
+            {
+                SaveSettingsToDisk(_enableMoviesSpreadsheetImport, _enableSeriesSpreadsheetImport, _enableChannelsSpreadsheetImport);
+            }
         }
         catch { }
     }
 
-    public bool IsMoviesSpreadsheetImportEnabled() => _enableMoviesSpreadsheetImport;
-    public bool IsSeriesSpreadsheetImportEnabled() => _enableSeriesSpreadsheetImport;
-    public bool IsChannelsSpreadsheetImportEnabled() => _enableChannelsSpreadsheetImport;
+    private static void SaveSettingsToDisk(bool movies, bool series, bool channels)
+    {
+        try
+        {
+            var dto = new
+            {
+                EnableMoviesSpreadsheetImport = movies,
+                EnableSeriesSpreadsheetImport = series,
+                EnableChannelsSpreadsheetImport = channels
+            };
+            var json = System.Text.Json.JsonSerializer.Serialize(dto, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+            var targetPath = Path.Combine(Directory.GetCurrentDirectory(), SettingsFileName);
+            File.WriteAllText(targetPath, json);
+        }
+        catch { }
+    }
+
+    private User.UserEntity? GetCurrentLoggedInUser()
+    {
+        try
+        {
+            var username = _httpContextAccessor?.HttpContext?.User?.Identity?.Name;
+            if (string.IsNullOrWhiteSpace(username) || _serviceProvider == null)
+                return null;
+
+            using var scope = _serviceProvider.CreateScope();
+            var repo = scope.ServiceProvider.GetService<IUserRepository>();
+            if (repo == null) return null;
+
+            return repo.GetByUsernameAsync(username).GetAwaiter().GetResult();
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    public bool IsMoviesSpreadsheetImportEnabled()
+    {
+        var user = GetCurrentLoggedInUser();
+        return user != null ? user.EnableMoviesSpreadsheetImport : _enableMoviesSpreadsheetImport;
+    }
+
+    public bool IsSeriesSpreadsheetImportEnabled()
+    {
+        var user = GetCurrentLoggedInUser();
+        return user != null ? user.EnableSeriesSpreadsheetImport : _enableSeriesSpreadsheetImport;
+    }
+
+    public bool IsChannelsSpreadsheetImportEnabled()
+    {
+        var user = GetCurrentLoggedInUser();
+        return user != null ? user.EnableChannelsSpreadsheetImport : _enableChannelsSpreadsheetImport;
+    }
 
     public void SetSpreadsheetImportSettings(bool movies, bool series, bool channels)
     {
@@ -42,18 +128,7 @@ public class SystemSettingsService : ISystemSettingsService
             _enableMoviesSpreadsheetImport = movies;
             _enableSeriesSpreadsheetImport = series;
             _enableChannelsSpreadsheetImport = channels;
-            try
-            {
-                var dto = new
-                {
-                    EnableMoviesSpreadsheetImport = movies,
-                    EnableSeriesSpreadsheetImport = series,
-                    EnableChannelsSpreadsheetImport = channels
-                };
-                var json = System.Text.Json.JsonSerializer.Serialize(dto);
-                File.WriteAllText(SettingsFilePath, json);
-            }
-            catch { }
+            SaveSettingsToDisk(movies, series, channels);
         }
     }
 }

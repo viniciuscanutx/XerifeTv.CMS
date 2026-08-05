@@ -11,4 +11,7 @@ public class BatchEpisodeLinksRequestDto
     public bool IsBackgroundJob { get; set; } = false;
     public string VideoUrlsText { get; set; } = string.Empty;
     public string? AlternativeVideoUrlsText { get; set; }
+    public string Mode { get; set; } = "add";
+    public string RemoveTarget { get; set; } = "both";
+    public int RemoveEpisodesCount { get; set; } = 0;
 }

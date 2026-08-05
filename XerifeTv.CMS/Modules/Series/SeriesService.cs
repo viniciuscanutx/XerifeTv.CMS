@@ -296,30 +296,84 @@ public class SeriesService(
             var altVideoUrls = (dto.AlternativeVideoUrlsText ?? string.Empty)
                 .Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
 
-            if (videoUrls.Length == 0)
+            var isRemoveMode = dto.Mode != null && dto.Mode.Equals("remove", StringComparison.OrdinalIgnoreCase);
+
+            if (isRemoveMode)
+            {
+                var existingEpisodesResult = await GetEpisodesBySeasonAsync(dto.SerieId, dto.Season, includeDisabled: true);
+                var existingEpisodes = existingEpisodesResult.IsSuccess && existingEpisodesResult.Data?.Episodes != null
+                    ? existingEpisodesResult.Data.Episodes.ToList()
+                    : [];
+
+                int startNumber = dto.StartEpisodeNumber > 0 ? dto.StartEpisodeNumber : 1;
+                int lineCount = Math.Max(videoUrls.Length, altVideoUrls.Length);
+                int episodesToClear = lineCount > 0 ? lineCount : (dto.RemoveEpisodesCount > 0 ? dto.RemoveEpisodesCount : 1);
+
+                bool removeDublado = string.IsNullOrWhiteSpace(dto.RemoveTarget) || dto.RemoveTarget.Equals("dublado", StringComparison.OrdinalIgnoreCase) || dto.RemoveTarget.Equals("both", StringComparison.OrdinalIgnoreCase);
+                bool removeLegendado = string.IsNullOrWhiteSpace(dto.RemoveTarget) || dto.RemoveTarget.Equals("legendado", StringComparison.OrdinalIgnoreCase) || dto.RemoveTarget.Equals("both", StringComparison.OrdinalIgnoreCase);
+
+                int removedCount = 0;
+
+                for (int i = 0; i < episodesToClear; i++)
+                {
+                    int episodeNumber = startNumber + i;
+                    var existingEpisode = existingEpisodes.FirstOrDefault(e => e.Season == dto.Season && e.Number == episodeNumber);
+
+                    if (existingEpisode != null)
+                    {
+                        var updateDto = new UpdateEpisodeRequestDto
+                        {
+                            Id = existingEpisode.Id,
+                            SerieId = dto.SerieId,
+                            Title = existingEpisode.Title,
+                            BannerUrl = existingEpisode.BannerUrl,
+                            Number = existingEpisode.Number,
+                            Season = existingEpisode.Season,
+                            VideoUrl = removeDublado ? string.Empty : (existingEpisode.Video?.Url ?? string.Empty),
+                            AlternativeVideoUrl = removeLegendado ? null : existingEpisode.AlternativeVideoUrl,
+                            VideoDuration = existingEpisode.Video?.Duration ?? 0,
+                            VideoStreamFormat = dto.VideoStreamFormat,
+                            VideoSubtitle = existingEpisode.Video?.Subtitle,
+                            MediaDeliveryProfileId = existingEpisode.MediaDeliveryProfileId,
+                            MediaRoute = existingEpisode.MediaRoute,
+                            HighQuality = existingEpisode.HighQuality,
+                            Disabled = existingEpisode.Disabled
+                        };
+
+                        var updateResult = await UpdateEpisodeAsync(updateDto);
+                        if (updateResult.IsSuccess) removedCount++;
+                    }
+                }
+
+                return Result<int>.Success(removedCount);
+            }
+
+            int maxCount = Math.Max(videoUrls.Length, altVideoUrls.Length);
+
+            if (maxCount == 0)
                 return Result<int>.Failure(new Error("400", "Nenhum link fornecido"));
 
-            var existingEpisodesResult = await GetEpisodesBySeasonAsync(dto.SerieId, dto.Season, includeDisabled: true);
-            var existingEpisodes = existingEpisodesResult.IsSuccess && existingEpisodesResult.Data?.Episodes != null
-                ? existingEpisodesResult.Data.Episodes.ToList()
+            var existingEpisodesResultAdd = await GetEpisodesBySeasonAsync(dto.SerieId, dto.Season, includeDisabled: true);
+            var existingEpisodesAdd = existingEpisodesResultAdd.IsSuccess && existingEpisodesResultAdd.Data?.Episodes != null
+                ? existingEpisodesResultAdd.Data.Episodes.ToList()
                 : [];
 
             int updatedCount = 0;
-            int maxEpisodeNumber = existingEpisodes.Any() ? existingEpisodes.Max(e => e.Number) : 1;
-            int startNumber = dto.StartEpisodeNumber > 0 ? dto.StartEpisodeNumber : 1;
+            int maxEpisodeNumber = existingEpisodesAdd.Any() ? existingEpisodesAdd.Max(e => e.Number) : 1;
+            int startNumberAdd = dto.StartEpisodeNumber > 0 ? dto.StartEpisodeNumber : 1;
 
-            if (dto.OnlyExistingEpisodes && startNumber > maxEpisodeNumber)
+            if (dto.OnlyExistingEpisodes && startNumberAdd > maxEpisodeNumber)
             {
-                startNumber = maxEpisodeNumber;
+                startNumberAdd = maxEpisodeNumber;
             }
 
-            for (int i = 0; i < videoUrls.Length; i++)
+            for (int i = 0; i < maxCount; i++)
             {
-                int episodeNumber = startNumber + i;
-                string url = videoUrls[i];
+                int episodeNumber = startNumberAdd + i;
+                string url = i < videoUrls.Length ? videoUrls[i] : string.Empty;
                 string? altUrl = i < altVideoUrls.Length ? altVideoUrls[i] : null;
 
-                var existingEpisode = existingEpisodes.FirstOrDefault(e => e.Season == dto.Season && e.Number == episodeNumber);
+                var existingEpisode = existingEpisodesAdd.FirstOrDefault(e => e.Season == dto.Season && e.Number == episodeNumber);
 
                 if (existingEpisode != null)
                 {
@@ -331,7 +385,7 @@ public class SeriesService(
                         BannerUrl = existingEpisode.BannerUrl,
                         Number = existingEpisode.Number,
                         Season = existingEpisode.Season,
-                        VideoUrl = url,
+                        VideoUrl = !string.IsNullOrWhiteSpace(url) ? url : (existingEpisode.Video?.Url ?? string.Empty),
                         AlternativeVideoUrl = !string.IsNullOrWhiteSpace(altUrl) ? altUrl : existingEpisode.AlternativeVideoUrl,
                         VideoDuration = existingEpisode.Video?.Duration ?? 0,
                         VideoStreamFormat = dto.VideoStreamFormat,
