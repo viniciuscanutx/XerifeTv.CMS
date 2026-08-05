@@ -1,4 +1,4 @@
-﻿
+
 <div class="modal fade"
      id="videoModal"
      data-bs-backdrop="static"
@@ -95,23 +95,40 @@
 
             currentDubResolver = button.getAttribute('data-bs-video-resolver')
             currentLegResolver = button.getAttribute('data-bs-video-alternative-resolver')
-            currentLang = 'dub'
+
+            const hasDub = currentDubResolver && currentDubResolver.trim() !== ''
+            const hasLeg = currentLegResolver && currentLegResolver.trim() !== ''
 
             const langSwitcher = document.getElementById('videoLangSwitcher')
             const btnDub = document.getElementById('btnDub')
             const btnLeg = document.getElementById('btnLeg')
 
-            if (currentLegResolver && currentLegResolver.trim() !== '') {
-                langSwitcher.style.display = 'flex'
+            if (btnDub) btnDub.classList.remove('active')
+            if (btnLeg) btnLeg.classList.remove('active')
 
-                btnDub.classList.remove('active')
-                btnLeg.classList.remove('active')
-                btnDub.classList.add('active')
+            if (hasDub && hasLeg) {
+                if (langSwitcher) langSwitcher.style.display = 'flex'
+                if (btnDub) {
+                    btnDub.style.display = 'inline-block'
+                    btnDub.classList.add('active')
+                }
+                if (btnLeg) {
+                    btnLeg.style.display = 'inline-block'
+                }
+                currentLang = 'dub'
             } else {
-                langSwitcher.style.display = 'none'
+                if (langSwitcher) langSwitcher.style.display = 'none'
+                if (hasLeg) {
+                    currentLang = 'leg'
+                } else {
+                    currentLang = 'dub'
+                }
             }
 
-            await resolveAndPlay(currentDubResolver, currentLang)
+            const initialResolver = (currentLang === 'leg' && hasLeg) ? currentLegResolver : currentDubResolver
+            if (initialResolver && initialResolver.trim() !== '') {
+                await resolveAndPlay(initialResolver, currentLang)
+            }
 
             const subtitle = button.getAttribute('data-bs-video-subtitle')
 
@@ -140,20 +157,22 @@
         async function switchLang(lang) {
             if (lang === currentLang) return
 
-            const btnDub = document.getElementById('btnDub')
-            const btnLeg = document.getElementById('btnLeg')
+            const hasDub = currentDubResolver && currentDubResolver.trim() !== ''
+            const hasLeg = currentLegResolver && currentLegResolver.trim() !== ''
 
-            btnDub.classList.remove('active')
-            btnLeg.classList.remove('active')
+            const btnDubEl = document.getElementById('btnDub')
+            const btnLegEl = document.getElementById('btnLeg')
 
-            if (lang === 'dub') {
-                btnDub.classList.add('active')
+            if (lang === 'dub' && hasDub) {
+                btnDubEl?.classList.add('active')
+                btnLegEl?.classList.remove('active')
                 currentLang = 'dub'
-                if (currentDubResolver) await resolveAndPlay(currentDubResolver, lang)
-            } else {
-                btnLeg.classList.add('active')
+                await resolveAndPlay(currentDubResolver, lang)
+            } else if (lang === 'leg' && hasLeg) {
+                btnLegEl?.classList.add('active')
+                btnDubEl?.classList.remove('active')
                 currentLang = 'leg'
-                if (currentLegResolver) await resolveAndPlay(currentLegResolver, lang)
+                await resolveAndPlay(currentLegResolver, lang)
             }
         }
 
