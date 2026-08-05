@@ -233,6 +233,7 @@
         const startEpCol = document.getElementById("batch_startEpisode_col");
         const startEpLabel = document.getElementById("batch_startEpisode_label");
         const startEpInput = document.getElementById("batch_startEpisodeNumber");
+        const startEpSmall = document.getElementById("batch_startEpisode_small");
         const removeStartEpSlot = document.getElementById("remove_start_ep_slot");
         const mainRow = document.getElementById("batch_main_row");
 
@@ -257,9 +258,13 @@
                 if (startEpLabel) {
                     startEpLabel.className = "form-label mb-1 fw-bold text-danger-emphasis";
                     startEpLabel.style.fontSize = "13px";
+                    startEpLabel.textContent = "Episódio Inicial:";
                 }
                 if (startEpInput) {
                     startEpInput.className = "form-control form-control-sm";
+                }
+                if (startEpSmall) {
+                    startEpSmall.classList.add("d-none");
                 }
 
                 if (seasonCol) seasonCol.className = "col-12";
@@ -291,9 +296,13 @@
                 if (startEpLabel) {
                     startEpLabel.className = "form-label";
                     startEpLabel.style.fontSize = "";
+                    startEpLabel.textContent = "Episódio Inicial";
                 }
                 if (startEpInput) {
                     startEpInput.className = "form-control";
+                }
+                if (startEpSmall) {
+                    startEpSmall.classList.remove("d-none");
                 }
 
                 if (seasonCol) seasonCol.className = "col-4";

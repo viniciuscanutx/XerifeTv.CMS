@@ -17,7 +17,7 @@ public class MovieContentV2ResponseDto
     public float RatingImdb { get; private set; }
     public string Duration { get; private set; } = string.Empty;
     public long DurationSeconds { get; private set; }
-    public string VideoResolverURL { get; private set; } = string.Empty;
+    public string? VideoResolverURL { get; private set; }
     public string? AlternativeVideoResolverURL { get; private set; }
     public string? SubtitleURL { get; private set; }
     public string? TrailerVideoYoutubeId { get; private set; }
@@ -25,19 +25,19 @@ public class MovieContentV2ResponseDto
 
     public static MovieContentV2ResponseDto FromEntity(MovieEntity entity, string encryptKey)
     {
-        string videoResolverPath;
+        string? videoResolverPath = null;
 
         if (!string.IsNullOrWhiteSpace(entity.MediaDeliveryProfileId))
         {
             string mdp = CryptographyHelper.Encrypt(entity.MediaDeliveryProfileId, encryptKey);
             string mp = CryptographyHelper.Encrypt(entity.MediaRoute ?? string.Empty, encryptKey);
-            videoResolverPath = $"/ResolveUrlMdp?mdp={Uri.EscapeDataString(mdp)}&mp={Uri.EscapeDataString(mp)}";
+            videoResolverPath = $"/MediaDeliveryProfiles/ResolveUrlMdp?mdp={Uri.EscapeDataString(mdp)}&mp={Uri.EscapeDataString(mp)}";
         }
-        else
+        else if (!string.IsNullOrWhiteSpace(entity.Video?.Url))
         {
-            string uf = CryptographyHelper.Encrypt(entity.Video?.Url ?? string.Empty, encryptKey);
+            string uf = CryptographyHelper.Encrypt(entity.Video.Url, encryptKey);
             string sf = CryptographyHelper.Encrypt(entity.Video?.StreamFormat ?? string.Empty, encryptKey);
-            videoResolverPath = $"/ResolveUrlFx?uf={Uri.EscapeDataString(uf)}&sf={Uri.EscapeDataString(sf)}";
+            videoResolverPath = $"/MediaDeliveryProfiles/ResolveUrlFx?uf={Uri.EscapeDataString(uf)}&sf={Uri.EscapeDataString(sf)}";
         }
 
         string? altResolverPath = null;
@@ -61,7 +61,7 @@ public class MovieContentV2ResponseDto
             RatingImdb = entity.Review,
             Duration = DateTimeHelper.ConvertSecondsToHHmm(entity.Video?.Duration ?? 0),
             DurationSeconds = entity.Video?.Duration ?? 0,
-            VideoResolverURL = $"/MediaDeliveryProfiles{videoResolverPath}",
+            VideoResolverURL = videoResolverPath,
             AlternativeVideoResolverURL = altResolverPath,
             SubtitleURL = entity.Video?.Subtitle,
             TrailerVideoYoutubeId = entity.TrailerVideoYoutubeId,

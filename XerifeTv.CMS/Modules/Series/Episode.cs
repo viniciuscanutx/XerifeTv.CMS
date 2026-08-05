@@ -24,7 +24,7 @@ public class Episode : BaseEntity
 
     public void SetUrlResolverPath(string encryptKey)
     {
-        string videoResolverPath;
+        string? videoResolverPath = null;
 
         if (!string.IsNullOrWhiteSpace(MediaDeliveryProfileId))
         {
@@ -32,14 +32,14 @@ public class Episode : BaseEntity
             string mp = CryptographyHelper.Encrypt(MediaRoute ?? string.Empty, encryptKey);
             videoResolverPath = $"/ResolveUrlMdp?mdp={Uri.EscapeDataString(mdp)}&mp={Uri.EscapeDataString(mp)}";
         }
-        else
+        else if (!string.IsNullOrWhiteSpace(Video?.Url))
         {
-            string uf = CryptographyHelper.Encrypt(Video?.Url ?? string.Empty, encryptKey);
-            string sf = CryptographyHelper.Encrypt(Video?.StreamFormat ?? string.Empty, encryptKey);
+            string uf = CryptographyHelper.Encrypt(Video.Url, encryptKey);
+            string sf = CryptographyHelper.Encrypt(Video.StreamFormat ?? string.Empty, encryptKey);
             videoResolverPath = $"/ResolveUrlFx?uf={Uri.EscapeDataString(uf)}&sf={Uri.EscapeDataString(sf)}";
         }
 
-        UrlResolverPath = $"/MediaDeliveryProfiles{videoResolverPath}";
+        UrlResolverPath = !string.IsNullOrWhiteSpace(videoResolverPath) ? $"/MediaDeliveryProfiles{videoResolverPath}" : null;
 
         if (!string.IsNullOrWhiteSpace(AlternativeVideoUrl))
         {
@@ -47,6 +47,10 @@ public class Episode : BaseEntity
             string asf = CryptographyHelper.Encrypt(Video?.StreamFormat ?? "hls", encryptKey);
             string altResolverPath = $"/ResolveUrlFx?uf={Uri.EscapeDataString(auf)}&sf={Uri.EscapeDataString(asf)}";
             AlternativeUrlResolverPath = $"/MediaDeliveryProfiles{altResolverPath}";
+        }
+        else
+        {
+            AlternativeUrlResolverPath = null;
         }
     }
 }
