@@ -1,100 +1,212 @@
-﻿@using XerifeTv.CMS.Modules.Dashboard.Dtos.Response;
+@using XerifeTv.CMS.Modules.Dashboard.Dtos.Response;
 
 @model GetDashboardDataRequestDto;
 
 @{
   ViewData["Title"] = "Dashboard";
+
+  var maxCategoryCount = Model.TopCategories?.Count > 0 ? Model.TopCategories.Max(c => c.Count) : 1;
+  ICollection<string> categoryAccents = ["accent-pink", "accent-purple", "accent-blue", "accent-amber", "accent-teal"];
 }
 
 <div class="container">
-  <header>
-    <div class="d-flex align-items-center justify-content-between gap-4">
-      <span class="fs-3 fw-normal">Dashboard</span>
-    </div>
-    <hr />
+  <header class="mb-4">
+    <span class="fs-3 fw-normal">Bem-vindo de volta</span>
+    <p class="text-secondary mb-0">Aqui está o resumo do seu catálogo</p>
   </header>
 
-  <div class="row gap-4">
-    <div class="col-lg-3 card-dashboard bg-success text-light py-3">
-      <div class="d-flex justify-content-between align-items-center px-3">
-        <i class="fa-solid fa-clapperboard display-5"></i>
-        <span class="display-5 fw-bold">@Model.NumberOfMovies</span>
-      </div>
-      <div class="w-full px-3 d-flex justify-content-between align-items-center">
-        <span class="fs-4">Qtde. Filmes</span>
+  <div class="row g-4">
+    <div class="col-lg-4">
+      <div class="dashboard-stat-card h-100" style="background: #f1526f;">
+        <span class="dashboard-stat-card__icon" style="color: #f1526f;"><i class="fa-solid fa-clapperboard"></i></span>
+        <span class="dashboard-stat-card__label">Filmes</span>
+        <div class="dashboard-stat-card__value">@Model.NumberOfMovies</div>
+        <div class="d-flex justify-content-between align-items-center position-relative">
+          <span class="small" style="opacity: 0.9;">Total no catálogo</span>
 
-        @if (!User.IsInRole("visitor"))
-        {
-          <a class="text-light fs-5" asp-controller="Movies" asp-action="Form">
-            <i class="fa-solid fa-plus"></i>
-          </a>
-        }
-      </div>
-    </div>
-
-    <div class="col-lg-3 card-dashboard bg-primary text-light py-3">
-      <div class="d-flex justify-content-between align-items-center px-3">
-        <i class="fa-solid fa-photo-film display-5"></i>
-        <span class="display-5 fw-bold">@Model.NumberOfSeries</span>
-      </div>
-      <div class="w-full px-3 d-flex justify-content-between align-items-center">
-        <span class="fs-4">Qtde. Séries</span>
-
-        @if (!User.IsInRole("visitor"))
-        {
-          <a class="text-light fs-5" asp-controller="Series" asp-action="Form">
-            <i class="fa-solid fa-plus"></i>
-          </a>
-        }
+          @if (!User.IsInRole("visitor"))
+          {
+            <a class="dashboard-stat-card__add" asp-controller="Movies" asp-action="Form" title="Cadastrar filme">
+              <i class="fa-solid fa-plus"></i>
+            </a>
+          }
+        </div>
       </div>
     </div>
 
-    <div class="col-lg-3 card-dashboard bg-danger text-light py-3">
-      <div class="d-flex justify-content-between align-items-center px-3">
-        <i class="fa-solid fa-satellite-dish display-5"></i>
-        <span class="display-5 fw-bold">@Model.NumberOfChannels</span>
-      </div>
-      <div class="w-full px-3 d-flex justify-content-between align-items-center">
-        <span class="fs-4">Qtde. Canais</span>
+    <div class="col-lg-4">
+      <div class="dashboard-stat-card h-100" style="background: var(--xtv-accent);">
+        <span class="dashboard-stat-card__icon" style="color: var(--xtv-accent);"><i class="fa-solid fa-photo-film"></i></span>
+        <span class="dashboard-stat-card__label">Séries</span>
+        <div class="dashboard-stat-card__value">@Model.NumberOfSeries</div>
+        <div class="d-flex justify-content-between align-items-center position-relative">
+          <span class="small" style="opacity: 0.9;">Total no catálogo</span>
 
-        @if (!User.IsInRole("visitor"))
-        {
-          <a class="text-light fs-5" asp-controller="Channels" asp-action="Form">
-            <i class="fa-solid fa-plus"></i>
-          </a>
-        }
+          @if (!User.IsInRole("visitor"))
+          {
+            <a class="dashboard-stat-card__add" asp-controller="Series" asp-action="Form" title="Cadastrar série">
+              <i class="fa-solid fa-plus"></i>
+            </a>
+          }
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="dashboard-stat-card h-100" style="background: #3aa0e8;">
+        <span class="dashboard-stat-card__icon" style="color: #3aa0e8;"><i class="fa-solid fa-satellite-dish"></i></span>
+        <span class="dashboard-stat-card__label">Canais</span>
+        <div class="dashboard-stat-card__value">@Model.NumberOfChannels</div>
+        <div class="d-flex justify-content-between align-items-center position-relative">
+          <span class="small" style="opacity: 0.9;">Total no catálogo</span>
+
+          @if (!User.IsInRole("visitor"))
+          {
+            <a class="dashboard-stat-card__add" asp-controller="Channels" asp-action="Form" title="Cadastrar canal">
+              <i class="fa-solid fa-plus"></i>
+            </a>
+          }
+        </div>
       </div>
     </div>
   </div>
 
-  <div class="w-full d-none d-lg-block" style="height: 60vh;">
-    <canvas class="mt-5 w-full h-full" id="chart"></canvas>
+  <div class="row mt-4 mb-3">
+    <div class="col-12">
+      <h6 class="fw-semibold text-secondary mt-4 mb-3">Categorias em destaque</h6>
+
+      @if (Model.TopCategories?.Count > 0)
+      {
+        <div class="dashboard-category-list dashboard-category-list--row">
+          @{ var accentIndex = 0; }
+          @foreach (var category in Model.TopCategories)
+          {
+            var accentClass = categoryAccents.ElementAt(accentIndex % categoryAccents.Count);
+            var barWidth = maxCategoryCount > 0 ? (category.Count * 100 / maxCategoryCount) : 0;
+            accentIndex++;
+
+            <div class="dashboard-category-row">
+              <span class="dashboard-category-row__icon @accentClass"><i class="fa-solid fa-tag"></i></span>
+              <div class="dashboard-category-row__body">
+                <div class="d-flex justify-content-between">
+                  <span class="text-capitalize">@category.Category</span>
+                  <span class="text-secondary small">@category.Count</span>
+                </div>
+                <div class="dashboard-category-row__bar">
+                  <div class="dashboard-category-row__bar-fill @accentClass" style="width: @(barWidth)%;"></div>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      }
+      else
+      {
+        <p class="text-secondary">Sem categorias cadastradas ainda.</p>
+      }
+    </div>
+  </div>
+
+  <div class="row mt-5">
+    <div class="col-lg-7">
+      <h6 class="fw-semibold text-secondary mt-4 mb-3">Fila de processamentos</h6>
+
+      @if (Model.RecentJobs?.Count > 0)
+      {
+        <div class="dashboard-jobs-list">
+          @foreach (var job in Model.RecentJobs)
+          {
+            var (jobIcon, jobBadgeClass, jobLabel) = job.Status switch
+            {
+              "PENDING" => ("fa-hourglass-half", "text-bg-secondary", "Pendente"),
+              "PROCESSING" => ("fa-rotate fa-spin", "text-bg-primary", "Processando"),
+              "COMPLETED" => ("fa-circle-check", "text-bg-success", "Concluído"),
+              "FAILED" => ("fa-circle-xmark", "text-bg-danger", "Falhou"),
+              "CANCELED" => ("fa-ban", "text-bg-danger", "Cancelado"),
+              _ => ("fa-circle-question", "text-bg-secondary", job.Status)
+            };
+
+            <div class="dashboard-job-row">
+              <i class="fa-solid @jobIcon dashboard-job-row__icon"></i>
+              <div class="dashboard-job-row__body">
+                <span class="text-truncate d-block">@job.JobName</span>
+                <span class="text-secondary small">@job.TotalProcessedRecords/@job.TotalRecordsToProcess registros</span>
+              </div>
+              <span class="badge rounded-pill @jobBadgeClass">@jobLabel</span>
+            </div>
+          }
+        </div>
+
+        <a class="small" asp-controller="BackgroundJobQueue" asp-action="Index">Ver todos <i class="fa-solid fa-arrow-right ms-1"></i></a>
+      }
+      else
+      {
+        <p class="text-secondary">Nenhum processamento nos últimos 30 dias.</p>
+      }
+    </div>
+
+    <div class="col-lg-5">
+      <h6 class="fw-semibold text-secondary mt-4 mb-3">Ações rápidas</h6>
+
+      <div class="dashboard-quick-actions">
+        @if (!User.IsInRole("visitor"))
+        {
+          <a class="dashboard-quick-action" asp-controller="Movies" asp-action="Form">
+            <i class="fa-solid fa-clapperboard"></i> Novo filme
+          </a>
+          <a class="dashboard-quick-action" asp-controller="Series" asp-action="Form">
+            <i class="fa-solid fa-photo-film"></i> Nova série
+          </a>
+          <a class="dashboard-quick-action" asp-controller="Channels" asp-action="Form">
+            <i class="fa-solid fa-satellite-dish"></i> Novo canal
+          </a>
+        }
+
+        @if (User.IsInRole("admin"))
+        {
+          <a class="dashboard-quick-action" asp-controller="Users" asp-action="Index">
+            <i class="fa-solid fa-users"></i> Usuários
+          </a>
+        }
+
+        <a class="dashboard-quick-action" asp-controller="Settings" asp-action="Index">
+          <i class="fa-solid fa-gear"></i> Configurações
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="row mt-5">
+    <div class="col-12">
+      <h6 class="fw-semibold text-secondary mt-4 mb-3">Adicionados recentemente</h6>
+
+      @if (Model.RecentItems?.Count > 0)
+      {
+        <div class="dashboard-recent-grid">
+          @foreach (var item in Model.RecentItems)
+          {
+            <a class="dashboard-recent-tile text-decoration-none"
+               asp-controller="@(item.Type == "series" ? "Series" : "Movies")"
+               asp-action="Form"
+               asp-route-id="@item.Id"
+               title="@item.Title">
+              <img src="@item.PosterUrl" onerror="this.onerror=null; this.src='/assets/poster_default.jpg';" alt="@item.Title" loading="lazy" />
+              <div class="dashboard-recent-tile__overlay">
+                <span class="dashboard-recent-tile__title">@item.Title</span>
+                @if (item.Review > 0)
+                {
+                  <span class="dashboard-recent-tile__rating"><i class="fa-solid fa-star"></i> @item.Review.ToString("0.0")</span>
+                }
+              </div>
+            </a>
+          }
+        </div>
+      }
+      else
+      {
+        <p class="text-secondary">Nenhum título cadastrado ainda.</p>
+      }
+    </div>
   </div>
 
 </div>
-
-@section scripts {
-  <script>
-    var ctx = document.getElementById('chart').getContext('2d');
-
-    var chart = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: ['Filmes', 'Séries', 'Canais'],
-        datasets: [{
-          label: 'Qtde. Conteúdos',
-          data: [
-            @Model.NumberOfMovies, 
-            @Model.NumberOfSeries, 
-            @Model.NumberOfChannels
-          ],
-          backgroundColor: [
-            '#0d8d3799',
-            '#2b60a3b8',
-            'rgba(227,51,51,0.72)',
-          ]
-        }]
-      },  
-    });
-  </script>
-}

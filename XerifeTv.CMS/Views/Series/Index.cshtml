@@ -1,5 +1,6 @@
 @using XerifeTv.CMS.Modules.Series.Dtos.Response
 @using XerifeTv.CMS.Modules.Series.Enums
+@using XerifeTv.CMS.Extensions
 
 @model IEnumerable<GetSeriesResponseDto>;
 
@@ -30,22 +31,18 @@
         <hr />
     </header>
 
-    <div class="row mb-3 justify-content-between">
-        <a class="d-none d-md-block col-1 fs-5" role="button" asp-controller="Series" asp-action="Index">
+    <div class="content-toolbar">
+        <a class="content-toolbar__icon-btn" asp-controller="Series" asp-action="Index" title="Atualizar">
             <i class="fa-solid fa-rotate"></i>
         </a>
 
-        <div class="col-md-8 col-lg-5">
-            <form class="input-group input-group-sm"
-                  asp-controller="Series"
-                  asp-action="Index"
-                  method="get">
+        <form class="content-toolbar__search-group"
+              asp-controller="Series"
+              asp-action="Index"
+              method="get">
 
-                @* <input type="hidden"
-                       name="currentPage"
-                       value="@(ViewBag.Filter is not null ? ViewBag.CurrentPage : 1)" /> *@
-
-                <select class="form-select shadow-none" name="filter">
+            <div class="content-toolbar__select-wrap">
+                <select class="content-toolbar__select" name="filter">
                     @foreach (var filter in filters)
                     {
                         if (filter[0].Equals(ViewBag.Filter))
@@ -58,84 +55,179 @@
                         }
                     }
                 </select>
+                <i class="fa-solid fa-chevron-down content-toolbar__select-caret"></i>
+            </div>
 
+            <div class="content-toolbar__search">
+                <i class="fa-solid fa-magnifying-glass"></i>
                 <input type="text"
                        name="search"
-                       class="form-control shadow-none"
+                       placeholder="Buscar por título..."
                        value="@ViewBag.Search"
                        required>
-                <button class="btn btn-success shadow-none" type="submit">
-                    <i class="fa-solid fa-magnifying-glass"></i>
-                </button>
-            </form>
+            </div>
+
+        </form>
+
+        <div class="view-toggle btn-group ms-lg-auto" data-view-key="series" role="group" aria-label="Alternar visualização">
+            <button type="button" class="btn btn-sm btn-outline-secondary view-toggle-btn" data-view="grid" title="Visualização em grade">
+                <i class="fa-solid fa-table-cells-large"></i>
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary view-toggle-btn" data-view="list" title="Visualização em lista">
+                <i class="fa-solid fa-list"></i>
+            </button>
         </div>
     </div>
 
-    <div class="row gap-3">
+    <div class="content-view" data-view-key="series">
+    <div class="view-grid poster-grid">
         @foreach (var serie in Model)
         {
-            <div class="card col-md-4 col-xl-2 pt-1">
-                <div class="w-auto h-100 position-relative">
+            <article class="poster-card @((serie?.Disabled ?? false) ? "poster-card--disabled" : "")">
+                <div class="poster-card__media">
                     <img src="@serie.PosterUrl"
                          onerror="this.onerror=null; this.src='/assets/poster_default.jpg';"
-                         class="card-img-top object-fit-cover"
                          alt="@serie.Title"
-                         loading="lazy"
-                         style="height: 14rem;">
+                         loading="lazy" />
 
-                    @if (serie.HighQuality)
-                    {
-                        <span class="position-absolute rounded-1 fw-bolder px-2 py-1 bg-warning text-dark border border-dark"
-                              style="top: 6px; right: 6px; font-size: 11px; z-index: 2;">
-                            4K
-                        </span>
-                    }
+                    <div class="poster-card__badges">
+                        @if (serie?.HighQuality ?? false)
+                        {
+                            <span class="poster-card__badge poster-card__badge--4k">4K</span>
+                        }
+                    </div>
 
-                    @if (@serie.Disabled)
+                    @if (@serie?.Disabled ?? false)
                     {
-                        <span class="position-absolute text-danger"
-                              style="top: 6px; left: 8px; font-size: 24px;">
+                        <span class="poster-card__badge poster-card__badge--off" title="Desativado">
                             <i class="fa-solid fa-circle-exclamation"></i>
                         </span>
                     }
-                </div>
 
-                <div class="card-body">
-                    <h5 class="card-title text-nowrap overflow-hidden text-truncate">@serie.Title</h5>
-                    <p class="card-text">@serie.Categories.Split(",").Select(x => x.Trim()).FirstOrDefault()</p>
-
-                    <div class="d-flex gap-1">
-                        <a class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#seriesDetailsModal-@serie.Id">
-                            <i class="fa-solid fa-eye"></i>
-                        </a>
-
-                        @if (!User.IsInRole("visitor"))
-                        {
-                            <a class="btn btn-sm btn-primary"
-                                   asp-controller="Series"
-                                   asp-action="Form"
-                                   asp-route-id="@serie.Id">
-                                <i class="fa-solid fa-pen-to-square"></i>
-                            </a>
-                        }
-
-                        <a class="btn btn-sm btn-info"
-                               asp-controller="Series"
-                               asp-action="Episodes"
-                               asp-route-id="@serie.Id">
-                            <i class="fa-solid fa-list"></i>
-                        </a>
+                    <div class="poster-card__info">
+                        <h3 class="poster-card__title">@serie?.Title</h3>
+                        <span class="poster-card__meta">
+                            @serie?.ReleaseYear
+                            <span class="poster-card__dot">·</span>
+                            @((serie?.Categories?
+                                .Split(',')
+                                .Select(x => x.Trim())
+                                .FirstOrDefault() ?? string.Empty)
+                                .CapitalizeFirstLetter())
+                        </span>
                     </div>
                 </div>
-            </div>
+
+                <div class="poster-card__actions">
+                    <a class="poster-card__action" data-bs-toggle="modal" data-bs-target="#seriesDetailsModal-@serie?.Id" title="Ver detalhes">
+                        <i class="fa-solid fa-eye"></i>
+                    </a>
+
+                    @if (!User.IsInRole("visitor"))
+                    {
+                        <a class="poster-card__action"
+                           asp-controller="Series"
+                           asp-action="Form"
+                           asp-route-id="@serie?.Id"
+                           title="Editar">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                        </a>
+                    }
+
+                    <a class="poster-card__action"
+                       asp-controller="Series"
+                       asp-action="Episodes"
+                       asp-route-id="@serie?.Id"
+                       title="Episódios">
+                        <i class="fa-solid fa-list"></i>
+                    </a>
+                </div>
+            </article>
 
             @await Html.PartialAsync("_DetailsModal", serie)
         }
 
         @if (Model?.Count() <= 0)
         {
-            <p>Nenhum registro encontrado.</p>
+            <div class="poster-grid__empty text-center text-secondary py-5">
+                <i class="fa-solid fa-video fa-2x mb-3 d-block opacity-50"></i>
+                <p class="mb-0 fs-5">Nenhuma série encontrada.</p>
+            </div>
         }
+    </div>
+
+    <div class="view-list d-none">
+        @if (Model?.Count() <= 0)
+        {
+            <div class="w-100 text-center text-secondary py-5">
+                <i class="fa-solid fa-video fa-2x mb-3 d-block opacity-50"></i>
+                <p class="mb-0 fs-5">Nenhuma série encontrada.</p>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table align-middle content-list-table">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th>Título</th>
+                            <th>Categoria</th>
+                            <th>Status</th>
+                            <th class="text-end">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var serie in Model)
+                        {
+                            <tr>
+                                <td style="width: 3.5rem;">
+                                    <img src="@serie.PosterUrl"
+                                         onerror="this.onerror=null; this.src='/assets/poster_default.jpg';"
+                                         class="content-list-thumb"
+                                         alt="@serie.Title" />
+                                </td>
+                                <td class="fw-semibold">@serie.Title</td>
+                                <td>
+                                    <span class="badge bg-primary rounded-pill">
+                                        @((serie?.Categories?.Split(',').Select(x => x.Trim()).FirstOrDefault() ?? string.Empty).CapitalizeFirstLetter())
+                                    </span>
+                                </td>
+                                <td>
+                                    @if (serie?.Disabled ?? false)
+                                    {
+                                        <span class="badge rounded-pill bg-danger">Desativado</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge rounded-pill bg-success">Ativo</span>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    <div class="d-flex gap-1 justify-content-end">
+                                        <a class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#seriesDetailsModal-@serie?.Id" title="Ver detalhes">
+                                            <i class="fa-solid fa-eye"></i>
+                                        </a>
+
+                                        @if (!User.IsInRole("visitor"))
+                                        {
+                                            <a class="btn btn-sm btn-primary" asp-controller="Series" asp-action="Form" asp-route-id="@serie?.Id" title="Editar">
+                                                <i class="fa-solid fa-pen-to-square"></i>
+                                            </a>
+                                        }
+
+                                        <a class="btn btn-sm btn-info" asp-controller="Series" asp-action="Episodes" asp-route-id="@serie?.Id" title="Episódios">
+                                            <i class="fa-solid fa-list"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
     </div>
 
     @await Html.PartialAsync("_Pagination")

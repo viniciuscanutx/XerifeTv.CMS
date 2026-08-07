@@ -49,12 +49,13 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://accounts.google.com/gsi/client"></script>
   <style>
-    .side-menu .nav-link:not(.active):hover {
-      background: #1e344f;
+    .side-menu .nav-link {
+      border-radius: 0.5rem;
+      transition: background-color 0.15s ease;
     }
 
-    .bg-dark .side-menu .nav-link:not(.active):hover {
-      background: #252525;
+    .side-menu .nav-link:not(.active):hover {
+      background: rgba(155, 104, 255, 0.15);
     }
 
     #message-box {
@@ -103,13 +104,21 @@
       @if (!pagesViewWithoutTemplate.Contains(ViewData["title"]?.ToString()))
       {
         <div class="col-auto col-md-3 col-xl-2 px-sm-2 px-0 side-menu">
-          <div class="d-flex flex-column align-items-center align-items-sm-start gap-2 px-2 pt-2 text-white min-vh-100">
+          <div class="d-flex flex-column align-items-center align-items-sm-start gap-2 px-2 pt-2 text-white h-100">
 
             <!--
             <a href="/" class="d-flex align-items-center justify-content-center py-3 mt-2 mb-md-0 me-md-auto text-white text-decoration-none">
               <img class="w-75 d-none d-md-block" src="~/assets/logo.png" alt="Xerife.TV CMS" />
             </a>
             -->
+
+            <a href="/" class="d-flex align-items-center justify-content-center gap-2 py-3 mt-1 w-100 text-white text-decoration-none">
+              <span class="d-flex align-items-center justify-content-center flex-shrink-0 rounded-2 fw-bold"
+                    style="width: 2rem; height: 2rem; background: linear-gradient(135deg, var(--xtv-accent) 0%, var(--xtv-accent-active) 100%); font-size: 0.9rem;">
+                C
+              </span>
+              <span class="d-none d-sm-inline fw-semibold fs-5">Chelife</span>
+            </a>
 
             <ul class="w-100 nav nav-pills flex-column mb-sm-auto mb-0 mt-3 align-items-center align-items-sm-start" id="menu">
               @foreach (var pageView in pagesViewSideMenu)
@@ -161,8 +170,8 @@
 
               <div class="d-flex justify-content-between align-items-center gap-2 w-100">
                 <div class="w-100 d-none d-md-flex align-items-center gap-2 mt-1 py-2 px-2 position-relative rounded-2"
-                     style="background: #2e2e2e;">
-                  <img src="~/assets/profile.png" alt="profile" style="width: 1.7rem; height: 1.7rem;" />
+                     style="background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.08);">
+                  <img src="~/assets/profile.png" alt="profile" class="rounded-circle" style="width: 1.7rem; height: 1.7rem; object-fit: cover;" />
                   <span class="d-none d-md-block overflow-hidden">@User.Identity?.Name</span>
 
                   <div class="btn-group dropend position-absolute" style="right: 0">
@@ -193,7 +202,7 @@
         </div>
       }
 
-      <div class="col py-3 px-3" style="max-height:95vh; overflow:auto;">
+      <div class="col py-3 px-3">
         @RenderBody()
       </div>
     </div>

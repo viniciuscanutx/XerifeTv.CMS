@@ -254,4 +254,26 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     // --- key value repeater script end ---
+
+    // --- content view toggle (grade/lista) ---
+    $('.view-toggle-btn').on('click', function () {
+        const $toggle = $(this).closest('.view-toggle');
+        const key = $toggle.data('view-key');
+        const view = $(this).data('view');
+
+        $toggle.find('.view-toggle-btn').removeClass('active');
+        $(this).addClass('active');
+
+        $(`.content-view[data-view-key="${key}"] .view-grid`).toggleClass('d-none', view !== 'grid');
+        $(`.content-view[data-view-key="${key}"] .view-list`).toggleClass('d-none', view !== 'list');
+
+        localStorage.setItem(`contentView:${key}`, view);
+    });
+
+    $('.view-toggle').each(function () {
+        const key = $(this).data('view-key');
+        const savedView = localStorage.getItem(`contentView:${key}`) || 'grid';
+
+        $(this).find(`.view-toggle-btn[data-view="${savedView}"]`).trigger('click');
+    });
 });

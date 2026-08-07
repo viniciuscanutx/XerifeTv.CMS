@@ -56,22 +56,18 @@
         <hr />
     </header>
 
-    <div class="row mb-3 justify-content-between">
-        <a class="d-none d-md-block col-1 fs-5" role="button" asp-controller="Movies" asp-action="Index">
+    <div class="content-toolbar">
+        <a class="content-toolbar__icon-btn" asp-controller="Movies" asp-action="Index" title="Atualizar">
             <i class="fa-solid fa-rotate"></i>
         </a>
 
-        <div class="col-md-8 col-lg-5">
-            <form class="input-group input-group-sm"
-                  asp-controller="Movies"
-                  asp-action="Index"
-                  method="get">
+        <form class="content-toolbar__search-group"
+              asp-controller="Movies"
+              asp-action="Index"
+              method="get">
 
-                @*  <input type="hidden"
-                       name="currentPage"
-                       value="@(ViewBag.Filter is not null ? ViewBag.CurrentPage : 1)" /> *@
-
-                <select class="form-select shadow-none" name="filter">
+            <div class="content-toolbar__select-wrap">
+                <select class="content-toolbar__select" name="filter">
                     @foreach (var filter in filters)
                     {
                         if (filter[0].Equals(ViewBag.Filter))
@@ -84,117 +80,201 @@
                         }
                     }
                 </select>
+                <i class="fa-solid fa-chevron-down content-toolbar__select-caret"></i>
+            </div>
 
+            <div class="content-toolbar__search">
+                <i class="fa-solid fa-magnifying-glass"></i>
                 <input type="text"
                        name="search"
-                       class="form-control shadow-none"
+                       placeholder="Buscar por título..."
                        value="@ViewBag.Search"
                        required>
-                <button class="btn btn-success shadow-none" type="submit">
-                    <i class="fa-solid fa-magnifying-glass"></i>
-                </button>
-            </form>
+            </div>
+
+        </form>
+
+        <div class="view-toggle btn-group ms-lg-auto" data-view-key="movies" role="group" aria-label="Alternar visualização">
+            <button type="button" class="btn btn-sm btn-outline-secondary view-toggle-btn" data-view="grid" title="Visualização em grade">
+                <i class="fa-solid fa-table-cells-large"></i>
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary view-toggle-btn" data-view="list" title="Visualização em lista">
+                <i class="fa-solid fa-list"></i>
+            </button>
         </div>
     </div>
 
 
     @await Html.PartialAsync("_VideoModal")
 
-    <div class="row gap-3">
+    <div class="content-view" data-view-key="movies">
+    <div class="view-grid poster-grid">
         @foreach (var movie in Model)
         {
-            <div class="card col-md-4 col-xl-2 pt-1">
-                <div class="w-auto h-100 position-relative">
+            <article class="poster-card @((movie?.Disabled ?? false) ? "poster-card--disabled" : "")">
+                <div class="poster-card__media">
                     <img src="@movie.PosterUrl"
                          onerror="this.onerror=null; this.src='/assets/poster_default.jpg';"
-                         class="card-img-top object-fit-cover"
                          alt="@movie.Title"
-                         loading="lazy" style="height: 14rem;" />
+                         loading="lazy" />
 
-                    @if (movie?.HighQuality ?? false)
-                    {
-                        <span class="position-absolute rounded-1 fw-bolder px-2 py-1 bg-warning text-dark border border-dark"
-                              style="top: 6px; right: 6px; font-size: 11px; z-index: 2;">
-                            4K
-                        </span>
-                    }
+                    <div class="poster-card__badges">
+                        @if (movie?.HighQuality ?? false)
+                        {
+                            <span class="poster-card__badge poster-card__badge--4k">4K</span>
+                        }
 
-                    @if (!string.IsNullOrEmpty(@movie?.Video?.Subtitle))
-                    {
-                        <span class="position-absolute rounded-1 fw-bolder p-1 bg-info text-white"
-                              style="bottom: 6px; right: 6px; font-size: 12px;">
-                            CC
-                        </span>
-                    }
+                        @if (!string.IsNullOrEmpty(@movie?.Video?.Subtitle))
+                        {
+                            <span class="poster-card__badge poster-card__badge--cc">CC</span>
+                        }
+                    </div>
 
                     @if (@movie?.Disabled ?? false)
                     {
-                        <span class="position-absolute text-danger"
-                              style="top: 6px; left: 8px; font-size: 24px;">
+                        <span class="poster-card__badge poster-card__badge--off" title="Desativado">
                             <i class="fa-solid fa-circle-exclamation"></i>
                         </span>
                     }
-                </div>
 
-                <div class="card-body">
-                    <h5 class="card-title text-nowrap overflow-hidden text-truncate text-center">@movie?.Title</h5>
-
-                    @if (!string.IsNullOrEmpty(@movie?.AlternativeVideoUrl))
-                    {
-                        <h6 class="card-title text-nowrap overflow-hidden text-truncate text-muted text-center">@movie?.ReleaseYear | Multiaudio </h6>
-                    }
-                    else
-                    {
-                        <h6 class="card-title text-nowrap overflow-hidden text-truncate text-muted text-center">@movie?.ReleaseYear</h6>
-                    }
-
-
-                    <p class="badge bg-primary mb-3 mt-2 d-flex justify-content-center align-items-center">
-                        <span class="text-nowrap overflow-hidden text-truncate text-center mt-1">
+                    <div class="poster-card__info">
+                        <h3 class="poster-card__title">@movie?.Title</h3>
+                        <span class="poster-card__meta">
+                            @movie?.ReleaseYear
+                            <span class="poster-card__dot">·</span>
                             @((movie?.Categories?
                                 .Split(',')
                                 .Select(x => x.Trim())
                                 .FirstOrDefault() ?? string.Empty)
                                 .CapitalizeFirstLetter())
                         </span>
-                    </p>
-
-                    <div class="d-flex gap-1 justify-content-center">
-                        <a class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#movielDetailsModal-@movie?.Id">
-                            <i class="fa-solid fa-eye"></i>
-                        </a>
-
-                        @if (!User.IsInRole("visitor"))
-                        {
-                            <a class="btn btn-sm btn-primary"
-                                   asp-controller="Movies"
-                                   asp-action="Form"
-                                   asp-route-id="@movie?.Id">
-                                <i class="fa-solid fa-pen-to-square"></i>
-                            </a>
-                        }
-
-                        <a class="btn btn-sm btn-secondary"
-                               data-bs-toggle="modal"
-                               data-bs-target="#videoModal"
-                               data-bs-title="@movie?.Title"
-                               data-bs-banner="@movie?.BannerUrl"
-                               data-bs-video-subtitle="@movie?.Video?.Subtitle"
-                               data-bs-video-resolver="@movie?.UrlResolverPath"
-                               data-bs-video-alternative-resolver="@movie?.AlternativeUrlResolverPath">
-                            <i class="fa-solid fa-play"></i>
-                        </a>
                     </div>
                 </div>
-            </div>
+
+                <div class="poster-card__actions">
+                    <a class="poster-card__action" data-bs-toggle="modal" data-bs-target="#movielDetailsModal-@movie?.Id" title="Ver detalhes">
+                        <i class="fa-solid fa-eye"></i>
+                    </a>
+
+                    @if (!User.IsInRole("visitor"))
+                    {
+                        <a class="poster-card__action"
+                           asp-controller="Movies"
+                           asp-action="Form"
+                           asp-route-id="@movie?.Id"
+                           title="Editar">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                        </a>
+                    }
+
+                    <a class="poster-card__action poster-card__action--play"
+                       data-bs-toggle="modal"
+                       data-bs-target="#videoModal"
+                       data-bs-title="@movie?.Title"
+                       data-bs-banner="@movie?.BannerUrl"
+                       data-bs-video-subtitle="@movie?.Video?.Subtitle"
+                       data-bs-video-resolver="@movie?.UrlResolverPath"
+                       data-bs-video-alternative-resolver="@movie?.AlternativeUrlResolverPath"
+                       title="Assistir">
+                        <i class="fa-solid fa-play"></i>
+                    </a>
+                </div>
+            </article>
 
             @await Html.PartialAsync("_DetailsModal", movie)
         }
 
         @if (Model?.Count() <= 0)
         {
-            <p>Nenhum registro encontrado.</p>
+            <div class="poster-grid__empty text-center text-secondary py-5">
+                <i class="fa-solid fa-film fa-2x mb-3 d-block opacity-50"></i>
+                <p class="mb-0 fs-5">Nenhum filme encontrado.</p>
+            </div>
         }
+    </div>
+
+    <div class="view-list d-none">
+        @if (Model?.Count() <= 0)
+        {
+            <div class="w-100 text-center text-secondary py-5">
+                <i class="fa-solid fa-film fa-2x mb-3 d-block opacity-50"></i>
+                <p class="mb-0 fs-5">Nenhum filme encontrado.</p>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table align-middle content-list-table">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th>Título</th>
+                            <th>Categoria</th>
+                            <th>Ano</th>
+                            <th>Status</th>
+                            <th class="text-end">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var movie in Model)
+                        {
+                            <tr>
+                                <td style="width: 3.5rem;">
+                                    <img src="@movie.PosterUrl"
+                                         onerror="this.onerror=null; this.src='/assets/poster_default.jpg';"
+                                         class="content-list-thumb"
+                                         alt="@movie.Title" />
+                                </td>
+                                <td class="fw-semibold">@movie.Title</td>
+                                <td>
+                                    <span class="badge bg-primary rounded-pill">
+                                        @((movie?.Categories?.Split(',').Select(x => x.Trim()).FirstOrDefault() ?? string.Empty).CapitalizeFirstLetter())
+                                    </span>
+                                </td>
+                                <td>@movie?.ReleaseYear</td>
+                                <td>
+                                    @if (movie?.Disabled ?? false)
+                                    {
+                                        <span class="badge rounded-pill bg-danger">Desativado</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge rounded-pill bg-success">Ativo</span>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    <div class="d-flex gap-1 justify-content-end">
+                                        <a class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#movielDetailsModal-@movie?.Id" title="Ver detalhes">
+                                            <i class="fa-solid fa-eye"></i>
+                                        </a>
+
+                                        @if (!User.IsInRole("visitor"))
+                                        {
+                                            <a class="btn btn-sm btn-primary" asp-controller="Movies" asp-action="Form" asp-route-id="@movie?.Id" title="Editar">
+                                                <i class="fa-solid fa-pen-to-square"></i>
+                                            </a>
+                                        }
+
+                                        <a class="btn btn-sm btn-secondary"
+                                           data-bs-toggle="modal"
+                                           data-bs-target="#videoModal"
+                                           data-bs-title="@movie?.Title"
+                                           data-bs-banner="@movie?.BannerUrl"
+                                           data-bs-video-subtitle="@movie?.Video?.Subtitle"
+                                           data-bs-video-resolver="@movie?.UrlResolverPath"
+                                           data-bs-video-alternative-resolver="@movie?.AlternativeUrlResolverPath"
+                                           title="Assistir">
+                                            <i class="fa-solid fa-play"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
     </div>
 
     @await Html.PartialAsync("_Pagination")
