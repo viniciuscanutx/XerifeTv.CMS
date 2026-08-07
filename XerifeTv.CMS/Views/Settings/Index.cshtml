@@ -76,7 +76,7 @@
             </button>
 
 
-            @if (User.IsInRole("admin"))
+            @if (User.IsInRole("admin") || User.IsInRole("common"))
             {
                 <button class="nav-link d-flex align-items-center justify-content-start gap-2 ps-4"
                         id="v-pills-import-tab"
@@ -120,7 +120,7 @@
                 </button>
             }
 
-            @if (User.IsInRole("admin"))
+            @if (User.IsInRole("admin") || User.IsInRole("common"))
             {
                 <button class="nav-link d-flex align-items-center justify-content-start gap-2 ps-4"
                         id="v-pills-cache-tab"
@@ -189,7 +189,7 @@
                 </div>
             </div>
 
-            @if (User.IsInRole("admin"))
+            @if (User.IsInRole("admin") || User.IsInRole("common"))
             {
                 <div class="tab-pane fade"
                      id="v-pills-import"
@@ -342,7 +342,7 @@
                 </div>
             }
 
-            @if (User.IsInRole("admin"))
+            @if (User.IsInRole("admin") || User.IsInRole("common"))
             {
                 <div class="tab-pane fade"
                      id="v-pills-cache"

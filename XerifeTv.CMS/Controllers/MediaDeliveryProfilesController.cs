@@ -8,14 +8,14 @@ using XerifeTv.CMS.Shared.Helpers;
 
 namespace XerifeTv.CMS.Controllers;
 
-[Authorize(Roles = "admin")]
 public class MediaDeliveryProfilesController(
     IMediaDeliveryProfileService _service,
     IMediaDeliveryUrlResolver _urlResolver,
     ILogger<MediaDeliveryProfilesController> _logger,
-    ICacheService _cacheService, 
+    ICacheService _cacheService,
     IConfiguration _configuration) : Controller
 {
+    [Authorize(Roles = "admin")]
     public async Task<IActionResult> Create(CreateMediaDeliveryProfileRequestDto dto)
     {
         var response = await _service.CreateAsync(dto);
@@ -29,6 +29,7 @@ public class MediaDeliveryProfilesController(
         return Redirect(Url.Action("Index", "Settings") + "#media-delivery");
     }
 
+    [Authorize(Roles = "admin")]
     public async Task<IActionResult> Update(UpdateMediaDeliveryProfileRequestDto dto)
     {
         var response = await _service.UpdateAsync(dto);
@@ -42,6 +43,7 @@ public class MediaDeliveryProfilesController(
         return Redirect(Url.Action("Index", "Settings") + "#media-delivery");
     }
 
+    [Authorize(Roles = "admin")]
     public async Task<IActionResult> Delete(string? id)
     {
         if (id is not null)

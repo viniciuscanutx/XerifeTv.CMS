@@ -35,7 +35,7 @@ public class GetUserResponseDto
       => role switch
       {
           EUserRole.ADMIN => "Administrador",
-          EUserRole.COMMON => "Usuário Comum",
+          EUserRole.COMMON => "Moderador",
           _ => "Visitante"
       };
 }

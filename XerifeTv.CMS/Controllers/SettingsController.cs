@@ -46,7 +46,7 @@ public class SettingsController(
     }
 
     [HttpPost]
-    [Authorize(Roles = "admin")]
+    [Authorize(Roles = "admin, common")]
     public async Task<IActionResult> UpdateImportSettings(
         bool enableMoviesSpreadsheetImport = false,
         bool enableSeriesSpreadsheetImport = false,
@@ -165,7 +165,7 @@ public class SettingsController(
     }
 
     [HttpPost]
-    [Authorize(Roles = "admin")]
+    [Authorize(Roles = "admin, common")]
     public IActionResult ClearCache()
     {
         _cacheService.Clear();
