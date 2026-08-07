@@ -313,4 +313,50 @@ public class SeriesController(
 
 		return RedirectToAction("Episodes", new { id = dto.SerieId, seasonFilter = dto.Season });
 	}
+
+	[Authorize(Roles = "admin, common")]
+	[HttpPost]
+	public async Task<IActionResult> QuickUpdateEpisodeVideoUrl(string serieId, string episodeId, int season, int number, string videoUrl, string? alternativeVideoUrl)
+	{
+		var episodeResult = await _service.GetEpisodesBySeasonAsync(serieId, season, includeDisabled: true);
+		if (episodeResult.IsFailure || episodeResult.Data?.Episodes is null)
+		{
+			TempData["Notification"] = MessageViewHelper.ErrorJson("Episódio não encontrado");
+			return RedirectToAction("Episodes", new { id = serieId, seasonFilter = season });
+		}
+
+		var episode = episodeResult.Data.Episodes.FirstOrDefault(e => e.Id == episodeId);
+		if (episode is null)
+		{
+			TempData["Notification"] = MessageViewHelper.ErrorJson("Episódio não encontrado");
+			return RedirectToAction("Episodes", new { id = serieId, seasonFilter = season });
+		}
+
+		var updateDto = new UpdateEpisodeRequestDto
+		{
+			Id = episode.Id,
+			SerieId = serieId,
+			Season = episode.Season,
+			Number = episode.Number,
+			Title = episode.Title,
+			BannerUrl = episode.BannerUrl,
+			VideoUrl = videoUrl,
+			AlternativeVideoUrl = alternativeVideoUrl ?? episode.AlternativeVideoUrl,
+			VideoDuration = episode.Video?.Duration ?? 0,
+			VideoStreamFormat = episode.Video?.StreamFormat ?? "m3u8",
+			VideoSubtitle = episode.Video?.Subtitle,
+			MediaDeliveryProfileId = episode.MediaDeliveryProfileId,
+			MediaRoute = episode.MediaRoute,
+			HighQuality = episode.HighQuality,
+			Disabled = episode.Disabled
+		};
+
+		var updateResponse = await _service.UpdateEpisodeAsync(updateDto);
+
+		TempData["Notification"] = updateResponse.IsFailure
+		  ? MessageViewHelper.ErrorJson(updateResponse.Error?.Description ?? string.Empty)
+		  : MessageViewHelper.SuccessJson($"Link do episódio T{season}:EP{number} atualizado com sucesso!");
+
+		return RedirectToAction("Episodes", new { id = serieId, seasonFilter = season });
+	}
 }

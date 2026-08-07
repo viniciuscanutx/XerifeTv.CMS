@@ -124,9 +124,9 @@
 
                             @if (!User.IsInRole("visitor"))
                             {
-                                <a class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#episodeFormModal-@episode.Id">
+                                <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#quickEditEpisodeModal-@episode.Id" title="Editar link">
                                     <i class="fa-solid fa-pen-to-square"></i>
-                                </a>
+                                </button>
                             }
 
                             <a class="btn btn-sm btn-secondary"
@@ -145,6 +145,69 @@
             </div>
 
             @await Html.PartialAsync("_EpisodeFormModal", new EpisodeFormModelView(episode, Model?.MediaDeliveryProfiles ?? []))
+
+            @if (!User.IsInRole("visitor"))
+            {
+                <div class="modal fade"
+                     id="quickEditEpisodeModal-@episode.Id"
+                     tabindex="-1"
+                     aria-labelledby="quickEditEpisodeModal-@episode.Id-Label"
+                     aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <form class="modal-content details-modal-dark" asp-controller="Series" asp-action="QuickUpdateEpisodeVideoUrl" method="post">
+                            <input type="hidden" name="serieId" value="@Model?.EpisodesDto?.SerieId" />
+                            <input type="hidden" name="episodeId" value="@episode.Id" />
+                            <input type="hidden" name="season" value="@episode.Season" />
+                            <input type="hidden" name="number" value="@episode.Number" />
+
+                            <div class="modal-header border-bottom border-secondary">
+                                <h5 class="modal-title fs-5 fw-semibold" id="quickEditEpisodeModal-@episode.Id-Label">
+                                    <i class="fa-solid fa-link me-2 text-primary"></i>Editar Link - T@(episode.Season):EP@(episode.Number)
+                                </h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+
+                            <div class="modal-body">
+                                <div class="mb-3">
+                                    <label for="episodeVideoUrl-@episode.Id" class="form-label fw-semibold">Link do Vídeo (Dublado / Principal)</label>
+                                    <input type="text"
+                                           class="form-control"
+                                           id="episodeVideoUrl-@episode.Id"
+                                           name="videoUrl"
+                                           placeholder="https://servidor.com/episodio.m3u8"
+                                           value="@episode.Video?.Url"
+                                           required />
+                                    <small class="text-secondary mt-1 d-block">Cole aqui a URL direta do vídeo dublado.</small>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="episodeAltVideoUrl-@episode.Id" class="form-label fw-semibold">Link Legendado (Opcional)</label>
+                                    <input type="text"
+                                           class="form-control"
+                                           id="episodeAltVideoUrl-@episode.Id"
+                                           name="alternativeVideoUrl"
+                                           placeholder="https://servidor.com/episodio-legendado.m3u8"
+                                           value="@episode.AlternativeVideoUrl" />
+                                </div>
+                            </div>
+
+                            <div class="modal-footer border-top border-secondary">
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-secondary me-auto"
+                                        data-bs-dismiss="modal"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#episodeFormModal-@episode.Id">
+                                    <i class="fa-solid fa-gear me-1"></i> Edição Completa
+                                </button>
+                                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                <button type="submit" class="btn btn-sm btn-primary">
+                                    <i class="fa-solid fa-floppy-disk me-1"></i> Salvar Link
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            }
         }
 
         @if (Model?.EpisodesDto?.Episodes.Count() == 0)

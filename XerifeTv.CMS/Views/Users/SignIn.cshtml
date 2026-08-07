@@ -1,4 +1,4 @@
-﻿@using XerifeTv.CMS.Modules.Authentication.Enums
+@using XerifeTv.CMS.Modules.Authentication.Enums
 
 @{
   ViewData["Title"] = "SignIn";
@@ -47,11 +47,13 @@
     <input type="hidden" id="provider" name="provider" value="@((int)ELoginProvider.Basic)" />
     <input type="hidden" id="externalToken" name="externalToken" value="" />
 
-    <!--
-    <div class="w-100 d-flex justify-content-center mb-5 py-1">
-      <img src="~/assets/logo.png" alt="logo" style="width: 60%;"/>
+    <div class="d-flex align-items-center justify-content-center gap-2 mb-4 pt-1">
+      <span class="d-flex align-items-center justify-content-center flex-shrink-0 rounded-2 fw-bold text-white shadow-sm"
+            style="width: 2.5rem; height: 2.5rem; background: linear-gradient(135deg, var(--xtv-accent) 0%, var(--xtv-accent-active) 100%); font-size: 1.15rem;">
+        C
+      </span>
+      <span class="fw-semibold fs-3">Chelife</span>
     </div>
-    -->
 
     <div class="mb-3">
       <label for="userNameOrEmail" class="form-label">Usuário ou E-mail</label>
@@ -84,8 +86,9 @@
     </div>
 
     <button type="submit" class="btn btn-primary w-100">Login</button>
-    <div id="googleSignInDiv" class="mt-3" style="width: 96.5% !important;">
-      <button id="googleSignInBtn"></button>
+    
+    <div id="googleSignInDiv" class="mt-3 w-100 d-flex justify-content-center">
+      <div id="googleSignInBtn"></div>
     </div>
 
     <div class="w-100 d-flex justify-content-center align-items-center mt-4">
@@ -117,11 +120,14 @@
                 callback: handleGoogleCredentialResponse
             });
 
+            const isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+            const formWidth = document.getElementById('signInForm')?.offsetWidth;
+
             google.accounts.id.renderButton(
                 document.getElementById('googleSignInBtn'), { 
-                    theme: 'outline', 
+                    theme: isDark ? 'filled_black' : 'outline', 
                     size: 'large',
-                    width: document.getElementById('googleSignInDiv')?.offsetWidth
+                    width: formWidth ? formWidth - 64 : 350
                 }
             );
         });

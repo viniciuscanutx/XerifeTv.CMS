@@ -62,9 +62,13 @@
           <div class="details-modal-dark__actions mt-3">
             @if (!User.IsInRole("visitor"))
             {
-              <a class="btn btn-outline-light btn-sm" asp-controller="Movies" asp-action="Form" asp-route-id="@Model.Id">
+              <button type="button"
+                      class="btn btn-outline-light btn-sm"
+                      data-bs-dismiss="modal"
+                      data-bs-toggle="modal"
+                      data-bs-target="#quickEditMovieModal-@Model.Id">
                 <i class="fa-solid fa-pen-to-square me-1"></i> Editar
-              </a>
+              </button>
             }
 
             <a class="btn btn-primary btn-sm"
@@ -84,3 +88,59 @@
     </div>
   </div>
 </div>
+
+@if (!User.IsInRole("visitor"))
+{
+  <div class="modal fade"
+       id="quickEditMovieModal-@Model.Id"
+       tabindex="-1"
+       aria-labelledby="quickEditMovieModal-@Model.Id-Label"
+       aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <form class="modal-content details-modal-dark" asp-controller="Movies" asp-action="QuickUpdateVideoUrl" method="post">
+        <input type="hidden" name="id" value="@Model.Id" />
+
+        <div class="modal-header border-bottom border-secondary">
+          <h5 class="modal-title fs-5 fw-semibold" id="quickEditMovieModal-@Model.Id-Label">
+            <i class="fa-solid fa-link me-2 text-primary"></i>Editar Link - @Model.Title
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="videoUrl-@Model.Id" class="form-label fw-semibold">Link do Vídeo (Dublado / Principal)</label>
+            <input type="text"
+                   class="form-control"
+                   id="videoUrl-@Model.Id"
+                   name="videoUrl"
+                   placeholder="https://servidor.com/filme.m3u8"
+                   value="@Model.Video?.Url"
+                   required />
+            <small class="text-secondary mt-1 d-block">Cole aqui a URL direta do vídeo dublado.</small>
+          </div>
+
+          <div class="mb-3">
+            <label for="alternativeVideoUrl-@Model.Id" class="form-label fw-semibold">Link Legendado (Opcional)</label>
+            <input type="text"
+                   class="form-control"
+                   id="alternativeVideoUrl-@Model.Id"
+                   name="alternativeVideoUrl"
+                   placeholder="https://servidor.com/filme-legendado.m3u8"
+                   value="@Model.AlternativeVideoUrl" />
+          </div>
+        </div>
+
+        <div class="modal-footer border-top border-secondary">
+          <a class="btn btn-sm btn-outline-secondary me-auto" asp-controller="Movies" asp-action="Form" asp-route-id="@Model.Id">
+            <i class="fa-solid fa-gear me-1"></i> Edição Completa
+          </a>
+          <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-sm btn-primary">
+            <i class="fa-solid fa-floppy-disk me-1"></i> Salvar Link
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}

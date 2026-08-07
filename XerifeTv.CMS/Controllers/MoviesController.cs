@@ -209,4 +209,50 @@ public class MoviesController(
 
         return RedirectToAction("Index");
     }
+
+    [Authorize(Roles = "admin, common")]
+    [HttpPost]
+    public async Task<IActionResult> QuickUpdateVideoUrl(string id, string videoUrl, string? alternativeVideoUrl)
+    {
+        var response = await _service.GetAsync(id);
+        if (response.IsFailure || response.Data is null)
+        {
+            TempData["Notification"] = MessageViewHelper.ErrorJson("Filme não encontrado");
+            return RedirectToAction("Index");
+        }
+
+        var movie = response.Data;
+        var updateDto = new UpdateMovieRequestDto
+        {
+            Id = movie.Id,
+            ImdbId = movie.ImdbId,
+            Title = movie.Title,
+            Synopsis = movie.Synopsis,
+            Categories = movie.Categories,
+            FranchiseId = movie.FranchiseId,
+            PosterUrl = movie.PosterUrl,
+            BannerUrl = movie.BannerUrl,
+            ReleaseYear = movie.ReleaseYear,
+            ParentalRating = movie.ParentalRating,
+            Review = movie.Review,
+            VideoUrl = videoUrl,
+            AlternativeVideoUrl = alternativeVideoUrl ?? movie.AlternativeVideoUrl,
+            VideoDuration = movie.Video?.Duration ?? 0,
+            VideoStreamFormat = movie.Video?.StreamFormat ?? "m3u8",
+            VideoSubtitle = movie.Video?.Subtitle,
+            MediaDeliveryProfileId = movie.MediaDeliveryProfileId,
+            MediaRoute = movie.MediaRoute,
+            TrailerVideoYoutubeId = movie.TrailerVideoYoutubeId,
+            HighQuality = movie.HighQuality,
+            Disabled = movie.Disabled
+        };
+
+        var updateResponse = await _service.UpdateAsync(updateDto);
+
+        TempData["Notification"] = updateResponse.IsFailure
+          ? MessageViewHelper.ErrorJson(updateResponse.Error?.Description ?? string.Empty)
+          : MessageViewHelper.SuccessJson($"Link do filme '{movie.Title}' atualizado com sucesso!");
+
+        return RedirectToAction("Index");
+    }
 }

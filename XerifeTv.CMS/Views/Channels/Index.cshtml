@@ -1,5 +1,6 @@
-﻿@using XerifeTv.CMS.Modules.Channel.Dtos.Response
+@using XerifeTv.CMS.Modules.Channel.Dtos.Response
 @using XerifeTv.CMS.Modules.Channel.Enums
+@using XerifeTv.CMS.Extensions
 
 @model IEnumerable<GetChannelResponseDto>;
 
@@ -26,22 +27,18 @@
         <hr />
     </header>
 
-    <div class="row mb-3 justify-content-between align-items-center">
-        <a class="d-none d-md-block col-1 fs-5" role="button" asp-controller="Channels" asp-action="Index">
+    <div class="content-toolbar">
+        <a class="content-toolbar__icon-btn" asp-controller="Channels" asp-action="Index" title="Atualizar">
             <i class="fa-solid fa-rotate"></i>
         </a>
 
-        <div class="col-md-8 col-lg-5">
-            <form class="input-group input-group-sm"
-                  asp-controller="Channels"
-                  asp-action="Index"
-                  method="get">
+        <form class="content-toolbar__search-group"
+              asp-controller="Channels"
+              asp-action="Index"
+              method="get">
 
-                @* <input type="hidden"
-                       name="currentPage"
-                       value="@(ViewBag.Filter is not null ? ViewBag.CurrentPage : 1)" /> *@
-
-                <select class="form-select shadow-none" name="filter">
+            <div class="content-toolbar__select-wrap">
+                <select class="content-toolbar__select" name="filter">
                     @foreach (var filter in filters)
                     {
                         if (filter[0].Equals(ViewBag.Filter))
@@ -54,89 +51,90 @@
                         }
                     }
                 </select>
+                <i class="fa-solid fa-chevron-down content-toolbar__select-caret"></i>
+            </div>
 
+            <div class="content-toolbar__search">
+                <i class="fa-solid fa-magnifying-glass"></i>
                 <input type="text"
                        name="search"
-                       class="form-control shadow-none"
+                       placeholder="Buscar por título..."
                        value="@ViewBag.Search"
                        required>
-                <button class="btn btn-success shadow-none" type="submit">
-                    <i class="fa-solid fa-magnifying-glass"></i>
-                </button>
-            </form>
-        </div>
-
-        <div class="col-auto">
-            <div class="view-toggle btn-group" data-view-key="channels" role="group" aria-label="Alternar visualização">
-                <button type="button" class="btn btn-sm btn-outline-secondary view-toggle-btn" data-view="grid" title="Visualização em grade">
-                    <i class="fa-solid fa-table-cells-large"></i>
-                </button>
-                <button type="button" class="btn btn-sm btn-outline-secondary view-toggle-btn" data-view="list" title="Visualização em lista">
-                    <i class="fa-solid fa-list"></i>
-                </button>
             </div>
+
+        </form>
+
+        <div class="view-toggle btn-group ms-lg-auto" data-view-key="channels" role="group" aria-label="Alternar visualização">
+            <button type="button" class="btn btn-sm btn-outline-secondary view-toggle-btn" data-view="grid" title="Visualização em grade">
+                <i class="fa-solid fa-table-cells-large"></i>
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary view-toggle-btn" data-view="list" title="Visualização em lista">
+                <i class="fa-solid fa-list"></i>
+            </button>
         </div>
     </div>
-
 
     @await Html.PartialAsync("_VideoModal")
 
     <div class="content-view" data-view-key="channels">
-    <div class="view-grid row gap-3">
+    <div class="view-grid poster-grid">
         @foreach (var channel in Model)
         {
-            <div class="card col-md-4 col-xl-2 pt-1 overflow-hidden">
-                <div class="w-auto position-relative bg-body-tertiary" style="height: 9rem;">
+            <article class="poster-card @((channel?.Disabled ?? false) ? "poster-card--disabled" : "")">
+                <div class="poster-card__media">
                     <img src="@channel.LogoUrl"
                          onerror="this.onerror=null; this.src='/assets/poster_default.jpg';"
-                         class="w-100 h-100 object-fit-cover"
                          alt="@channel.Title"
                          loading="lazy" />
 
-                    <div class="position-absolute bottom-0 start-0 end-0 px-2 pt-4 pb-2"
-                         style="background: linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.55) 55%, transparent 100%);">
-                        <h5 class="text-white text-nowrap overflow-hidden text-truncate mb-0" style="font-size: 0.9rem;">@channel.Title</h5>
-                        <span class="text-white-50" style="font-size: 0.72rem;">@channel.Categories.Split(",").Select(x => x.Trim()).FirstOrDefault()</span>
-                    </div>
-
-                    @if (channel.Disabled)
+                    @if (channel?.Disabled ?? false)
                     {
-                        <span class="position-absolute text-danger"
-                              style="top: 6px; left: 8px; font-size: 24px;">
+                        <span class="poster-card__badge poster-card__badge--off" title="Desativado">
                             <i class="fa-solid fa-circle-exclamation"></i>
                         </span>
                     }
 
+                    <div class="poster-card__info">
+                        <h3 class="poster-card__title">@channel?.Title</h3>
+                        <span class="poster-card__meta">
+                            @((channel?.Categories?
+                                .Split(',')
+                                .Select(x => x.Trim())
+                                .FirstOrDefault() ?? string.Empty)
+                                .CapitalizeFirstLetter())
+                        </span>
+                    </div>
                 </div>
 
-                <div class="card-body d-flex align-items-center justify-content-end gap-1 py-2 px-2">
+                <div class="poster-card__actions">
                     @if (!User.IsInRole("visitor"))
                     {
-                        <a class="btn btn-sm btn-primary"
+                        <a class="poster-card__action"
                            asp-controller="Channels"
                            asp-action="Form"
-                           asp-route-id="@channel.Id"
+                           asp-route-id="@channel?.Id"
                            title="Editar">
                             <i class="fa-solid fa-pen-to-square"></i>
                         </a>
                     }
 
-                    <a class="btn btn-sm btn-secondary"
+                    <a class="poster-card__action"
                        data-bs-toggle="modal"
                        data-bs-target="#videoModal"
-                       data-bs-title="@channel.Title"
-                       data-bs-banner="@channel.LogoUrl"
+                       data-bs-title="@channel?.Title"
+                       data-bs-banner="@channel?.LogoUrl"
                        data-bs-video-resolver="@channel?.UrlResolverPath"
                        title="Assistir">
                         <i class="fa-solid fa-play"></i>
                     </a>
                 </div>
-            </div>
+            </article>
         }
 
         @if (Model?.Count() <= 0)
         {
-            <div class="w-100 text-center text-secondary py-5">
+            <div class="poster-grid__empty text-center text-secondary py-5">
                 <i class="fa-solid fa-satellite-dish fa-2x mb-3 d-block opacity-50"></i>
                 <p class="mb-0 fs-5">Nenhum canal encontrado.</p>
             </div>
@@ -177,11 +175,11 @@
                                 <td class="fw-semibold">@channel.Title</td>
                                 <td>
                                     <span class="badge bg-primary rounded-pill">
-                                        @channel.Categories.Split(",").Select(x => x.Trim()).FirstOrDefault()
+                                        @((channel?.Categories?.Split(',').Select(x => x.Trim()).FirstOrDefault() ?? string.Empty).CapitalizeFirstLetter())
                                     </span>
                                 </td>
                                 <td>
-                                    @if (channel.Disabled)
+                                    @if (channel?.Disabled ?? false)
                                     {
                                         <span class="badge rounded-pill bg-danger">Desativado</span>
                                     }
@@ -194,7 +192,7 @@
                                     <div class="d-flex gap-1 justify-content-end">
                                         @if (!User.IsInRole("visitor"))
                                         {
-                                            <a class="btn btn-sm btn-primary" asp-controller="Channels" asp-action="Form" asp-route-id="@channel.Id" title="Editar">
+                                            <a class="btn btn-sm btn-primary" asp-controller="Channels" asp-action="Form" asp-route-id="@channel?.Id" title="Editar">
                                                 <i class="fa-solid fa-pen-to-square"></i>
                                             </a>
                                         }
@@ -202,8 +200,8 @@
                                         <a class="btn btn-sm btn-secondary"
                                            data-bs-toggle="modal"
                                            data-bs-target="#videoModal"
-                                           data-bs-title="@channel.Title"
-                                           data-bs-banner="@channel.LogoUrl"
+                                           data-bs-title="@channel?.Title"
+                                           data-bs-banner="@channel?.LogoUrl"
                                            data-bs-video-resolver="@channel?.UrlResolverPath"
                                            title="Assistir">
                                             <i class="fa-solid fa-play"></i>
