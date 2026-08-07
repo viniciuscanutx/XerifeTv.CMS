@@ -72,8 +72,10 @@
         modal.addEventListener('show.bs.modal', async event => {
             const button = event.relatedTarget
 
-            const modalTitle = document.querySelector('.modal-title')
-            modalTitle.textContent = button.getAttribute('data-bs-title')
+            const modalTitle = modal.querySelector('#videoModalLabel') || modal.querySelector('.modal-title')
+            if (modalTitle && button) {
+                modalTitle.textContent = button.getAttribute('data-bs-title') || ''
+            }
 
             if (!player) {
                 player = videojs('player', {
