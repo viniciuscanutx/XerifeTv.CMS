@@ -204,8 +204,16 @@ html {
   border-radius: 0.85rem;
   overflow: hidden;
   display: block;
-  background: var(--bs-tertiary-bg);
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  background: var(--bs-body-bg);
+  border: 1px solid var(--bs-border-color);
+  box-shadow: 0 0.25rem 0.65rem rgba(0, 0, 0, 0.05);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+[data-bs-theme="dark"] .dashboard-recent-tile {
+  background: #1c1d2a;
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0.4rem 1rem rgba(0, 0, 0, 0.25);
 }
 
 .dashboard-recent-tile:hover {
@@ -306,7 +314,15 @@ html {
   gap: 0.75rem;
   padding: 0.65rem 0.85rem;
   border-radius: 0.75rem;
-  background: var(--bs-tertiary-bg);
+  background: var(--bs-body-bg);
+  border: 1px solid var(--bs-border-color);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.03);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.dashboard-job-row:hover {
+  border-color: rgba(var(--xtv-accent-rgb), 0.35);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
 }
 
 .dashboard-job-row__icon {
@@ -335,13 +351,15 @@ html {
   gap: 0.5rem;
   padding: 1.1rem 0.5rem;
   border-radius: 0.85rem;
-  background: var(--bs-tertiary-bg);
+  background: var(--bs-body-bg);
+  border: 1px solid var(--bs-border-color);
   color: var(--bs-body-color);
   text-decoration: none;
   font-size: 0.85rem;
   font-weight: 500;
   text-align: center;
-  transition: background-color 0.15s ease, transform 0.15s ease;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.03);
+  transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .dashboard-quick-action i {
@@ -350,9 +368,22 @@ html {
 }
 
 .dashboard-quick-action:hover {
-  background: rgba(var(--xtv-accent-rgb), 0.12);
+  background: rgba(var(--xtv-accent-rgb), 0.08);
+  border-color: rgba(var(--xtv-accent-rgb), 0.4);
   color: var(--bs-body-color);
   transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+}
+
+[data-bs-theme="dark"] .dashboard-job-row,
+[data-bs-theme="dark"] .dashboard-quick-action {
+  background: #1c1d2a;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-bs-theme="dark"] .dashboard-quick-action:hover {
+  background: rgba(var(--xtv-accent-rgb), 0.18);
+  border-color: rgba(var(--xtv-accent-rgb), 0.4);
 }
 
 .accent-pink {
