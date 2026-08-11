@@ -1,3 +1,5 @@
+using XerifeTv.CMS.Modules.User.Enums;
+
 namespace XerifeTv.CMS.Modules.Abstractions.Interfaces;
 
 public interface ISystemSettingsService
@@ -6,4 +8,6 @@ public interface ISystemSettingsService
     bool IsSeriesSpreadsheetImportEnabled();
     bool IsChannelsSpreadsheetImportEnabled();
     void SetSpreadsheetImportSettings(bool movies, bool series, bool channels);
+    EImdbSearchMode GetDefaultImdbSearchMode();
+    void SetImdbSearchMode(EImdbSearchMode mode);
 }

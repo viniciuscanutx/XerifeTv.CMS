@@ -14,6 +14,7 @@ public class GetUserResponseDto
     public bool EnableMoviesSpreadsheetImport { get; private set; } = true;
     public bool EnableSeriesSpreadsheetImport { get; private set; } = true;
     public bool EnableChannelsSpreadsheetImport { get; private set; } = true;
+    public EImdbSearchMode ImdbSearchMode { get; private set; } = EImdbSearchMode.IMDB_ID;
 
     public static GetUserResponseDto FromEntity(UserEntity entity)
     {
@@ -27,7 +28,8 @@ public class GetUserResponseDto
             FailedLoginAttempts = entity.FailedLoginAttempts,
             EnableMoviesSpreadsheetImport = entity.EnableMoviesSpreadsheetImport,
             EnableSeriesSpreadsheetImport = entity.EnableSeriesSpreadsheetImport,
-            EnableChannelsSpreadsheetImport = entity.EnableChannelsSpreadsheetImport
+            EnableChannelsSpreadsheetImport = entity.EnableChannelsSpreadsheetImport,
+            ImdbSearchMode = entity.ImdbSearchMode
 		};
     }
 

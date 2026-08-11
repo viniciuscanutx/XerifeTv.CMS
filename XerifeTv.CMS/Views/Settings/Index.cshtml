@@ -208,6 +208,18 @@
                                 Configuração de Importação
                             </button>
                         </li>
+
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link"
+                                    id="search-config-tab"
+                                    data-bs-toggle="tab"
+                                    data-bs-target="#search-config"
+                                    type="button"
+                                    role="tab"
+                                    aria-selected="false">
+                                Busca de Conteúdo
+                            </button>
+                        </li>
                     </ul>
 
                     <div class="tab-content" id="importTabsContent">
@@ -256,6 +268,47 @@
                                            @(ViewBag.EnableChannelsSpreadsheetImport == true ? "checked" : "")>
                                     <label class="form-check-label fs-6 fw-semibold ms-2" for="enableChannelsSpreadsheetImport">
                                         <i class="fa-solid fa-tower-cell me-2 text-warning"></i> Habilitar importação por planilha para <span class="fw-bold">Canais</span>
+                                    </label>
+                                </div>
+
+                                <div>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fa-solid fa-floppy-disk me-1"></i> Salvar Configuração
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <div class="tab-pane fade"
+                             id="search-config"
+                             role="tabpanel"
+                             aria-labelledby="search-config-tab">
+
+                            <form asp-controller="Settings" asp-action="UpdateSearchSettings" method="post" class="card p-4 shadow-sm border-0 bg-body-tertiary">
+                                <h5 class="fw-bold mb-3"><i class="fa-solid fa-magnifying-glass me-2 text-success"></i>Busca de Filmes e Séries</h5>
+                                <p class="text-muted fs-6 mb-4">Escolha como deseja preencher automaticamente os formulários de cadastro de Filmes e Séries. Você também pode alternar o modo diretamente no formulário, sem precisar voltar aqui.</p>
+
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input shadow-none"
+                                           type="radio"
+                                           id="searchModeImdbId"
+                                           name="imdbSearchMode"
+                                           value="IMDB_ID"
+                                           @(ViewBag.ImdbSearchMode?.ToString() != "NAME" ? "checked" : "")>
+                                    <label class="form-check-label fs-6 fw-semibold ms-2" for="searchModeImdbId">
+                                        Buscar por IMDB ID
+                                    </label>
+                                </div>
+
+                                <div class="form-check mb-4">
+                                    <input class="form-check-input shadow-none"
+                                           type="radio"
+                                           id="searchModeName"
+                                           name="imdbSearchMode"
+                                           value="NAME"
+                                           @(ViewBag.ImdbSearchMode?.ToString() == "NAME" ? "checked" : "")>
+                                    <label class="form-check-label fs-6 fw-semibold ms-2" for="searchModeName">
+                                        Buscar por Nome
                                     </label>
                                 </div>
 

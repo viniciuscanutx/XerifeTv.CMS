@@ -4,6 +4,7 @@ using XerifeTv.CMS.Modules.Abstractions.Interfaces;
 using XerifeTv.CMS.Modules.Common;
 using XerifeTv.CMS.Modules.Franchise.Dtos.Response;
 using XerifeTv.CMS.Modules.Franchise.Interfaces;
+using XerifeTv.CMS.Modules.Integrations.Imdb.Dtos;
 using XerifeTv.CMS.Modules.Integrations.Imdb.Services;
 using XerifeTv.CMS.Modules.Media.Delivery.Dtos.Response;
 using XerifeTv.CMS.Modules.Media.Delivery.Intefaces;
@@ -216,6 +217,30 @@ public class SeriesController(
 		if (string.IsNullOrEmpty(imdbId)) return BadRequest();
 
 		var response = await _imdbService.GetSeriesByImdbIdAsync(imdbId);
+
+		if (response.IsFailure) return BadRequest(response.Error.Description);
+
+		return Ok(response.Data);
+	}
+
+	[HttpGet]
+	public async Task<IActionResult> SearchByName(string? term)
+	{
+		if (string.IsNullOrWhiteSpace(term) || term.Trim().Length < 2)
+			return Ok(Enumerable.Empty<SeriesSearchResultDto>());
+
+		var response = await _imdbService.SearchSeriesByNameAsync(term);
+
+		if (response.IsFailure)
+			return BadRequest(response.Error.Description ?? string.Empty);
+
+		return Ok(response.Data?.Results ?? []);
+	}
+
+	[HttpGet]
+	public async Task<IActionResult> GetSeriesByTmdbId(int tmdbId)
+	{
+		var response = await _imdbService.GetSeriesByTmdbIdAsync(tmdbId);
 
 		if (response.IsFailure) return BadRequest(response.Error.Description);
 

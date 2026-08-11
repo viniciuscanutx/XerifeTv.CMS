@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using XerifeTv.CMS.Modules.Abstractions.Interfaces;
+using XerifeTv.CMS.Modules.User.Enums;
 using XerifeTv.CMS.Modules.User.Interfaces;
 
 namespace XerifeTv.CMS.Modules.Abstractions.Services;
@@ -16,6 +17,7 @@ public class SystemSettingsService : ISystemSettingsService
     private static bool _enableMoviesSpreadsheetImport = true;
     private static bool _enableSeriesSpreadsheetImport = true;
     private static bool _enableChannelsSpreadsheetImport = true;
+    private static EImdbSearchMode _defaultImdbSearchMode = EImdbSearchMode.IMDB_ID;
     private static readonly object _lock = new();
 
     private readonly IHttpContextAccessor? _httpContextAccessor;
@@ -57,16 +59,20 @@ public class SystemSettingsService : ISystemSettingsService
 
                 if (doc.RootElement.TryGetProperty("EnableChannelsSpreadsheetImport", out var p3))
                     _enableChannelsSpreadsheetImport = p3.GetBoolean();
+
+                if (doc.RootElement.TryGetProperty("ImdbSearchMode", out var p4) &&
+                    Enum.TryParse<EImdbSearchMode>(p4.GetString(), out var parsedImdbSearchMode))
+                    _defaultImdbSearchMode = parsedImdbSearchMode;
             }
             else
             {
-                SaveSettingsToDisk(_enableMoviesSpreadsheetImport, _enableSeriesSpreadsheetImport, _enableChannelsSpreadsheetImport);
+                SaveSettingsToDisk(_enableMoviesSpreadsheetImport, _enableSeriesSpreadsheetImport, _enableChannelsSpreadsheetImport, _defaultImdbSearchMode);
             }
         }
         catch { }
     }
 
-    private static void SaveSettingsToDisk(bool movies, bool series, bool channels)
+    private static void SaveSettingsToDisk(bool movies, bool series, bool channels, EImdbSearchMode imdbSearchMode)
     {
         try
         {
@@ -74,7 +80,8 @@ public class SystemSettingsService : ISystemSettingsService
             {
                 EnableMoviesSpreadsheetImport = movies,
                 EnableSeriesSpreadsheetImport = series,
-                EnableChannelsSpreadsheetImport = channels
+                EnableChannelsSpreadsheetImport = channels,
+                ImdbSearchMode = imdbSearchMode.ToString()
             };
             var json = System.Text.Json.JsonSerializer.Serialize(dto, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
             var targetPath = Path.Combine(Directory.GetCurrentDirectory(), SettingsFileName);
@@ -128,7 +135,22 @@ public class SystemSettingsService : ISystemSettingsService
             _enableMoviesSpreadsheetImport = movies;
             _enableSeriesSpreadsheetImport = series;
             _enableChannelsSpreadsheetImport = channels;
-            SaveSettingsToDisk(movies, series, channels);
+            SaveSettingsToDisk(movies, series, channels, _defaultImdbSearchMode);
+        }
+    }
+
+    public EImdbSearchMode GetDefaultImdbSearchMode()
+    {
+        var user = GetCurrentLoggedInUser();
+        return user != null ? user.ImdbSearchMode : _defaultImdbSearchMode;
+    }
+
+    public void SetImdbSearchMode(EImdbSearchMode mode)
+    {
+        lock (_lock)
+        {
+            _defaultImdbSearchMode = mode;
+            SaveSettingsToDisk(_enableMoviesSpreadsheetImport, _enableSeriesSpreadsheetImport, _enableChannelsSpreadsheetImport, mode);
         }
     }
 }

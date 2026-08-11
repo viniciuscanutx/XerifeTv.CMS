@@ -138,4 +138,124 @@ public class ImdbService(IConfiguration _configuration) : IImdbService
             return Result<GetSeriesEpisodesBySeasonResponseDto?>.Failure(error);
         }
     }
+
+    public async Task<Result<SearchMoviesByNameResponseDto?>> SearchMoviesByNameAsync(string query)
+    {
+        try
+        {
+            var client = new HttpClient();
+            var url = "https://api.themoviedb.org/3/search/movie";
+            var tmdbKey = _configuration["Tmdb:Key"];
+
+            var response = await client.GetAsync($"{url}?api_key={tmdbKey}&query={Uri.EscapeDataString(query)}&language=pt-BR&page=1");
+
+            if (!response.IsSuccessStatusCode)
+                return Result<SearchMoviesByNameResponseDto?>.Failure(
+                    new Error("400", $"[{query}] IMDB API retornou: {response.ReasonPhrase}"));
+
+            var responseJsonString = await response.Content.ReadAsStringAsync();
+            var result = JsonConvert.DeserializeObject<SearchMoviesByNameResponseDto>(responseJsonString);
+
+            if (result is null)
+                return Result<SearchMoviesByNameResponseDto?>.Failure(
+                    new Error("404", $"Nenhum filme encontrado para: {query}"));
+
+            return Result<SearchMoviesByNameResponseDto?>.Success(result);
+        }
+        catch (Exception ex)
+        {
+            var error = new Error("500", ex.InnerException?.Message ?? ex.Message);
+            return Result<SearchMoviesByNameResponseDto?>.Failure(error);
+        }
+    }
+
+    public async Task<Result<SearchSeriesByNameResponseDto?>> SearchSeriesByNameAsync(string query)
+    {
+        try
+        {
+            var client = new HttpClient();
+            var url = "https://api.themoviedb.org/3/search/tv";
+            var tmdbKey = _configuration["Tmdb:Key"];
+
+            var response = await client.GetAsync($"{url}?api_key={tmdbKey}&query={Uri.EscapeDataString(query)}&language=pt-BR&page=1");
+
+            if (!response.IsSuccessStatusCode)
+                return Result<SearchSeriesByNameResponseDto?>.Failure(
+                    new Error("400", $"[{query}] IMDB API retornou: {response.ReasonPhrase}"));
+
+            var responseJsonString = await response.Content.ReadAsStringAsync();
+            var result = JsonConvert.DeserializeObject<SearchSeriesByNameResponseDto>(responseJsonString);
+
+            if (result is null)
+                return Result<SearchSeriesByNameResponseDto?>.Failure(
+                    new Error("404", $"Nenhuma serie encontrada para: {query}"));
+
+            return Result<SearchSeriesByNameResponseDto?>.Success(result);
+        }
+        catch (Exception ex)
+        {
+            var error = new Error("500", ex.InnerException?.Message ?? ex.Message);
+            return Result<SearchSeriesByNameResponseDto?>.Failure(error);
+        }
+    }
+
+    public async Task<Result<GetMovieByImdbResponseDto?>> GetMovieByTmdbIdAsync(int tmdbId)
+    {
+        try
+        {
+            var client = new HttpClient();
+            var url = $"https://api.themoviedb.org/3/movie/{tmdbId}";
+            var tmdbKey = _configuration["Tmdb:Key"];
+
+            var response = await client.GetAsync($"{url}?api_key={tmdbKey}&language=pt-BR");
+
+            if (!response.IsSuccessStatusCode)
+                return Result<GetMovieByImdbResponseDto?>.Failure(
+                    new Error("400", $"[{tmdbId}] IMDB API retornou: {response.ReasonPhrase}"));
+
+            var responseJsonString = await response.Content.ReadAsStringAsync();
+            var result = JsonConvert.DeserializeObject<GetMovieByImdbResponseDto>(responseJsonString);
+
+            if (result is null)
+                return Result<GetMovieByImdbResponseDto?>.Failure(
+                    new Error("404", $"Tmdb ID: {tmdbId} invalido"));
+
+            return Result<GetMovieByImdbResponseDto?>.Success(result);
+        }
+        catch (Exception ex)
+        {
+            var error = new Error("500", ex.InnerException?.Message ?? ex.Message);
+            return Result<GetMovieByImdbResponseDto?>.Failure(error);
+        }
+    }
+
+    public async Task<Result<GetSeriesByImdbResponseDto?>> GetSeriesByTmdbIdAsync(int tmdbId)
+    {
+        try
+        {
+            var client = new HttpClient();
+            var url = $"https://api.themoviedb.org/3/tv/{tmdbId}";
+            var tmdbKey = _configuration["Tmdb:Key"];
+
+            var response = await client.GetAsync($"{url}?api_key={tmdbKey}&language=pt-BR&append_to_response=external_ids");
+
+            if (!response.IsSuccessStatusCode)
+                return Result<GetSeriesByImdbResponseDto?>.Failure(
+                    new Error("400", $"[{tmdbId}] IMDB API retornou: {response.ReasonPhrase}"));
+
+            var responseJsonString = await response.Content.ReadAsStringAsync();
+            var result = JsonConvert.DeserializeObject<GetSeriesByImdbResponseDto>(responseJsonString);
+
+            if (result is null)
+                return Result<GetSeriesByImdbResponseDto?>.Failure(
+                    new Error("404", $"Tmdb ID: {tmdbId} invalido"));
+
+            return Result<GetSeriesByImdbResponseDto?>.Success(result);
+        }
+        catch (Exception ex)
+        {
+            var error = new Error("500", ex.InnerException?.Message ?? ex.Message);
+            return Result<GetSeriesByImdbResponseDto?>.Failure(error);
+        }
+    }
 }

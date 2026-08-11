@@ -46,5 +46,16 @@ public class GetSeriesByImdbResponseDto
 	[JsonProperty("number_of_episodes")]
 	public int NumberEpisodes { get; set; }
 
+	[JsonProperty("external_ids")]
+	public ExternalIdsDto? ExternalIds { get; set; }
+
+	public string? ImdbId => ExternalIds?.ImdbId;
+
 	public record GenreDto(int Id, string Name);
+
+	public class ExternalIdsDto
+	{
+		[JsonProperty("imdb_id")]
+		public string? ImdbId { get; set; }
+	}
 }

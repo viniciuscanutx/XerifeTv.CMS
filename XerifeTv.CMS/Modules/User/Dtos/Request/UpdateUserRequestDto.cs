@@ -12,6 +12,7 @@ public class UpdateUserRequestDto
     public bool? EnableMoviesSpreadsheetImport { get; set; }
     public bool? EnableSeriesSpreadsheetImport { get; set; }
     public bool? EnableChannelsSpreadsheetImport { get; set; }
+    public EImdbSearchMode? ImdbSearchMode { get; set; }
 
     public UserEntity ToEntity()
     {
@@ -24,7 +25,8 @@ public class UpdateUserRequestDto
             Blocked = Blocked ?? false,
             EnableMoviesSpreadsheetImport = EnableMoviesSpreadsheetImport ?? true,
             EnableSeriesSpreadsheetImport = EnableSeriesSpreadsheetImport ?? true,
-            EnableChannelsSpreadsheetImport = EnableChannelsSpreadsheetImport ?? true
+            EnableChannelsSpreadsheetImport = EnableChannelsSpreadsheetImport ?? true,
+            ImdbSearchMode = ImdbSearchMode ?? EImdbSearchMode.IMDB_ID
         };
     }
 }

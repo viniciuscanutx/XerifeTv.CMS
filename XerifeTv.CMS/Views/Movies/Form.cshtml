@@ -3,6 +3,7 @@
 @using XerifeTv.CMS.Views.Movies.Models
 @using XerifeTv.CMS.Views.Shared.Models
 @using XerifeTv.CMS.Modules.Abstractions.Interfaces
+@using XerifeTv.CMS.Modules.User.Enums
 @inject ISystemSettingsService SystemSettingsService
 
 @model MovieFormModelView
@@ -11,6 +12,7 @@
     ViewData["Title"] = "Filmes";
 
     bool isMediaDeliveryProfileSelected = !string.IsNullOrWhiteSpace(Model?.MovieDto?.MediaDeliveryProfileId);
+    bool isNameSearchDefault = SystemSettingsService.GetDefaultImdbSearchMode() == EImdbSearchMode.NAME;
 }
 
 @if (SystemSettingsService.IsMoviesSpreadsheetImportEnabled())
@@ -60,21 +62,48 @@
 
             <div class="row mb-3">
                 <div class="col-12 col-md-3">
-                    <label for="imdbId" class="form-label">Imdb ID</label>
-                    <div class="input-group">
-                        <input type="text"
-                               name="imdbId"
-                               id="imdbId"
-                               class="form-control"
-                               placeholder="tt999999"
-                               value="@Model?.MovieDto?.ImdbId"
-                               required>
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <label class="form-label mb-0">Buscar por</label>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button type="button"
+                                    class="btn search-mode-btn @(isNameSearchDefault ? "btn-outline-secondary" : "btn-secondary active")"
+                                    data-mode="imdb">
+                                IMDB ID
+                            </button>
+                            <button type="button"
+                                    class="btn search-mode-btn @(isNameSearchDefault ? "btn-secondary active" : "btn-outline-secondary")"
+                                    data-mode="name">
+                                Nome
+                            </button>
+                        </div>
+                    </div>
 
-                        <button id="btn-get-imdb"
-                                class="btn btn-success shadow-none"
-                                type="button">
-                            <i class="fa-solid fa-magnifying-glass"></i>
-                        </button>
+                    <div class="search-mode-panel @(isNameSearchDefault ? "d-none" : "")" data-mode-panel="imdb">
+                        <div class="input-group">
+                            <input type="text"
+                                   name="imdbId"
+                                   id="imdbId"
+                                   class="form-control"
+                                   placeholder="tt999999"
+                                   value="@Model?.MovieDto?.ImdbId"
+                                   required>
+
+                            <button id="btn-get-imdb"
+                                    class="btn btn-success shadow-none"
+                                    type="button">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="search-mode-panel @(isNameSearchDefault ? "" : "d-none")" data-mode-panel="name">
+                        <input type="text"
+                               id="titleSearch"
+                               class="form-control"
+                               placeholder="Pesquise pelo nome..."
+                               list="titleSearchList"
+                               autocomplete="off">
+                        <datalist id="titleSearchList"></datalist>
                     </div>
                 </div>
 
@@ -349,6 +378,111 @@
             $('.loading-global').hide();
           }
         });
+
+        $('.search-mode-btn').click(function () {
+          const mode = $(this).data('mode');
+          $('.search-mode-btn').removeClass('active btn-secondary').addClass('btn-outline-secondary');
+          $(this).addClass('active btn-secondary').removeClass('btn-outline-secondary');
+          $('.search-mode-panel').addClass('d-none');
+          $(`.search-mode-panel[data-mode-panel="${mode}"]`).removeClass('d-none');
+        });
+
+        $('form').on('submit', function (e) {
+          const activeMode = $('.search-mode-btn.active').data('mode');
+          if (activeMode === 'name' && !$('#imdbId').val()) {
+            e.preventDefault();
+            alert('Selecione um resultado da busca por nome antes de salvar.');
+          }
+        });
+
+        (function () {
+          const minSearchLength = 2;
+          const searchDebounceInMs = 250;
+          let searchTimeoutId = null;
+          let latestSearchRequest = 0;
+
+          const titleSearchInput = document.getElementById('titleSearch');
+          const titleSearchList = document.getElementById('titleSearchList');
+
+          function findOptionByName(name) {
+            return Array.from(titleSearchList.options)
+              .find(item => item.value.trim().toLowerCase() === name.trim().toLowerCase()) || null;
+          }
+
+          async function loadResults(term) {
+            const normalizedTerm = (term || '').trim();
+            if (normalizedTerm.length < minSearchLength) {
+              titleSearchList.innerHTML = '';
+              return;
+            }
+
+            const requestId = ++latestSearchRequest;
+
+            try {
+              const results = await $.ajax({
+                url: '/Movies/SearchByName',
+                method: 'GET',
+                data: { term: normalizedTerm }
+              });
+
+              if (requestId !== latestSearchRequest) return;
+
+              titleSearchList.innerHTML = (results || []).map(result =>
+                `<option value="${result.title}${result.releaseYear ? ' (' + result.releaseYear + ')' : ''}" data-id="${result.id}"></option>`
+              ).join('');
+            }
+            catch {
+            }
+          }
+
+          async function selectResult() {
+            const option = findOptionByName(titleSearchInput.value);
+            if (!option) return;
+
+            try {
+              $('.loading-global .label').text('Importando os dados, por favor aguarde...');
+              $('.loading-global').show();
+
+              const response = await $.ajax({
+                url: '/Movies/GetByTmdbId',
+                method: 'GET',
+                data: { tmdbId: option.dataset.id }
+              });
+
+              if (!response) return;
+
+              $('#imdbId').val(response.imdbId);
+              $('#title').val(response.title);
+              $('#categories').val(response.genres.map(g => g.name.toLowerCase()).join(', '));
+              $('#categories').blur();
+
+              $('#synopsis').val(response.overview);
+              $('#releaseYear').val(response.releaseYear);
+              $('#review').val(String(response.voteAverage).replace(',', '.'));
+              $('#posterUrl').val(response.posterUrl);
+              $('#bannerUrl').val(response.bannerUrl);
+              $('#videoDuration').val(response.durationInSeconds);
+            }
+            finally {
+              $('.loading-global').hide();
+            }
+          }
+
+          titleSearchInput?.addEventListener('input', function () {
+            const term = this.value;
+
+            if (searchTimeoutId) {
+              window.clearTimeout(searchTimeoutId);
+            }
+
+            searchTimeoutId = window.setTimeout(function () {
+              loadResults(term);
+            }, searchDebounceInMs);
+          });
+
+          titleSearchInput?.addEventListener('change', selectResult);
+          titleSearchInput?.addEventListener('blur', selectResult);
+        })();
 
         $('#trailerVideoYoutubeId').blur(function() {
             const url = $(this).val();

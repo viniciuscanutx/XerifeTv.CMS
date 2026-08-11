@@ -8,6 +8,7 @@ using XerifeTv.CMS.Modules.Integrations.Webhook.Enums;
 using XerifeTv.CMS.Modules.Integrations.Webhook.Interfaces;
 using XerifeTv.CMS.Modules.Media.Delivery.Intefaces;
 using XerifeTv.CMS.Modules.User.Dtos.Request;
+using XerifeTv.CMS.Modules.User.Enums;
 using XerifeTv.CMS.Modules.User.Interfaces;
 using XerifeTv.CMS.Shared.Helpers;
 using XerifeTv.CMS.Views.Settings.Models;
@@ -39,6 +40,7 @@ public class SettingsController(
         ViewBag.EnableMoviesSpreadsheetImport = userResponse.Data?.EnableMoviesSpreadsheetImport ?? _systemSettingsService.IsMoviesSpreadsheetImportEnabled();
         ViewBag.EnableSeriesSpreadsheetImport = userResponse.Data?.EnableSeriesSpreadsheetImport ?? _systemSettingsService.IsSeriesSpreadsheetImportEnabled();
         ViewBag.EnableChannelsSpreadsheetImport = userResponse.Data?.EnableChannelsSpreadsheetImport ?? _systemSettingsService.IsChannelsSpreadsheetImportEnabled();
+        ViewBag.ImdbSearchMode = userResponse.Data?.ImdbSearchMode ?? _systemSettingsService.GetDefaultImdbSearchMode();
 
         SettingsModelView model = new(userResponse.Data!, webhooksResponse.Data?.Items ?? [], mediaDeliveryProfilesResponse.Data ?? []);
 
@@ -77,6 +79,37 @@ public class SettingsController(
         TempData["Notification"] = MessageViewHelper.SuccessJson("Configurações de importação atualizadas com sucesso!");
 
         _logger.LogInformation($"{User.Identity?.Name} updated import settings (Movies:{enableMoviesSpreadsheetImport}, Series:{enableSeriesSpreadsheetImport}, Channels:{enableChannelsSpreadsheetImport})");
+
+        return Redirect(Url.Action("Index") + "#v-pills-import");
+    }
+
+    [HttpPost]
+    [Authorize(Roles = "admin, common")]
+    public async Task<IActionResult> UpdateSearchSettings(EImdbSearchMode imdbSearchMode)
+    {
+        _systemSettingsService.SetImdbSearchMode(imdbSearchMode);
+
+        var userResponse = await _userService.GetByUsernameAsync(User.Identity?.Name ?? string.Empty);
+        if (userResponse.IsSuccess && userResponse.Data != null)
+        {
+            var updateUserDto = new UpdateUserRequestDto
+            {
+                Id = userResponse.Data.Id,
+                Email = userResponse.Data.Email,
+                UserName = userResponse.Data.UserName,
+                Role = userResponse.Data.Role,
+                Blocked = userResponse.Data.Blocked,
+                EnableMoviesSpreadsheetImport = userResponse.Data.EnableMoviesSpreadsheetImport,
+                EnableSeriesSpreadsheetImport = userResponse.Data.EnableSeriesSpreadsheetImport,
+                EnableChannelsSpreadsheetImport = userResponse.Data.EnableChannelsSpreadsheetImport,
+                ImdbSearchMode = imdbSearchMode
+            };
+            await _userService.UpdateAsync(updateUserDto);
+        }
+
+        TempData["Notification"] = MessageViewHelper.SuccessJson("Preferência de busca atualizada com sucesso!");
+
+        _logger.LogInformation($"{User.Identity?.Name} updated the default content search mode to {imdbSearchMode}");
 
         return Redirect(Url.Action("Index") + "#v-pills-import");
     }

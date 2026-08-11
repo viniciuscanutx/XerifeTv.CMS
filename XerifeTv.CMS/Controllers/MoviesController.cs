@@ -8,6 +8,7 @@ using XerifeTv.CMS.Modules.Movie.Dtos.Response;
 using XerifeTv.CMS.Modules.Common;
 using XerifeTv.CMS.Modules.Franchise.Dtos.Response;
 using XerifeTv.CMS.Modules.Franchise.Interfaces;
+using XerifeTv.CMS.Modules.Integrations.Imdb.Dtos;
 using XerifeTv.CMS.Modules.Integrations.Imdb.Services;
 using XerifeTv.CMS.Shared.Helpers;
 using XerifeTv.CMS.Views.Movies.Models;
@@ -148,6 +149,28 @@ public class MoviesController(
         if (string.IsNullOrEmpty(imdbId)) return BadRequest();
 
         var response = await _imdbService.GetMovieByImdbIdAsync(imdbId);
+
+        return response.IsFailure ? BadRequest() : Ok(response.Data);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> SearchByName(string? term)
+    {
+        if (string.IsNullOrWhiteSpace(term) || term.Trim().Length < 2)
+            return Ok(Enumerable.Empty<MovieSearchResultDto>());
+
+        var response = await _imdbService.SearchMoviesByNameAsync(term);
+
+        if (response.IsFailure)
+            return BadRequest(response.Error.Description ?? string.Empty);
+
+        return Ok(response.Data?.Results ?? []);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetByTmdbId(int tmdbId)
+    {
+        var response = await _imdbService.GetMovieByTmdbIdAsync(tmdbId);
 
         return response.IsFailure ? BadRequest() : Ok(response.Data);
     }
