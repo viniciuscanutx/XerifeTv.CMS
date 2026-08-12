@@ -18,6 +18,9 @@
   if (User.IsInRole("admin"))
     pagesViewSideMenu.Add(["Users", "Index", "Usuários", "fa-solid fa-users"]);
 
+  if (User.IsInRole("admin"))
+    pagesViewSideMenu.Add(["Activities", "Index", "Atividades", "fa-solid fa-clock-rotate-left"]);
+
   if (!User.IsInRole("visitor"))
     pagesViewSideMenu.Add(["BackgroundJobQueue", "Index", "Fila de Processamentos", "fa-solid fa-list-check"]);
 

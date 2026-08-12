@@ -9,7 +9,8 @@
      aria-hidden="true">
 
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <form class="modal-content"
+        <form id="batchMoviesForm"
+              class="modal-content"
               asp-controller="Movies"
               asp-action="BatchAddMovies">
 
@@ -77,48 +78,95 @@
 
                 <div class="row mb-3">
                     <div class="col-12">
-                        <label for="batch_imdbIdsText" class="form-label fw-bold">IDs do IMDB (Um ID por linha)</label>
-                        <textarea id="batch_imdbIdsText"
-                                  name="imdbIdsText"
-                                  class="form-control"
-                                  rows="4"
-                                  placeholder="tt1084242&#10;tt14905854&#10;3443597"
-                                  required></textarea>
-                        <small class="text-muted">A linha 1 corresponderá ao Filme 1, linha 2 ao Filme 2, e assim por diante.</small>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button type="button" class="btn btn-secondary active batch-mode-btn" data-batch-mode="ids">
+                                Colar IDs do IMDB
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary batch-mode-btn" data-batch-mode="name">
+                                Buscar por Nome
+                            </button>
+                        </div>
                     </div>
                 </div>
 
-                <div class="row mb-3">
-                    <div class="col-12">
-                        <label for="batch_parentalRatingsText" class="form-label fw-bold">Classificação Indicativa por Linha (Opcional - Um por linha)</label>
-                        <textarea id="batch_parentalRatingsText"
-                                  name="parentalRatingsText"
-                                  class="form-control"
-                                  rows="3"
-                                  placeholder="18&#10;14&#10;16"></textarea>
-                        <small class="text-muted">Se deixado em branco para algum filme, utilizará a Classificação Indicativa Padrão selecionada acima.</small>
+                <div data-batch-mode-panel="ids">
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <label for="batch_imdbIdsText" class="form-label fw-bold">IDs do IMDB (Um ID por linha)</label>
+                            <textarea id="batch_imdbIdsText"
+                                      name="imdbIdsText"
+                                      class="form-control"
+                                      rows="4"
+                                      placeholder="tt1084242&#10;tt14905854&#10;3443597"
+                                      required></textarea>
+                            <small class="text-muted">A linha 1 corresponderá ao Filme 1, linha 2 ao Filme 2, e assim por diante.</small>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <label for="batch_parentalRatingsText" class="form-label fw-bold">Classificação Indicativa por Linha (Opcional - Um por linha)</label>
+                            <textarea id="batch_parentalRatingsText"
+                                      name="parentalRatingsText"
+                                      class="form-control"
+                                      rows="3"
+                                      placeholder="18&#10;14&#10;16"></textarea>
+                            <small class="text-muted">Se deixado em branco para algum filme, utilizará a Classificação Indicativa Padrão selecionada acima.</small>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <label for="batch_movie_videoUrlsText" class="form-label fw-bold">Links Primários dos Filmes (Opcional - Um link por linha)</label>
+                            <textarea id="batch_movie_videoUrlsText"
+                                      name="videoUrlsText"
+                                      class="form-control"
+                                      rows="5"
+                                      placeholder="https://servidor.com/filme1.mp4&#10;https://servidor.com/filme2.mp4"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <label for="batch_movie_alternativeVideoUrlsText" class="form-label fw-bold">Segundo Link / Legendado (Opcional - Um link por linha)</label>
+                            <textarea id="batch_movie_alternativeVideoUrlsText"
+                                      name="alternativeVideoUrlsText"
+                                      class="form-control"
+                                      rows="4"
+                                      placeholder="https://servidor.com/filme1-leg.mp4&#10;https://servidor.com/filme2-leg.mp4"></textarea>
+                        </div>
                     </div>
                 </div>
 
-                <div class="row mb-3">
-                    <div class="col-12">
-                        <label for="batch_movie_videoUrlsText" class="form-label fw-bold">Links Primários dos Filmes (Opcional - Um link por linha)</label>
-                        <textarea id="batch_movie_videoUrlsText"
-                                  name="videoUrlsText"
-                                  class="form-control"
-                                  rows="5"
-                                  placeholder="https://servidor.com/filme1.mp4&#10;https://servidor.com/filme2.mp4"></textarea>
+                <div data-batch-mode-panel="name" class="d-none">
+                    <div class="row mb-3">
+                        <div class="col-12 position-relative">
+                            <label for="batch_titleSearch" class="form-label fw-bold">Pesquisar Filme por Nome</label>
+                            <input type="text"
+                                   id="batch_titleSearch"
+                                   class="form-control"
+                                   placeholder="Pesquise pelo nome..."
+                                   autocomplete="off"
+                                   role="combobox"
+                                   aria-expanded="false"
+                                   aria-autocomplete="list"
+                                   aria-controls="batch_titleSearchResults">
+                            <div id="batch_titleSearchResults"
+                                 class="list-group position-absolute w-100 shadow-sm"
+                                 style="z-index: 1060; max-height: 320px; overflow-y: auto;"
+                                 role="listbox"
+                                 hidden></div>
+                            <small class="text-muted">Pesquise o filme e clique em <i class="fa-solid fa-plus"></i> para adicioná-lo à lista abaixo.</small>
+                        </div>
                     </div>
-                </div>
 
-                <div class="row mb-3">
-                    <div class="col-12">
-                        <label for="batch_movie_alternativeVideoUrlsText" class="form-label fw-bold">Segundo Link / Legendado (Opcional - Um link por linha)</label>
-                        <textarea id="batch_movie_alternativeVideoUrlsText"
-                                  name="alternativeVideoUrlsText"
-                                  class="form-control"
-                                  rows="4"
-                                  placeholder="https://servidor.com/filme1-leg.mp4&#10;https://servidor.com/filme2-leg.mp4"></textarea>
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <label class="form-label fw-bold">Filmes Selecionados</label>
+                            <div id="batch_selectedMoviesList" class="d-flex flex-column gap-2">
+                                <small class="text-muted">Nenhum filme adicionado ainda.</small>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -139,3 +187,269 @@
         </form>
     </div>
 </div>
+
+<script>
+    (function () {
+        const modeButtons = document.querySelectorAll('#batchMoviesModal .batch-mode-btn');
+        const modePanels = document.querySelectorAll('#batchMoviesModal [data-batch-mode-panel]');
+        const imdbIdsTextarea = document.getElementById('batch_imdbIdsText');
+        const videoUrlsTextarea = document.getElementById('batch_movie_videoUrlsText');
+        const titleSearchInput = document.getElementById('batch_titleSearch');
+        const titleSearchResults = document.getElementById('batch_titleSearchResults');
+        const selectedMoviesList = document.getElementById('batch_selectedMoviesList');
+        const form = document.getElementById('batchMoviesForm');
+
+        let currentMode = 'ids';
+        let selectedMovies = [];
+        let currentResults = [];
+        let activeIndex = -1;
+        let searchTimeoutId = null;
+        let latestSearchRequest = 0;
+
+        function syncHiddenFields() {
+            imdbIdsTextarea.value = selectedMovies.map(m => m.imdbId).join('\n');
+            videoUrlsTextarea.value = selectedMovies.map(m => m.videoUrl || '').join('\n');
+        }
+
+        modeButtons.forEach(btn => {
+            btn.addEventListener('click', function () {
+                currentMode = this.dataset.batchMode;
+
+                modeButtons.forEach(b => b.classList.remove('active', 'btn-secondary'));
+                modeButtons.forEach(b => b.classList.add('btn-outline-secondary'));
+                this.classList.add('active', 'btn-secondary');
+                this.classList.remove('btn-outline-secondary');
+
+                modePanels.forEach(panel => {
+                    panel.classList.toggle('d-none', panel.dataset.batchModePanel !== currentMode);
+                });
+
+                // The IMDB IDs textarea is `required`, but native HTML5 validation still
+                // blocks form submission (silently, with no visible tooltip) even when the
+                // field is hidden via display:none. Toggling `required` off while it's hidden
+                // avoids the browser eating the submit event before our own JS runs.
+                if (currentMode === 'name') {
+                    imdbIdsTextarea.removeAttribute('required');
+                    syncHiddenFields();
+                } else {
+                    imdbIdsTextarea.setAttribute('required', 'required');
+                }
+            });
+        });
+
+        function renderSelectedMovies() {
+            syncHiddenFields();
+
+            if (selectedMovies.length === 0) {
+                selectedMoviesList.innerHTML = '<small class="text-muted">Nenhum filme adicionado ainda.</small>';
+                return;
+            }
+
+            selectedMoviesList.innerHTML = selectedMovies.map((movie, index) => `
+                <div class="d-flex align-items-start gap-2 border rounded p-2">
+                    <img src="${movie.posterUrl || ''}"
+                         alt=""
+                         style="width: 40px; height: 60px; object-fit: cover; flex-shrink: 0;"
+                         onerror="this.style.visibility='hidden'">
+                    <div class="flex-grow-1">
+                        <label class="form-label mb-1">${movie.title}${movie.releaseYear ? ' (' + movie.releaseYear + ')' : ''}</label>
+                        <input type="text"
+                               class="form-control form-control-sm selected-movie-url"
+                               data-index="${index}"
+                               placeholder="https://servidor.com/filme.mp4"
+                               value="${movie.videoUrl || ''}">
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-danger remove-selected-movie" data-index="${index}" title="Remover">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+            `).join('');
+
+            selectedMoviesList.querySelectorAll('.selected-movie-url').forEach(input => {
+                input.addEventListener('input', function () {
+                    selectedMovies[Number(this.dataset.index)].videoUrl = this.value;
+                    syncHiddenFields();
+                });
+            });
+
+            selectedMoviesList.querySelectorAll('.remove-selected-movie').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    selectedMovies.splice(Number(this.dataset.index), 1);
+                    renderSelectedMovies();
+                });
+            });
+        }
+
+        function optionId(index) {
+            return `batch_titleSearchResult-${index}`;
+        }
+
+        function closeResults() {
+            titleSearchResults.hidden = true;
+            titleSearchResults.innerHTML = '';
+            titleSearchInput.setAttribute('aria-expanded', 'false');
+            titleSearchInput.removeAttribute('aria-activedescendant');
+            currentResults = [];
+            activeIndex = -1;
+        }
+
+        function highlight(index) {
+            const options = titleSearchResults.querySelectorAll('[role="option"]');
+            options.forEach(option => option.classList.remove('active'));
+
+            if (index < 0 || index >= options.length) {
+                activeIndex = -1;
+                titleSearchInput.removeAttribute('aria-activedescendant');
+                return;
+            }
+
+            activeIndex = index;
+            options[index].classList.add('active');
+            options[index].scrollIntoView({ block: 'nearest' });
+            titleSearchInput.setAttribute('aria-activedescendant', optionId(index));
+        }
+
+        async function addMovie(result) {
+            if (selectedMovies.some(m => m.tmdbId === result.id)) return;
+
+            const button = document.getElementById(optionId(result._index));
+            if (button) button.disabled = true;
+
+            try {
+                const response = await $.ajax({
+                    url: '/Movies/GetByTmdbId',
+                    method: 'GET',
+                    data: { tmdbId: result.id }
+                });
+
+                if (!response || !response.imdbId) return;
+
+                selectedMovies.push({
+                    tmdbId: result.id,
+                    imdbId: response.imdbId,
+                    title: result.title,
+                    releaseYear: result.releaseYear,
+                    posterUrl: result.posterUrl,
+                    videoUrl: ''
+                });
+
+                renderSelectedMovies();
+                titleSearchInput.value = '';
+                closeResults();
+                titleSearchInput.focus();
+            }
+            finally {
+                if (button) button.disabled = false;
+            }
+        }
+
+        function renderResults(results) {
+            currentResults = results || [];
+            activeIndex = -1;
+
+            if (currentResults.length === 0) {
+                closeResults();
+                return;
+            }
+
+            titleSearchResults.innerHTML = currentResults.map((result, index) => `
+                <div class="list-group-item d-flex align-items-center gap-2" role="option" id="${optionId(index)}">
+                    <img src="${result.posterUrl || ''}"
+                         alt=""
+                         style="width: 32px; height: 48px; object-fit: cover; flex-shrink: 0;"
+                         onerror="this.style.visibility='hidden'">
+                    <span class="flex-grow-1">${result.title}${result.releaseYear ? ' (' + result.releaseYear + ')' : ''}</span>
+                    <button type="button" class="btn btn-sm btn-outline-success add-search-result" data-index="${index}" title="Adicionar">
+                        <i class="fa-solid fa-plus"></i>
+                    </button>
+                </div>
+            `).join('');
+
+            titleSearchResults.hidden = false;
+            titleSearchInput.setAttribute('aria-expanded', 'true');
+
+            titleSearchResults.querySelectorAll('.add-search-result').forEach(btn => {
+                btn.addEventListener('mousedown', function (e) {
+                    e.preventDefault();
+                    const index = Number(this.dataset.index);
+                    addMovie({ ...currentResults[index], _index: index });
+                });
+            });
+        }
+
+        async function loadResults(term) {
+            const normalizedTerm = (term || '').trim();
+            if (normalizedTerm.length < 2) {
+                closeResults();
+                return;
+            }
+
+            const requestId = ++latestSearchRequest;
+
+            try {
+                const results = await $.ajax({
+                    url: '/Movies/SearchByName',
+                    method: 'GET',
+                    data: { term: normalizedTerm }
+                });
+
+                if (requestId !== latestSearchRequest) return;
+
+                renderResults(results);
+            }
+            catch {
+            }
+        }
+
+        titleSearchInput?.addEventListener('input', function () {
+            const term = this.value;
+
+            if (searchTimeoutId) window.clearTimeout(searchTimeoutId);
+            searchTimeoutId = window.setTimeout(function () {
+                loadResults(term);
+            }, 250);
+        });
+
+        titleSearchInput?.addEventListener('keydown', function (e) {
+            if (titleSearchResults.hidden) return;
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                highlight(Math.min(activeIndex + 1, currentResults.length - 1));
+            }
+            else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                highlight(Math.max(activeIndex - 1, 0));
+            }
+            else if (e.key === 'Enter') {
+                if (activeIndex >= 0) {
+                    e.preventDefault();
+                    addMovie({ ...currentResults[activeIndex], _index: activeIndex });
+                }
+            }
+            else if (e.key === 'Escape') {
+                closeResults();
+            }
+        });
+
+        titleSearchInput?.addEventListener('blur', function () {
+            window.setTimeout(closeResults, 150);
+        });
+
+        document.addEventListener('click', function (e) {
+            if (titleSearchInput && titleSearchResults &&
+                !titleSearchInput.contains(e.target) && !titleSearchResults.contains(e.target)) {
+                closeResults();
+            }
+        });
+
+        form?.addEventListener('submit', function (e) {
+            if (currentMode !== 'name') return;
+
+            if (selectedMovies.length === 0) {
+                e.preventDefault();
+                alert('Adicione ao menos um filme à lista antes de processar.');
+            }
+        });
+    })();
+</script>

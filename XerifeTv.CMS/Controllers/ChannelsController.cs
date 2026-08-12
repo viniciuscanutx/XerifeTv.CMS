@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using XerifeTv.CMS.Modules.Abstractions.Interfaces;
+using XerifeTv.CMS.Modules.Activity.Interfaces;
 using XerifeTv.CMS.Modules.Channel.Dtos.Request;
 using XerifeTv.CMS.Modules.Channel.Dtos.Response;
 using XerifeTv.CMS.Modules.Channel.Enums;
@@ -16,6 +17,7 @@ namespace XerifeTv.CMS.Controllers;
 [Authorize]
 public class ChannelsController(
   IChannelService _service,
+  IActivityLogService _activityLogService,
   ILogger<ChannelsController> _logger,
   ISpreadsheetBatchImporter<IChannelService> _spreadsheetBatchImporter,
   IMediaDeliveryProfileService _mediaDeliveryProfileService) : Controller
@@ -85,6 +87,7 @@ public class ChannelsController(
           : MessageViewHelper.SuccessJson($"Canal cadastrado com sucesso");
 
         _logger.LogInformation($"{User.Identity?.Name} registered the channel {dto.Title}");
+        await _activityLogService.LogAsync(User.Identity?.Name ?? "desconhecido", "Canais", "created", $"cadastrou o canal \"{dto.Title}\"");
 
         return RedirectToAction("Index");
     }
@@ -99,6 +102,7 @@ public class ChannelsController(
           : MessageViewHelper.SuccessJson($"Canal atualizado com sucesso");
 
         _logger.LogInformation($"{User.Identity?.Name} updated the channel {dto.Title}");
+        await _activityLogService.LogAsync(User.Identity?.Name ?? "desconhecido", "Canais", "updated", $"atualizou o canal \"{dto.Title}\"");
 
         return RedirectToAction("Index");
     }
@@ -115,6 +119,7 @@ public class ChannelsController(
               : MessageViewHelper.SuccessJson($"Canal deletado com sucesso");
 
             _logger.LogInformation($"{User.Identity?.Name} removed the channel with id = {id}");
+            await _activityLogService.LogAsync(User.Identity?.Name ?? "desconhecido", "Canais", "deleted", $"removeu o canal com id = {id}");
         }
 
         return RedirectToAction("Index");

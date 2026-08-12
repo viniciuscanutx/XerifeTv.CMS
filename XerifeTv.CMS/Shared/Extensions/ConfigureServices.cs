@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.OpenApi;
 using XerifeTv.CMS.Modules.Abstractions.Interfaces;
 using XerifeTv.CMS.Modules.Abstractions.Services;
+using XerifeTv.CMS.Modules.Activity;
+using XerifeTv.CMS.Modules.Activity.Interfaces;
 using XerifeTv.CMS.Modules.Authentication.Interfaces;
 using XerifeTv.CMS.Modules.Authentication.Services;
 using XerifeTv.CMS.Modules.BackgroundJobQueue;
@@ -28,6 +30,8 @@ using XerifeTv.CMS.Modules.Movie.Interfaces;
 using XerifeTv.CMS.Modules.Series;
 using XerifeTv.CMS.Modules.Series.Importers;
 using XerifeTv.CMS.Modules.Series.Interfaces;
+using XerifeTv.CMS.Modules.SystemSettings;
+using XerifeTv.CMS.Modules.SystemSettings.Interfaces;
 using XerifeTv.CMS.Modules.User;
 using XerifeTv.CMS.Modules.User.Interfaces;
 using XerifeTv.CMS.Modules.User.Services;
@@ -57,12 +61,15 @@ public static class ConfigureServices
 		services.AddScoped<IUserRepository, UserRepository>();
 		services.AddScoped<IWebhookRepository, WebhookRepository>();
 		services.AddScoped<IMediaDeliveryProfileRepository, MediaDeliveryProfileRepository>();
+		services.AddScoped<ISystemSettingsRepository, SystemSettingsRepository>();
+		services.AddScoped<IActivityLogRepository, ActivityLogRepository>();
 		return services;
 	}
 
 	private static IServiceCollection AddServices(this IServiceCollection services)
 	{
 		services.AddHttpContextAccessor();
+		services.AddHttpClient();
 		services.AddScoped<IMovieService, MovieService>();
 		services.AddScoped<ISeriesService, SeriesService>();
 		services.AddScoped<IChannelService, ChannelService>();
@@ -95,6 +102,8 @@ public static class ConfigureServices
 		services.AddScoped<IMediaDeliveryTokenStrategy, MediaDeliveryTokenNoneStrategy>();
 		services.AddScoped<IMediaDeliveryTokenStrategy, MediaDeliveryTokenStaticQueryStrategy>();
         services.AddScoped<IMediaDeliveryTokenStrategy, MediaDeliveryTokenSignedQueryStrategy>();
+
+        services.AddScoped<IActivityLogService, ActivityLogService>();
 
         services.AddHostedService<BackgroundJobQueueWorker>();
 

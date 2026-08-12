@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using XerifeTv.CMS.Modules.Abstractions.Interfaces;
+using XerifeTv.CMS.Modules.Activity.Interfaces;
 using XerifeTv.CMS.Modules.Media.Delivery.Dtos.Request;
 using XerifeTv.CMS.Modules.Media.Delivery.Dtos.Response;
 using XerifeTv.CMS.Modules.Media.Delivery.Intefaces;
@@ -11,6 +12,7 @@ namespace XerifeTv.CMS.Controllers;
 public class MediaDeliveryProfilesController(
     IMediaDeliveryProfileService _service,
     IMediaDeliveryUrlResolver _urlResolver,
+    IActivityLogService _activityLogService,
     ILogger<MediaDeliveryProfilesController> _logger,
     ICacheService _cacheService,
     IConfiguration _configuration) : Controller
@@ -25,6 +27,7 @@ public class MediaDeliveryProfilesController(
           : MessageViewHelper.SuccessJson($"Perfil Entrega de Midia cadastrado com sucesso");
 
         _logger.LogInformation($"{User.Identity?.Name} registered the media delivery profile {dto.Name}");
+        await _activityLogService.LogAsync(User.Identity?.Name ?? "desconhecido", "Configurações", "created", $"cadastrou o perfil de entrega de mídia \"{dto.Name}\"");
 
         return Redirect(Url.Action("Index", "Settings") + "#media-delivery");
     }
@@ -39,6 +42,7 @@ public class MediaDeliveryProfilesController(
           : MessageViewHelper.SuccessJson($"Perfil Entrega de Midia atualizado com sucesso");
 
         _logger.LogInformation($"{User.Identity?.Name} updated the media delivery profile {dto.Name}");
+        await _activityLogService.LogAsync(User.Identity?.Name ?? "desconhecido", "Configurações", "updated", $"atualizou o perfil de entrega de mídia \"{dto.Name}\"");
 
         return Redirect(Url.Action("Index", "Settings") + "#media-delivery");
     }
@@ -55,6 +59,7 @@ public class MediaDeliveryProfilesController(
               : MessageViewHelper.SuccessJson($"Perfil Entrega de Midia deletado com sucesso");
 
             _logger.LogInformation($"{User.Identity?.Name} removed the media delivery profile with id = {id}");
+            await _activityLogService.LogAsync(User.Identity?.Name ?? "desconhecido", "Configurações", "deleted", $"removeu o perfil de entrega de mídia com id = {id}");
         }
 
         return Redirect(Url.Action("Index", "Settings") + "#media-delivery");

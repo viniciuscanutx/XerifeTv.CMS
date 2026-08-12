@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using XerifeTv.CMS.Modules.Abstractions.Interfaces;
+using XerifeTv.CMS.Modules.Activity.Interfaces;
 using XerifeTv.CMS.Modules.Movie.Enums;
 using XerifeTv.CMS.Modules.Movie.Interfaces;
 using XerifeTv.CMS.Modules.Movie.Dtos.Request;
@@ -21,6 +22,7 @@ namespace XerifeTv.CMS.Controllers;
 public class MoviesController(
   IMovieService _service,
   IImdbService _imdbService,
+  IActivityLogService _activityLogService,
   ILogger<MoviesController> _logger,
   ISpreadsheetBatchImporter<IMovieService> _spreadsheetBatchImporter,
   IMediaDeliveryProfileService _mediaDeliveryProfileService,
@@ -108,6 +110,7 @@ public class MoviesController(
           : MessageViewHelper.SuccessJson($"Filme {dto.ImdbId} cadastrado com sucesso");
 
         _logger.LogInformation($"{User.Identity?.Name} registered the movie {dto.Title}");
+        await _activityLogService.LogAsync(User.Identity?.Name ?? "desconhecido", "Filmes", "created", $"cadastrou o filme \"{dto.Title}\"");
 
         return RedirectToAction("Index");
     }
@@ -122,6 +125,7 @@ public class MoviesController(
           : MessageViewHelper.SuccessJson($"Filme {dto.ImdbId} atualizado com sucesso");
 
         _logger.LogInformation($"{User.Identity?.Name} updated the movie {dto.Title}");
+        await _activityLogService.LogAsync(User.Identity?.Name ?? "desconhecido", "Filmes", "updated", $"atualizou o filme \"{dto.Title}\"");
 
         return RedirectToAction("Index");
     }
@@ -138,6 +142,7 @@ public class MoviesController(
               : MessageViewHelper.SuccessJson($"Filme deletado com sucesso");
 
             _logger.LogInformation($"{User.Identity?.Name} removed the movie with id = {id}");
+            await _activityLogService.LogAsync(User.Identity?.Name ?? "desconhecido", "Filmes", "deleted", $"removeu o filme com id = {id}");
         }
 
         return RedirectToAction("Index");
@@ -229,6 +234,7 @@ public class MoviesController(
             : MessageViewHelper.SuccessJson($"{response.Data} filme(s) cadastrado(s)/atualizado(s) com sucesso!");
 
         _logger.LogInformation($"{User.Identity?.Name} batch processed {response.Data} movies");
+        await _activityLogService.LogAsync(User.Identity?.Name ?? "desconhecido", "Filmes", "batch_created", $"cadastrou/atualizou {response.Data} filme(s) em lote");
 
         return RedirectToAction("Index");
     }

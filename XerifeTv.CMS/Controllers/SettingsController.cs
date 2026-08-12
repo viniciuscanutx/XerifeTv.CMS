@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using XerifeTv.CMS.Modules.Activity.Interfaces;
 using XerifeTv.CMS.Modules.Common.Enums;
 using XerifeTv.CMS.Modules.Integrations.Webhook;
 using XerifeTv.CMS.Modules.Integrations.Webhook.Dtos.Request;
@@ -23,6 +24,7 @@ public class SettingsController(
     IMediaDeliveryProfileService _mediaDeliveryProfileService,
     ISystemSettingsService _systemSettingsService,
     ICacheService _cacheService,
+    IActivityLogService _activityLogService,
     ILogger<SettingsController> _logger) : Controller
 {
     [Authorize]
@@ -79,6 +81,7 @@ public class SettingsController(
         TempData["Notification"] = MessageViewHelper.SuccessJson("Configurações de importação atualizadas com sucesso!");
 
         _logger.LogInformation($"{User.Identity?.Name} updated import settings (Movies:{enableMoviesSpreadsheetImport}, Series:{enableSeriesSpreadsheetImport}, Channels:{enableChannelsSpreadsheetImport})");
+        await _activityLogService.LogAsync(User.Identity?.Name ?? "desconhecido", "Configurações", "updated", "atualizou as configurações de importação por planilha");
 
         return Redirect(Url.Action("Index") + "#v-pills-import");
     }
@@ -110,6 +113,7 @@ public class SettingsController(
         TempData["Notification"] = MessageViewHelper.SuccessJson("Preferência de busca atualizada com sucesso!");
 
         _logger.LogInformation($"{User.Identity?.Name} updated the default content search mode to {imdbSearchMode}");
+        await _activityLogService.LogAsync(User.Identity?.Name ?? "desconhecido", "Configurações", "updated", $"alterou o modo de busca padrão para \"{imdbSearchMode}\"");
 
         return Redirect(Url.Action("Index") + "#v-pills-import");
     }
@@ -134,6 +138,7 @@ public class SettingsController(
           : MessageViewHelper.SuccessJson("Perfil atualizado com sucesso");
 
         _logger.LogInformation($"{User.Identity?.Name} updated your own profile");
+        await _activityLogService.LogAsync(User.Identity?.Name ?? "desconhecido", "Configurações", "updated", "atualizou o próprio perfil");
 
         return Redirect(Url.Action("Index") + "#profile");
     }
@@ -155,6 +160,7 @@ public class SettingsController(
           : MessageViewHelper.SuccessJson("Senha atualizada com sucesso");
 
         _logger.LogInformation($"{User.Identity?.Name} updated your password");
+        await _activityLogService.LogAsync(User.Identity?.Name ?? "desconhecido", "Configurações", "updated", "atualizou a própria senha");
 
         return Redirect(Url.Action("Index") + "#password");
     }
@@ -169,6 +175,9 @@ public class SettingsController(
           ? MessageViewHelper.ErrorJson(response.Error.Description ?? string.Empty)
           : MessageViewHelper.SuccessJson("Webhook cadastrado com sucesso");
 
+        _logger.LogInformation($"{User.Identity?.Name} registered webhook {dto.Name}");
+        await _activityLogService.LogAsync(User.Identity?.Name ?? "desconhecido", "Configurações", "created", $"cadastrou o webhook \"{dto.Name}\"");
+
         return Redirect(Url.Action("Index") + "#webhook");
     }
 
@@ -182,6 +191,9 @@ public class SettingsController(
           ? MessageViewHelper.ErrorJson(response.Error.Description ?? string.Empty)
           : MessageViewHelper.SuccessJson("Webhook atualizado com sucesso");
 
+        _logger.LogInformation($"{User.Identity?.Name} updated webhook {dto.Name}");
+        await _activityLogService.LogAsync(User.Identity?.Name ?? "desconhecido", "Configurações", "updated", $"atualizou o webhook \"{dto.Name}\"");
+
         return Redirect(Url.Action("Index") + "#webhook");
     }
 
@@ -194,18 +206,22 @@ public class SettingsController(
           ? MessageViewHelper.ErrorJson(response.Error.Description ?? string.Empty)
           : MessageViewHelper.SuccessJson("Webhook deletado com sucesso");
 
+        _logger.LogInformation($"{User.Identity?.Name} deleted webhook with id = {id}");
+        await _activityLogService.LogAsync(User.Identity?.Name ?? "desconhecido", "Configurações", "deleted", $"removeu o webhook com id = {id}");
+
         return Redirect(Url.Action("Index") + "#webhook");
     }
 
     [HttpPost]
     [Authorize(Roles = "admin, common")]
-    public IActionResult ClearCache()
+    public async Task<IActionResult> ClearCache()
     {
         _cacheService.Clear();
 
         TempData["Notification"] = MessageViewHelper.SuccessJson("Cache da API limpo com sucesso!");
 
         _logger.LogInformation($"{User.Identity?.Name} cleared the API cache");
+        await _activityLogService.LogAsync(User.Identity?.Name ?? "desconhecido", "Configurações", "updated", "limpou o cache da API");
 
         return Redirect(Url.Action("Index") + "#v-pills-cache");
     }

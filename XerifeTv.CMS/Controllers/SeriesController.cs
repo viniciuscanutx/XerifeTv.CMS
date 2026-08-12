@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using XerifeTv.CMS.Modules.Abstractions.Interfaces;
+using XerifeTv.CMS.Modules.Activity.Interfaces;
 using XerifeTv.CMS.Modules.Common;
 using XerifeTv.CMS.Modules.Franchise.Dtos.Response;
 using XerifeTv.CMS.Modules.Franchise.Interfaces;
@@ -21,6 +22,7 @@ namespace XerifeTv.CMS.Controllers;
 public class SeriesController(
   ISeriesService _service,
   IImdbService _imdbService,
+  IActivityLogService _activityLogService,
   ILogger<SeriesController> _logger,
   IEpisodesImporter _episodesImporter,
   ISpreadsheetBatchImporter<ISeriesService> _spreadsheetBatchImporter,
@@ -104,6 +106,7 @@ public class SeriesController(
 		  : MessageViewHelper.SuccessJson($"Serie {dto.ImdbId} cadastrada com sucesso");
 
 		_logger.LogInformation($"{User.Identity?.Name} registered the serie {dto.Title}");
+		await _activityLogService.LogAsync(User.Identity?.Name ?? "desconhecido", "Séries", "created", $"cadastrou a série \"{dto.Title}\"");
 
 		return RedirectToAction("Index");
 	}
@@ -118,6 +121,7 @@ public class SeriesController(
 		  : MessageViewHelper.SuccessJson($"Serie {dto.ImdbId} atualizada com sucesso");
 
 		_logger.LogInformation($"{User.Identity?.Name} updated the serie {dto.Title}");
+		await _activityLogService.LogAsync(User.Identity?.Name ?? "desconhecido", "Séries", "updated", $"atualizou a série \"{dto.Title}\"");
 
 		return RedirectToAction("Index");
 	}
@@ -134,6 +138,7 @@ public class SeriesController(
 			  : MessageViewHelper.SuccessJson($"Serie deletada com sucesso");
 
 			_logger.LogInformation($"{User.Identity?.Name} removed the serie with id = {id}");
+			await _activityLogService.LogAsync(User.Identity?.Name ?? "desconhecido", "Séries", "deleted", $"removeu a série com id = {id}");
 		}
 
 		return RedirectToAction("Index");
@@ -176,6 +181,7 @@ public class SeriesController(
 		  : MessageViewHelper.SuccessJson($"Episodio T{dto.Season}:EP{dto.Number} cadastrado com sucesso");
 
 		_logger.LogInformation($"{User.Identity?.Name} registered episode {dto.Number} of season {dto.Season} of the serie with id = {dto.SerieId}");
+		await _activityLogService.LogAsync(User.Identity?.Name ?? "desconhecido", "Séries", "created", $"cadastrou o episódio T{dto.Season}:EP{dto.Number} da série com id = {dto.SerieId}");
 
 		return RedirectToAction("Episodes", new { id = dto.SerieId, seasonFilter = dto.Season });
 	}
@@ -190,6 +196,7 @@ public class SeriesController(
 		  : MessageViewHelper.SuccessJson($"Episodio T{dto.Season}:EP{dto.Number} atualizado com sucesso");
 
 		_logger.LogInformation($"{User.Identity?.Name} updated episode {dto.Number} of season {dto.Season} of the serie with id = {dto.SerieId}");
+		await _activityLogService.LogAsync(User.Identity?.Name ?? "desconhecido", "Séries", "updated", $"atualizou o episódio T{dto.Season}:EP{dto.Number} da série com id = {dto.SerieId}");
 
 		return RedirectToAction("Episodes", new { id = dto.SerieId, seasonFilter = dto.Season });
 	}
@@ -206,6 +213,7 @@ public class SeriesController(
 			  : MessageViewHelper.SuccessJson($"Episodio deletado com sucesso");
 
 			_logger.LogInformation($"{User.Identity?.Name} deleted episode with id = {id} of the serie with id = {serieId}");
+			await _activityLogService.LogAsync(User.Identity?.Name ?? "desconhecido", "Séries", "deleted", $"removeu o episódio com id = {id} da série com id = {serieId}");
 		}
 
 		return RedirectToAction("Episodes", new { id = serieId });
@@ -335,6 +343,7 @@ public class SeriesController(
 		  : MessageViewHelper.SuccessJson($"{response.Data} episódio(s) atualizado(s)/cadastrado(s) com sucesso!");
 
 		_logger.LogInformation($"{User.Identity?.Name} batch added links for season {dto.Season} of serie {dto.SerieId}");
+		await _activityLogService.LogAsync(User.Identity?.Name ?? "desconhecido", "Séries", "batch_updated", $"atualizou {response.Data} link(s) de episódio em lote da temporada {dto.Season} da série com id = {dto.SerieId}");
 
 		return RedirectToAction("Episodes", new { id = dto.SerieId, seasonFilter = dto.Season });
 	}

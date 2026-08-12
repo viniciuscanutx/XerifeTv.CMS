@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using XerifeTv.CMS.Modules.Activity.Interfaces;
 using XerifeTv.CMS.Modules.Authentication.Dtos.Request;
 using XerifeTv.CMS.Modules.Authentication.Interfaces;
 using XerifeTv.CMS.Modules.User.Dtos.Request;
@@ -10,8 +11,9 @@ using XerifeTv.CMS.Shared.Helpers;
 namespace XerifeTv.CMS.Controllers;
 
 public class UsersController(
-	IUserService _userService, 
+	IUserService _userService,
 	IAuthService _authService,
+	IActivityLogService _activityLogService,
 	IConfiguration _configuration,
 	ILogger<UsersController> _logger) : Controller
 {
@@ -65,6 +67,7 @@ public class UsersController(
 		Response.Cookies.Append("refreshToken", response.Data?.RefreshToken ?? string.Empty, _cookieOptions);
 
 		_logger.LogInformation($"{User.Identity?.Name} logged into the system");
+		await _activityLogService.LogAsync(dto.UserNameOrEmail, "Usuários", "login", $"fez login no sistema");
 
 		return RedirectToAction("Index", "Home");
 	}
@@ -144,9 +147,10 @@ public class UsersController(
 	}
 
 	[AllowAnonymous]
-	public IActionResult Logout()
+	public async Task<IActionResult> Logout()
 	{
 		_logger.LogInformation($"{User.Identity?.Name} logged out of the system");
+		await _activityLogService.LogAsync(User.Identity?.Name ?? "desconhecido", "Usuários", "logout", $"fez logout do sistema");
 
 		Response.Cookies.Delete("token");
 		Response.Cookies.Delete("refreshToken");
@@ -164,6 +168,7 @@ public class UsersController(
 		  : MessageViewHelper.SuccessJson($"Usuario {dto.UserName} cadastrado com sucesso");
 
 		_logger.LogInformation($"{User.Identity?.Name} registered a new user");
+		await _activityLogService.LogAsync(User.Identity?.Name ?? "desconhecido", "Usuários", "created", $"cadastrou o usuário \"{dto.UserName}\"");
 
 		return RedirectToAction("Index");
 	}
@@ -179,6 +184,7 @@ public class UsersController(
 		  : MessageViewHelper.SuccessJson($"Usuario {dto.UserName} atualizado com sucesso");
 
 		_logger.LogInformation($"{User.Identity?.Name} updated user {dto.Id}");
+		await _activityLogService.LogAsync(User.Identity?.Name ?? "desconhecido", "Usuários", "updated", $"atualizou o usuário \"{dto.UserName}\"");
 		return RedirectToAction("Index");
 	}
 
@@ -192,6 +198,7 @@ public class UsersController(
 		  : MessageViewHelper.SuccessJson("Usuario deletado com sucesso");
 
 		_logger.LogInformation($"{User.Identity?.Name} removed user with id = {id}");
+		await _activityLogService.LogAsync(User.Identity?.Name ?? "desconhecido", "Usuários", "deleted", $"removeu o usuário com id = {id}");
 
 		return RedirectToAction("Index");
 	}

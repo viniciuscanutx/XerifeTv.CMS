@@ -4,13 +4,13 @@ using XerifeTv.CMS.Modules.Integrations.Imdb.Dtos;
 
 namespace XerifeTv.CMS.Modules.Integrations.Imdb.Services;
 
-public class ImdbService(IConfiguration _configuration) : IImdbService
+public class ImdbService(IConfiguration _configuration, IHttpClientFactory _httpClientFactory) : IImdbService
 {
     public async Task<Result<GetAllResultsByImdbIdResponseDto?>> GetAllResultsByImdbIdAsync(string imdbId)
     {
         try
         {
-            var client = new HttpClient();
+            var client = _httpClientFactory.CreateClient();
             var url = $"https://api.themoviedb.org/3/find/{imdbId}";
             var tmdbKey = _configuration["Tmdb:Key"];
 
@@ -40,7 +40,7 @@ public class ImdbService(IConfiguration _configuration) : IImdbService
     {
         try
         {
-            var client = new HttpClient();
+            var client = _httpClientFactory.CreateClient();
             var url = $"https://api.themoviedb.org/3/movie/{imdbId}";
             var tmdbKey = _configuration["Tmdb:Key"];
 
@@ -79,7 +79,7 @@ public class ImdbService(IConfiguration _configuration) : IImdbService
                 return Result<GetSeriesByImdbResponseDto?>.Failure(
                     new Error("404", $"[{imdbId}] serie invalida"));
 
-            var client = new HttpClient();
+            var client = _httpClientFactory.CreateClient();
             var url = $"https://api.themoviedb.org/3/tv/{seriesResult.Id}";
             var tmdbKey = _configuration["Tmdb:Key"];
 
@@ -113,7 +113,7 @@ public class ImdbService(IConfiguration _configuration) : IImdbService
             if (seriesResult.IsFailure)
                 return Result<GetSeriesEpisodesBySeasonResponseDto?>.Failure(seriesResult.Error);
 
-            var client = new HttpClient();
+            var client = _httpClientFactory.CreateClient();
             var url = $"https://api.themoviedb.org/3/tv/{seriesResult.Data?.Id}/season/{season}";
             var tmdbKey = _configuration["Tmdb:Key"];
 
@@ -143,7 +143,7 @@ public class ImdbService(IConfiguration _configuration) : IImdbService
     {
         try
         {
-            var client = new HttpClient();
+            var client = _httpClientFactory.CreateClient();
             var url = "https://api.themoviedb.org/3/search/movie";
             var tmdbKey = _configuration["Tmdb:Key"];
 
@@ -173,7 +173,7 @@ public class ImdbService(IConfiguration _configuration) : IImdbService
     {
         try
         {
-            var client = new HttpClient();
+            var client = _httpClientFactory.CreateClient();
             var url = "https://api.themoviedb.org/3/search/tv";
             var tmdbKey = _configuration["Tmdb:Key"];
 
@@ -203,7 +203,7 @@ public class ImdbService(IConfiguration _configuration) : IImdbService
     {
         try
         {
-            var client = new HttpClient();
+            var client = _httpClientFactory.CreateClient();
             var url = $"https://api.themoviedb.org/3/movie/{tmdbId}";
             var tmdbKey = _configuration["Tmdb:Key"];
 
@@ -233,7 +233,7 @@ public class ImdbService(IConfiguration _configuration) : IImdbService
     {
         try
         {
-            var client = new HttpClient();
+            var client = _httpClientFactory.CreateClient();
             var url = $"https://api.themoviedb.org/3/tv/{tmdbId}";
             var tmdbKey = _configuration["Tmdb:Key"];
 

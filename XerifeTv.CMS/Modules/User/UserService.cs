@@ -129,6 +129,7 @@ public sealed class UserService(
 			user.EnableMoviesSpreadsheetImport = dto.EnableMoviesSpreadsheetImport ?? user.EnableMoviesSpreadsheetImport;
 			user.EnableSeriesSpreadsheetImport = dto.EnableSeriesSpreadsheetImport ?? user.EnableSeriesSpreadsheetImport;
 			user.EnableChannelsSpreadsheetImport = dto.EnableChannelsSpreadsheetImport ?? user.EnableChannelsSpreadsheetImport;
+			user.ImdbSearchMode = dto.ImdbSearchMode ?? user.ImdbSearchMode;
 
 			await _repository.UpdateAsync(user);
 

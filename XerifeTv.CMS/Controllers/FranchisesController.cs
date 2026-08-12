@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using XerifeTv.CMS.Modules.Activity.Interfaces;
 using XerifeTv.CMS.Modules.Franchise.Dtos.Response;
 using XerifeTv.CMS.Modules.Franchise.Dtos.Request;
 using XerifeTv.CMS.Modules.Franchise.Interfaces;
@@ -9,6 +10,7 @@ namespace XerifeTv.CMS.Controllers;
 [Authorize]
 public class FranchisesController(
     IFranchiseService _service,
+    IActivityLogService _activityLogService,
     ILogger<FranchisesController> _logger) : Controller
 {
     [HttpGet]
@@ -35,6 +37,7 @@ public class FranchisesController(
             return BadRequest(response.Error.Description ?? string.Empty);
 
         _logger.LogInformation($"{User.Identity?.Name} created franchise {dto.Name}");
+        await _activityLogService.LogAsync(User.Identity?.Name ?? "desconhecido", "Franquias", "created", $"cadastrou a franquia \"{dto.Name}\"");
 
         return Ok(response.Data);
     }
@@ -49,6 +52,7 @@ public class FranchisesController(
             return BadRequest(response.Error.Description ?? string.Empty);
 
         _logger.LogInformation($"{User.Identity?.Name} updated franchise {dto.Id}");
+        await _activityLogService.LogAsync(User.Identity?.Name ?? "desconhecido", "Franquias", "updated", $"atualizou a franquia \"{dto.Name}\"");
 
         return Ok(response.Data);
     }
@@ -63,6 +67,7 @@ public class FranchisesController(
             return BadRequest(response.Error.Description ?? string.Empty);
 
         _logger.LogInformation($"{User.Identity?.Name} deleted franchise {id}");
+        await _activityLogService.LogAsync(User.Identity?.Name ?? "desconhecido", "Franquias", "deleted", $"removeu a franquia com id = {id}");
 
         return Ok();
     }
