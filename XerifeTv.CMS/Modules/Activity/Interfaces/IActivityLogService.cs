@@ -6,5 +6,5 @@ namespace XerifeTv.CMS.Modules.Activity.Interfaces;
 public interface IActivityLogService
 {
     Task LogAsync(string userName, string category, string action, string description);
-    Task<Result<PagedList<GetActivityLogResponseDto>>> GetAsync(int currentPage, int limit);
+    Task<Result<PagedList<GetActivityLogResponseDto>>> GetAsync(int currentPage, int limit, string? userName = null);
 }

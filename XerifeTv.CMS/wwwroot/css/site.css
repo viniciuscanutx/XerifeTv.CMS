@@ -4,6 +4,14 @@
   font-family: 'Source Sans 3', sans-serif;
 }
 
+/* Bootstrap's reboot underlines every <a> by default. Most links in this app are
+   icon buttons/cards (poster actions, toolbar icons, dashboard quick actions) styled
+   with their own custom classes that never opted out of that underline — reset it
+   globally instead of patching each component one by one. */
+a {
+  text-decoration: none;
+}
+
 html {
   font-size: 14px;
 }

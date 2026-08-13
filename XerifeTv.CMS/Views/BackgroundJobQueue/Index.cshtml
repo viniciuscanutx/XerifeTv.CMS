@@ -17,7 +17,8 @@
 
 <style>
   .users-select-group {
-    width: 25%;
+    width: 17rem !important;
+    flex-shrink: 0;
   }
 
   @@media (max-width: 800px) {
@@ -36,34 +37,18 @@
         </span>
       </div>
 
-      @if (User.IsInRole("admin"))
-      {
-        <div class="input-group d-flex justify-content-center align-items-center users-select-group">
-          <span class="input-group-text">Usuário</span>
-          <select class="form-select shadow-none" id="username" name="username">
-            @foreach (var user in Model.Users)
-            {
-              if (user.UserName.Equals(ViewBag.Username))
-              {
-                <option value="@user.UserName" selected>@user.UserName</option>
-              }
-              else
-              {
-                <option value="@user.UserName">@user.UserName</option>
-              }
-            }
-          </select>
-        </div>
-      }
+      <a class="content-toolbar__icon-btn" role="button" onclick="location.reload()" title="Atualizar">
+        <i class="fa-solid fa-rotate"></i>
+      </a>
     </div>
   </header>
   <hr />
 
   <div class="row mt-2">
 
-    <div class="row mb-4">
-      <div class="col-12 col-md-2">
-        <div class="w-100 d-flex justify-content-start align-items-center">
+    <div class="col-12 d-flex justify-content-start align-items-center gap-3 flex-wrap mb-5">
+        <div class="input-group users-select-group">
+          <span class="input-group-text">Status</span>
           <select class="form-select shadow-none" id="status" name="status">
             <option value="">Todos</option>
             @foreach (var status in statusList)
@@ -79,13 +64,26 @@
             }
           </select>
         </div>
-      </div>
 
-      <div class="col-md-10 d-none d-md-flex justify-content-end align-items-center">
-        <a class="fs-5" role="button" onclick="location.reload()">
-          <i class="fa-solid fa-rotate"></i>
-        </a>
-      </div>
+        @if (User.IsInRole("admin"))
+        {
+          <div class="input-group users-select-group">
+            <span class="input-group-text">Usuário</span>
+            <select class="form-select shadow-none" id="username" name="username">
+              @foreach (var user in Model.Users)
+              {
+                if (user.UserName.Equals(ViewBag.Username))
+                {
+                  <option value="@user.UserName" selected>@user.UserName</option>
+                }
+                else
+                {
+                  <option value="@user.UserName">@user.UserName</option>
+                }
+              }
+            </select>
+          </div>
+        }
     </div>
 
     @if (Model?.Jobs.Count() > 0)

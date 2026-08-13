@@ -26,11 +26,11 @@ public class ActivityLogService(
         }
     }
 
-    public async Task<Result<PagedList<GetActivityLogResponseDto>>> GetAsync(int currentPage, int limit)
+    public async Task<Result<PagedList<GetActivityLogResponseDto>>> GetAsync(int currentPage, int limit, string? userName = null)
     {
         try
         {
-            var response = await _repository.GetAsync(currentPage, limit);
+            var response = await _repository.GetByUserAsync(userName, currentPage, limit);
 
             return Result<PagedList<GetActivityLogResponseDto>>.Success(
                 new PagedList<GetActivityLogResponseDto>(

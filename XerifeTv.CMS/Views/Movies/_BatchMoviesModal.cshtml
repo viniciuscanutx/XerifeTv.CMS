@@ -1,4 +1,11 @@
 @using XerifeTv.CMS.Shared.Helpers
+@using XerifeTv.CMS.Modules.Abstractions.Interfaces
+@using XerifeTv.CMS.Modules.User.Enums
+@inject ISystemSettingsService SystemSettingsService
+
+@{
+    bool isBatchNameSearchDefault = SystemSettingsService.GetDefaultImdbSearchMode() == EImdbSearchMode.NAME;
+}
 
 <div class="modal fade"
      id="batchMoviesModal"
@@ -79,17 +86,21 @@
                 <div class="row mb-3">
                     <div class="col-12">
                         <div class="btn-group btn-group-sm" role="group">
-                            <button type="button" class="btn btn-secondary active batch-mode-btn" data-batch-mode="ids">
+                            <button type="button"
+                                    class="btn batch-mode-btn @(isBatchNameSearchDefault ? "btn-outline-secondary" : "btn-secondary active")"
+                                    data-batch-mode="ids">
                                 Colar IDs do IMDB
                             </button>
-                            <button type="button" class="btn btn-outline-secondary batch-mode-btn" data-batch-mode="name">
+                            <button type="button"
+                                    class="btn batch-mode-btn @(isBatchNameSearchDefault ? "btn-secondary active" : "btn-outline-secondary")"
+                                    data-batch-mode="name">
                                 Buscar por Nome
                             </button>
                         </div>
                     </div>
                 </div>
 
-                <div data-batch-mode-panel="ids">
+                <div data-batch-mode-panel="ids" class="@(isBatchNameSearchDefault ? "d-none" : "")">
                     <div class="row mb-3">
                         <div class="col-12">
                             <label for="batch_imdbIdsText" class="form-label fw-bold">IDs do IMDB (Um ID por linha)</label>
@@ -98,7 +109,7 @@
                                       class="form-control"
                                       rows="4"
                                       placeholder="tt1084242&#10;tt14905854&#10;3443597"
-                                      required></textarea>
+                            @(isBatchNameSearchDefault ? "" : "required")></textarea>
                             <small class="text-muted">A linha 1 corresponderá ao Filme 1, linha 2 ao Filme 2, e assim por diante.</small>
                         </div>
                     </div>
@@ -138,7 +149,7 @@
                     </div>
                 </div>
 
-                <div data-batch-mode-panel="name" class="d-none">
+                <div data-batch-mode-panel="name" class="@(isBatchNameSearchDefault ? "" : "d-none")">
                     <div class="row mb-3">
                         <div class="col-12 position-relative">
                             <label for="batch_titleSearch" class="form-label fw-bold">Pesquisar Filme por Nome</label>
@@ -199,7 +210,7 @@
         const selectedMoviesList = document.getElementById('batch_selectedMoviesList');
         const form = document.getElementById('batchMoviesForm');
 
-        let currentMode = 'ids';
+        let currentMode = @(isBatchNameSearchDefault ? "'name'" : "'ids'");
         let selectedMovies = [];
         let currentResults = [];
         let activeIndex = -1;

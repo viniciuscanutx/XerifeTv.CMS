@@ -86,3 +86,7 @@ XerifeTVWeb/
 .vscode/
 
 /.vscode
+
+.claude
+
+.claude/

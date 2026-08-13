@@ -1,53 +1,146 @@
 @using XerifeTv.CMS.Modules.Activity.Dtos.Response
+@using XerifeTv.CMS.Modules.User.Dtos.Response
 
 @model IEnumerable<GetActivityLogResponseDto>
 
 @{
     ViewData["Title"] = "Atividades";
+    var users = (ViewBag.Users as IEnumerable<GetUserResponseDto>) ?? [];
+    string? selectedUserName = ViewBag.UserName;
+
+    static string ActionIconClass(string action) => action switch
+    {
+        "created" => "fa-solid fa-circle-plus fa-lg p-3 text-success opacity-75",
+        "batch_created" => "fa-solid fa-circle-plus fa-lg p-3 text-success opacity-75",
+        "updated" => "fa-solid fa-pen-to-square fa-lg p-3 text-primary opacity-75",
+        "batch_updated" => "fa-solid fa-pen-to-square fa-lg p-3 text-primary opacity-75",
+        "deleted" => "fa-solid fa-circle-minus fa-lg p-3 text-danger opacity-75",
+        "login" => "fa-solid fa-right-to-bracket fa-lg p-3 text-secondary opacity-75",
+        "logout" => "fa-solid fa-right-from-bracket fa-lg p-3 text-secondary opacity-75",
+        _ => "fa-solid fa-circle-info fa-lg p-3 text-secondary opacity-75"
+    };
 }
 
-<div class="container">
-    <header>
-        <div class="d-flex align-items-center justify-content-between gap-4">
-            <span class="fs-3 fw-normal">Atividades</span>
-        </div>
-        <hr />
-    </header>
+<style>
+  .users-select-group {
+    width: 17rem !important;
+    flex-shrink: 0;
+  }
 
-    <div class="table-responsive">
-        <table class="table table-hover align-middle">
-            <thead>
-                <tr>
-                    <th>Data/Hora</th>
-                    <th>Usuário</th>
-                    <th>Categoria</th>
-                    <th>Ação</th>
-                    <th>Descrição</th>
-                </tr>
-            </thead>
-            <tbody>
-                @if (!Model.Any())
-                {
-                    <tr>
-                        <td colspan="5" class="text-center text-muted py-4">Nenhuma atividade registrada</td>
-                    </tr>
-                }
-                else
-                {
-                    @foreach (var activity in Model)
+  @@media (max-width: 800px) {
+    .users-select-group {
+      width: 100% !important;
+    }
+  }
+</style>
+
+<form id="page-form" asp-controller="Activities" asp-action="Index" class="container">
+    <header>
+        <div class="d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center gap-4" style="max-width: 65%;">
+                <span class="d-none d-md-inline-block text-truncate fs-3 fw-normal mw-100">
+                    Atividades
+                </span>
+            </div>
+
+            <a class="content-toolbar__icon-btn" role="button" onclick="location.reload()" title="Atualizar">
+                <i class="fa-solid fa-rotate"></i>
+            </a>
+        </div>
+    </header>
+    <hr />
+
+    <div class="row mt-2">
+        <div class="col-12 d-flex justify-content-start align-items-center gap-3 flex-wrap mb-5">
+            <div class="input-group users-select-group">
+                <span class="input-group-text">Usuário</span>
+                <select class="form-select shadow-none" id="userName" name="userName">
+                    <option value="">Todos</option>
+                    @foreach (var user in users)
                     {
-                        <tr>
-                            <td class="text-nowrap">@activity.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
-                            <td>@activity.UserName</td>
-                            <td>@activity.Category</td>
-                            <td>@activity.Action</td>
-                            <td>@activity.Description</td>
-                        </tr>
+                        if (user.UserName == selectedUserName)
+                        {
+                            <option value="@user.UserName" selected>@user.UserName</option>
+                        }
+                        else
+                        {
+                            <option value="@user.UserName">@user.UserName</option>
+                        }
                     }
-                }
-            </tbody>
-        </table>
+                </select>
+            </div>
+        </div>
+
+        @if (Model.Any())
+        {
+            <div class="col-12 d-none d-lg-flex justify-content-between mb-2">
+                <div class="col-1" style="max-width: 40px;"></div>
+                <div class="col-4"></div>
+                <div class="col-2 text-center fw-semibold" style="font-size: 17px;">categoria</div>
+                <div class="col-1 text-center fw-semibold" style="font-size: 17px;">ação</div>
+                <div class="col-2 text-center fw-semibold" style="font-size: 17px;">usuário</div>
+                <div class="col-2 text-center fw-semibold" style="font-size: 17px;">data/hora</div>
+            </div>
+
+            @foreach (var activity in Model)
+            {
+                <div class="col-12">
+                    <div class="card mb-3">
+                        <div class="row d-flex justify-content-between">
+                            <div class="col-1 d-flex justify-content-start align-items-center" style="max-width: 40px;">
+                                <i class="@ActionIconClass(activity.Action)"></i>
+                            </div>
+
+                            <div class="col-11 col-md-4">
+                                <div class="card-body w-100 h-100 d-flex justify-content-start align-items-center">
+                                    <p class="card-text text-truncate">@activity.Description</p>
+                                </div>
+                            </div>
+
+                            <div class="col-6 col-md-2">
+                                <div class="card-body h-100 d-flex justify-content-center align-items-center">
+                                    <h5 class="m-0"><span class="badge text-bg-secondary">@activity.Category</span></h5>
+                                </div>
+                            </div>
+
+                            <div class="col-6 col-md-1">
+                                <div class="card-body h-100 d-flex justify-content-center align-items-center">
+                                    <p class="card-text">@activity.Action</p>
+                                </div>
+                            </div>
+
+                            <div class="col-6 col-md-2">
+                                <div class="card-body h-100 d-flex justify-content-center align-items-center">
+                                    <p class="card-text text-truncate">@activity.UserName</p>
+                                </div>
+                            </div>
+
+                            <div class="col-6 col-md-2">
+                                <div class="card-body h-100 d-flex justify-content-center align-items-center">
+                                    <p class="card-text">@activity.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <p>Nenhuma atividade registrada.</p>
+        }
     </div>
 
     @await Html.PartialAsync("_Pagination")
-</div>
+</form>
+
+@section scripts {
+    <script>
+        $('#userName').change(() => {
+            $('.loading-global .label').text('Carregando, por favor aguarde...');
+            $('.loading-global').show();
+
+            $('#page-form').trigger('submit');
+        });
+    </script>
+}
