@@ -13,5 +13,6 @@ public enum ECollection
     SYSTEM_SETTINGS,
     ACTIVITIES,
     SITE_USERS,
-    SITE_ROLES
+    SITE_ROLES,
+    SITE_WATCH_PROGRESS
 }

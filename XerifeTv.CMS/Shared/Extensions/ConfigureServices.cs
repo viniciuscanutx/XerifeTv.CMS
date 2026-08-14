@@ -36,6 +36,8 @@ using XerifeTv.CMS.Modules.SiteRole;
 using XerifeTv.CMS.Modules.SiteRole.Interfaces;
 using XerifeTv.CMS.Modules.SiteUser;
 using XerifeTv.CMS.Modules.SiteUser.Interfaces;
+using XerifeTv.CMS.Modules.SiteWatchProgress;
+using XerifeTv.CMS.Modules.SiteWatchProgress.Interfaces;
 using XerifeTv.CMS.Modules.SystemSettings;
 using XerifeTv.CMS.Modules.SystemSettings.Interfaces;
 using XerifeTv.CMS.Modules.User;
@@ -71,6 +73,7 @@ public static class ConfigureServices
 		services.AddScoped<IActivityLogRepository, ActivityLogRepository>();
 		services.AddScoped<ISiteUserRepository, SiteUserRepository>();
 		services.AddScoped<ISiteRoleRepository, SiteRoleRepository>();
+		services.AddScoped<ISiteWatchProgressRepository, SiteWatchProgressRepository>();
 		return services;
 	}
 
@@ -117,6 +120,7 @@ public static class ConfigureServices
         services.AddScoped<ISiteUserService, SiteUserService>();
         services.AddScoped<ISiteTokenService, SiteTokenService>();
         services.AddScoped<ISiteAuthService, SiteAuthService>();
+        services.AddScoped<ISiteWatchProgressService, SiteWatchProgressService>();
 
         services.AddHostedService<BackgroundJobQueueWorker>();
 
@@ -143,6 +147,10 @@ public static class ConfigureServices
 					return Task.CompletedTask;
 				}
 			};
+		})
+		.AddJwtBearer("SiteJwt", options =>
+		{
+			options.TokenValidationParameters = SiteTokenService.GetTokenValidationParameters(_configuration);
 		});
 
 		services.AddAuthorization();
