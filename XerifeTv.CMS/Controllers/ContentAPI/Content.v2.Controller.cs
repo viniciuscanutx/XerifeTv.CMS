@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using System.Net;
 using XerifeTv.CMS.Modules.Abstractions.Interfaces;
@@ -8,6 +9,7 @@ namespace XerifeTv.CMS.Controllers.ContentAPI;
 
 [Route("Api/Content/v2")]
 [ApiController]
+[EnableCors("AuthApi")]
 public class ContentV2Controller(
     IContentV2Service _service,
     ILogger<ContentV2Controller> _logger,
