@@ -14,8 +14,7 @@ namespace XerifeTv.CMS.Controllers.ContentAPI;
 public class AuthController(
 	ISiteAuthService _siteAuthService,
 	ISiteTokenService _siteTokenService,
-	ISiteUserService _siteUserService,
-	IConfiguration _configuration) : ControllerBase
+	ISiteUserService _siteUserService) : ControllerBase
 {
 	[HttpPost("Login")]
 	[AllowAnonymous]
@@ -31,21 +30,22 @@ public class AuthController(
 		if (userResult.IsFailure || userResult.Data is null)
 			return Unauthorized();
 
-		AppendAuthCookies(loginResult.Data!.Token, loginResult.Data.RefreshToken);
-
-		return Ok(new { user = ToUserResponse(userResult.Data) });
+		return Ok(new
+		{
+			user = ToUserResponse(userResult.Data),
+			accessToken = loginResult.Data!.Token,
+			refreshToken = loginResult.Data.RefreshToken
+		});
 	}
 
 	[HttpPost("Refresh")]
 	[AllowAnonymous]
-	public async Task<IActionResult> Refresh()
+	public async Task<IActionResult> Refresh(RefreshTokenRequestDto dto)
 	{
-		var refreshToken = Request.Cookies["refresh_token"];
-
-		if (string.IsNullOrEmpty(refreshToken))
+		if (string.IsNullOrEmpty(dto.RefreshToken))
 			return Unauthorized();
 
-		var refreshResult = await _siteAuthService.TryRefreshSessionAsync(refreshToken);
+		var refreshResult = await _siteAuthService.TryRefreshSessionAsync(dto.RefreshToken);
 
 		if (refreshResult.IsFailure)
 			return Unauthorized();
@@ -65,26 +65,23 @@ public class AuthController(
 		if (userResult.IsFailure || userResult.Data is null)
 			return Unauthorized();
 
-		AppendAuthCookies(newToken, newRefreshToken);
-
-		return Ok(new { user = ToUserResponse(userResult.Data) });
+		return Ok(new
+		{
+			user = ToUserResponse(userResult.Data),
+			accessToken = newToken,
+			refreshToken = newRefreshToken
+		});
 	}
 
 	[HttpPost("Logout")]
 	[AllowAnonymous]
-	public IActionResult Logout()
-	{
-		Response.Cookies.Delete("access_token");
-		Response.Cookies.Delete("refresh_token");
-
-		return Ok();
-	}
+	public IActionResult Logout() => Ok();
 
 	[HttpGet("Me")]
 	[AllowAnonymous]
 	public async Task<IActionResult> Me()
 	{
-		var accessToken = Request.Cookies["access_token"];
+		var accessToken = GetBearerToken();
 
 		var (isValid, userId) = await _siteTokenService.ValidateTokenAsync(accessToken ?? string.Empty);
 
@@ -99,26 +96,14 @@ public class AuthController(
 		return Ok(new { user = ToUserResponse(userResult.Data) });
 	}
 
-	private void AppendAuthCookies(string accessToken, string refreshToken)
+	private string? GetBearerToken()
 	{
-		_ = int.TryParse(_configuration["SiteJwt:ExpirationTimeInMinutes"], out var accessExpirationMinutes);
-		_ = int.TryParse(_configuration["SiteJwt:RefreshExpirationTimeInMinutes"], out var refreshExpirationMinutes);
+		var header = Request.Headers.Authorization.ToString();
 
-		Response.Cookies.Append("access_token", accessToken, new CookieOptions
-		{
-			HttpOnly = true,
-			Secure = true,
-			SameSite = SameSiteMode.None,
-			Expires = DateTimeOffset.UtcNow.AddMinutes(accessExpirationMinutes)
-		});
+		if (string.IsNullOrEmpty(header) || !header.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+			return null;
 
-		Response.Cookies.Append("refresh_token", refreshToken, new CookieOptions
-		{
-			HttpOnly = true,
-			Secure = true,
-			SameSite = SameSiteMode.None,
-			Expires = DateTimeOffset.UtcNow.AddMinutes(refreshExpirationMinutes)
-		});
+		return header["Bearer ".Length..].Trim();
 	}
 
 	private static object ToUserResponse(GetSiteUserResponseDto user)
