@@ -1,0 +1,96 @@
+@using XerifeTv.CMS.Modules.SiteRole.Dtos.Response
+
+@model IEnumerable<GetSiteRoleResponseDto>
+
+@{
+    ViewData["Title"] = "Roles do Site";
+
+    var siteRoleDtoEmpty = new GetSiteRoleResponseDto();
+}
+
+<div class="container">
+    @await Html.PartialAsync("_SiteRoleFormModal", siteRoleDtoEmpty)
+
+    <header>
+        <div class="d-flex align-items-center justify-content-between gap-4">
+            <span class="fs-3 fw-normal">Roles do Site</span>
+            <a class="btn btn-primary" role="button" data-bs-toggle="modal" data-bs-target="#siteRoleFormModal-@siteRoleDtoEmpty.Id">
+                <i class="fa-solid fa-plus"></i> Cadastrar
+            </a>
+        </div>
+        <hr />
+        <p class="text-muted fs-6">
+            Roles definem as permissões de um usuário no front de mídia (filmes/séries/canais). Cada usuário do site pode ser vinculado a uma role.
+        </p>
+    </header>
+
+    <div class="row gap-2 mt-4">
+        <div class="table-responsive mt-4">
+            <table class="table table-striped table-hover align-middle">
+                <thead class="table">
+                    <tr>
+                        <th>Nome</th>
+                        <th>Permissões</th>
+                        <th class="text-end">...</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @if (Model.Any())
+                    {
+                        @foreach (var role in Model)
+                        {
+                            <tr>
+                                <td class="fw-semibold">@role.Name</td>
+                                <td>
+                                    @if (role.Permissions.Any())
+                                    {
+                                        @foreach (var permission in role.Permissions)
+                                        {
+                                            <span class="badge bg-secondary me-1">@permission</span>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">Nenhuma</span>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    <button class="btn btn-sm btn-outline-primary shadow-sm"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#siteRoleFormModal-@role.Id"
+                                            title="Editar role">
+                                        <i class="fa-solid fa-pen-to-square"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="3" class="text-center text-muted py-4">
+                                <i class="fa-solid fa-circle-info me-2"></i>
+                                Nenhum registro encontrado.
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @if (Model.Any())
+        {
+            @foreach (var role in Model) @await Html.PartialAsync("_SiteRoleFormModal", role)
+        }
+    </div>
+</div>
+
+@section scripts {
+    <script defer>
+        function deleteSiteRole(id) {
+          if (!confirm('Deseja realmente remover esta role?')) return;
+          location.href = `/SiteRoles/Delete/${id}`
+        }
+    </script>
+}

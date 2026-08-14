@@ -1,0 +1,81 @@
+@using XerifeTv.CMS.Modules.SiteRole
+@using XerifeTv.CMS.Modules.SiteRole.Dtos.Response
+
+@model GetSiteRoleResponseDto?
+
+<div class="modal fade"
+     id="siteRoleFormModal-@Model?.Id"
+     data-bs-backdrop="static"
+     data-bs-keyboard="false"
+     tabindex="-1"
+     aria-labelledby="siteRoleFormModal-@Model?.Id-Label"
+     aria-hidden="true">
+
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <form class="modal-content"
+              asp-controller="SiteRoles"
+              asp-action="@(string.IsNullOrEmpty(Model?.Id) ? "Create" : "Update")">
+
+            <input type="hidden" name="id" value="@Model?.Id" />
+
+            <div class="modal-header">
+                <h1 class="modal-title fs-5" id="siteRoleFormModal-@Model?.Id-Label">
+                    @(string.IsNullOrEmpty(Model?.Id) ? "Cadastrar" : "Editar") Role
+                </h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body">
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <label for="name-@Model?.Id" class="form-label">Nome da Role</label>
+                        <input type="text"
+                               class="form-control"
+                               id="name-@Model?.Id"
+                               name="name"
+                               placeholder="Ex: assinante-premium"
+                               value="@Model?.Name"
+                               required>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <label class="form-label">Permissões</label>
+
+                        <div class="d-flex flex-column gap-2">
+                            @foreach (var permission in SitePermissions.All)
+                            {
+                                <div class="form-check">
+                                    <input class="form-check-input"
+                                           type="checkbox"
+                                           id="permission-@permission.Key-@Model?.Id"
+                                           name="permissions"
+                                           value="@permission.Key"
+                                           @(Model?.Permissions.Contains(permission.Key) == true ? "checked" : "")>
+                                    <label class="form-check-label" for="permission-@permission.Key-@Model?.Id">
+                                        @permission.Value
+                                        <span class="text-muted">(@permission.Key)</span>
+                                    </label>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer d-flex justify-content-between">
+                <button type="submit" class="btn btn-primary">
+                    @(string.IsNullOrEmpty(Model?.Id) ? "Cadastrar" : "Salvar")
+                </button>
+
+                @if (!string.IsNullOrEmpty(Model?.Id))
+                {
+                    <button type="button" class="btn btn-danger" onclick="deleteSiteRole('@Model?.Id')">
+                        Excluir
+                    </button>
+                }
+            </div>
+        </form>
+    </div>
+</div>

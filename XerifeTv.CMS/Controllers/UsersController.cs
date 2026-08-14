@@ -3,6 +3,9 @@ using Microsoft.AspNetCore.Mvc;
 using XerifeTv.CMS.Modules.Activity.Interfaces;
 using XerifeTv.CMS.Modules.Authentication.Dtos.Request;
 using XerifeTv.CMS.Modules.Authentication.Interfaces;
+using XerifeTv.CMS.Modules.SiteRole.Interfaces;
+using XerifeTv.CMS.Modules.SiteUser.Dtos.Request;
+using XerifeTv.CMS.Modules.SiteUser.Interfaces;
 using XerifeTv.CMS.Modules.User.Dtos.Request;
 using XerifeTv.CMS.Modules.User.Dtos.Response;
 using XerifeTv.CMS.Modules.User.Interfaces;
@@ -13,6 +16,8 @@ namespace XerifeTv.CMS.Controllers;
 public class UsersController(
 	IUserService _userService,
 	IAuthService _authService,
+	ISiteUserService _siteUserService,
+	ISiteRoleService _siteRoleService,
 	IActivityLogService _activityLogService,
 	IConfiguration _configuration,
 	ILogger<UsersController> _logger) : Controller
@@ -29,13 +34,65 @@ public class UsersController(
 	public async Task<IActionResult> Index()
 	{
 		var response = await _userService.GetAsync(1, 20);
+		var siteRolesResponse = await _siteRoleService.GetAllAsync();
+		var siteUsersResponse = await _siteUserService.GetAllAsync();
 
 		_logger.LogInformation($"{User.Identity?.Name} accessed the users page");
+
+		ViewBag.SiteRoles = siteRolesResponse.Data ?? [];
+		ViewBag.SiteUsers = siteUsersResponse.Data ?? [];
 
 		if (response.IsSuccess)
 			return View(response.Data?.Items);
 
 		return View(Enumerable.Empty<GetUserResponseDto>());
+	}
+
+	[HttpPost]
+	[Authorize(Roles = "admin")]
+	public async Task<IActionResult> RegisterSiteUser(CreateSiteUserRequestDto dto)
+	{
+		var response = await _siteUserService.CreateAsync(dto);
+
+		TempData["Notification"] = response.IsFailure
+		  ? MessageViewHelper.ErrorJson(response.Error.Description ?? string.Empty)
+		  : MessageViewHelper.SuccessJson($"Usuário do site \"{dto.Name}\" cadastrado com sucesso");
+
+		_logger.LogInformation($"{User.Identity?.Name} registered a new site user");
+		await _activityLogService.LogAsync(User.Identity?.Name ?? "desconhecido", "Usuários", "created", $"cadastrou o usuário do site \"{dto.Email}\"");
+
+		return RedirectToAction("Index");
+	}
+
+	[HttpPost]
+	[Authorize(Roles = "admin")]
+	public async Task<IActionResult> UpdateSiteUser(UpdateSiteUserRequestDto dto)
+	{
+		var response = await _siteUserService.UpdateAsync(dto);
+
+		TempData["Notification"] = response.IsFailure
+		  ? MessageViewHelper.ErrorJson(response.Error.Description ?? string.Empty)
+		  : MessageViewHelper.SuccessJson($"Usuário do site \"{dto.Name}\" atualizado com sucesso");
+
+		_logger.LogInformation($"{User.Identity?.Name} updated site user {dto.Id}");
+		await _activityLogService.LogAsync(User.Identity?.Name ?? "desconhecido", "Usuários", "updated", $"atualizou o usuário do site \"{dto.Email}\"");
+
+		return RedirectToAction("Index");
+	}
+
+	[Authorize(Roles = "admin")]
+	public async Task<IActionResult> DeleteSiteUser(string id)
+	{
+		var response = await _siteUserService.DeleteAsync(id);
+
+		TempData["Notification"] = response.IsFailure
+		  ? MessageViewHelper.ErrorJson(response.Error.Description ?? string.Empty)
+		  : MessageViewHelper.SuccessJson("Usuário do site removido com sucesso");
+
+		_logger.LogInformation($"{User.Identity?.Name} removed site user with id = {id}");
+		await _activityLogService.LogAsync(User.Identity?.Name ?? "desconhecido", "Usuários", "deleted", $"removeu o usuário do site com id = {id}");
+
+		return RedirectToAction("Index");
 	}
 
 	[AllowAnonymous]
@@ -191,6 +248,14 @@ public class UsersController(
 	[Authorize(Roles = "admin")]
 	public async Task<IActionResult> Delete(string id)
 	{
+		var currentUserResponse = await _userService.GetByUsernameAsync(User.Identity?.Name ?? string.Empty);
+
+		if (currentUserResponse.IsSuccess && currentUserResponse.Data?.Id == id)
+		{
+			TempData["Notification"] = MessageViewHelper.ErrorJson("Você não pode excluir o próprio usuário");
+			return RedirectToAction("Index");
+		}
+
 		var response = await _userService.DeleteAsync(id);
 
 		TempData["Notification"] = response.IsFailure

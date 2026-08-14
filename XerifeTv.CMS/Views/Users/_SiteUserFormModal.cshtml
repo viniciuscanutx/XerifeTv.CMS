@@ -1,0 +1,107 @@
+@using XerifeTv.CMS.Modules.SiteRole.Dtos.Response
+@using XerifeTv.CMS.Modules.SiteUser.Dtos.Response
+
+@model GetSiteUserResponseDto?
+
+@{
+    var roles = ViewBag.SiteRoles as IEnumerable<GetSiteRoleResponseDto> ?? [];
+}
+
+<div class="modal fade"
+     id="siteUserFormModal-@Model?.Id"
+     data-bs-backdrop="static"
+     data-bs-keyboard="false"
+     tabindex="-1"
+     aria-labelledby="siteUserFormModal-@Model?.Id-Label"
+     aria-hidden="true">
+
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <form class="modal-content"
+              asp-controller="Users"
+              asp-action="@(string.IsNullOrEmpty(Model?.Id) ? "RegisterSiteUser" : "UpdateSiteUser")">
+
+            <input type="hidden" name="id" value="@Model?.Id" />
+
+            <div class="modal-header">
+                <h1 class="modal-title fs-5" id="siteUserFormModal-@Model?.Id-Label">
+                    @(string.IsNullOrEmpty(Model?.Id) ? "Cadastrar" : "Editar") Usuário do Site
+                </h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <label for="siteUserName-@Model?.Id" class="form-label">Nome</label>
+                        <input type="text"
+                               class="form-control"
+                               id="siteUserName-@Model?.Id"
+                               name="name"
+                               placeholder="digite aqui..."
+                               value="@Model?.Name"
+                               required>
+                    </div>
+
+                    <div class="col-6">
+                        <label for="siteUserEmail-@Model?.Id" class="form-label">E-mail</label>
+                        <input type="email"
+                               class="form-control"
+                               id="siteUserEmail-@Model?.Id"
+                               name="email"
+                               placeholder="email@example.com"
+                               value="@Model?.Email"
+                               required>
+                    </div>
+                </div>
+
+                @if (string.IsNullOrEmpty(Model?.Id))
+                {
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <label for="siteUserPassword-@Model?.Id" class="form-label">Senha</label>
+                            <input type="password"
+                                   class="form-control"
+                                   id="siteUserPassword-@Model?.Id"
+                                   name="password"
+                                   placeholder="digite aqui..."
+                                   required>
+                        </div>
+                    </div>
+                }
+
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <label for="siteUserRoleId-@Model?.Id" class="form-label">Role</label>
+                        <select class="form-select"
+                                id="siteUserRoleId-@Model?.Id"
+                                name="roleId">
+                            <option value="">Sem role</option>
+                            @foreach (var role in roles)
+                            {
+                                if (role.Id == Model?.RoleId)
+                                {
+                                    <option value="@role.Id" selected>@role.Name</option>
+                                }
+                                else
+                                {
+                                    <option value="@role.Id">@role.Name</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer d-flex justify-content-between">
+                <button type="submit" class="btn btn-primary">
+                    @(string.IsNullOrEmpty(Model?.Id) ? "Cadastrar" : "Salvar")
+                </button>
+
+                @if (!string.IsNullOrEmpty(Model?.Id))
+                {
+                    <button type="button" class="btn btn-danger" onclick="deleteSiteUser('@Model?.Id')">
+                        Excluir
+                    </button>
+                }
+            </div>
+        </form>
+    </div>
+</div>

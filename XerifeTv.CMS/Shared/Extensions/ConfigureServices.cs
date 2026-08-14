@@ -30,6 +30,12 @@ using XerifeTv.CMS.Modules.Movie.Interfaces;
 using XerifeTv.CMS.Modules.Series;
 using XerifeTv.CMS.Modules.Series.Importers;
 using XerifeTv.CMS.Modules.Series.Interfaces;
+using XerifeTv.CMS.Modules.SiteAuthentication.Interfaces;
+using XerifeTv.CMS.Modules.SiteAuthentication.Services;
+using XerifeTv.CMS.Modules.SiteRole;
+using XerifeTv.CMS.Modules.SiteRole.Interfaces;
+using XerifeTv.CMS.Modules.SiteUser;
+using XerifeTv.CMS.Modules.SiteUser.Interfaces;
 using XerifeTv.CMS.Modules.SystemSettings;
 using XerifeTv.CMS.Modules.SystemSettings.Interfaces;
 using XerifeTv.CMS.Modules.User;
@@ -63,6 +69,8 @@ public static class ConfigureServices
 		services.AddScoped<IMediaDeliveryProfileRepository, MediaDeliveryProfileRepository>();
 		services.AddScoped<ISystemSettingsRepository, SystemSettingsRepository>();
 		services.AddScoped<IActivityLogRepository, ActivityLogRepository>();
+		services.AddScoped<ISiteUserRepository, SiteUserRepository>();
+		services.AddScoped<ISiteRoleRepository, SiteRoleRepository>();
 		return services;
 	}
 
@@ -104,6 +112,11 @@ public static class ConfigureServices
         services.AddScoped<IMediaDeliveryTokenStrategy, MediaDeliveryTokenSignedQueryStrategy>();
 
         services.AddScoped<IActivityLogService, ActivityLogService>();
+
+        services.AddScoped<ISiteRoleService, SiteRoleService>();
+        services.AddScoped<ISiteUserService, SiteUserService>();
+        services.AddScoped<ISiteTokenService, SiteTokenService>();
+        services.AddScoped<ISiteAuthService, SiteAuthService>();
 
         services.AddHostedService<BackgroundJobQueueWorker>();
 

@@ -205,9 +205,6 @@ public sealed class UserService(
 			if (response is null)
 				return Result<bool>.Failure(new Error("404", "Usuario nao encontrado"));
 
-			if (response.Role == Enums.EUserRole.ADMIN)
-				return Result<bool>.Failure(new Error("403", "Usuario nao pode ser deletado"));
-
 			await _repository.DeleteAsync(id);
 			return Result<bool>.Success(true);
 		}

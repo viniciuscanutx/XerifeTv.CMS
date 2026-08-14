@@ -11,6 +11,8 @@ CultureInfo.DefaultThreadCurrentUICulture = defaultCulture;
 
 builder.Services.AddControllersWithViews();
 
+var authApiAllowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+
 builder.Services.AddCors(options =>
 {
 	options.AddPolicy("AllowAnyOrigin", builder =>
@@ -19,6 +21,15 @@ builder.Services.AddCors(options =>
 			   .AllowAnyOrigin()
 			   .AllowAnyMethod()
 			   .AllowAnyHeader();
+	});
+
+	options.AddPolicy("AuthApi", policy =>
+	{
+		policy
+			   .WithOrigins(authApiAllowedOrigins)
+			   .AllowAnyMethod()
+			   .AllowAnyHeader()
+			   .AllowCredentials();
 	});
 });
 

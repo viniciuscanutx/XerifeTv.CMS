@@ -19,6 +19,9 @@
     pagesViewSideMenu.Add(["Users", "Index", "Usuários", "fa-solid fa-users"]);
 
   if (User.IsInRole("admin"))
+    pagesViewSideMenu.Add(["SiteRoles", "Index", "Roles do Site", "fa-solid fa-user-shield"]);
+
+  if (User.IsInRole("admin"))
     pagesViewSideMenu.Add(["Activities", "Index", "Atividades", "fa-solid fa-clock-rotate-left"]);
 
   if (!User.IsInRole("visitor"))

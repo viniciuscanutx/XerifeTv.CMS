@@ -11,5 +11,7 @@ public enum ECollection
     WEBHOOKS,
     MEDIA_DELIVERY_PROFILES,
     SYSTEM_SETTINGS,
-    ACTIVITIES
+    ACTIVITIES,
+    SITE_USERS,
+    SITE_ROLES
 }
