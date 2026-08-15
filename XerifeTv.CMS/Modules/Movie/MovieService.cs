@@ -245,7 +245,8 @@ public sealed class MovieService(
                         MediaDeliveryProfileId = existingMovie.MediaDeliveryProfileId,
                         MediaRoute = existingMovie.MediaRoute,
                         TrailerVideoYoutubeId = existingMovie.TrailerVideoYoutubeId,
-                        HighQuality = dto.HighQuality
+                        HighQuality = dto.HighQuality,
+                        FollowRedirect = dto.FollowRedirect
                     };
 
                     var updateResult = await UpdateAsync(updateDto);
@@ -270,7 +271,8 @@ public sealed class MovieService(
                         AlternativeVideoUrl = altVideoUrl,
                         VideoDuration = imdbInfoResult.IsSuccess ? (imdbInfoResult.Data?.DurationInSeconds ?? 0) : 0,
                         VideoStreamFormat = dto.VideoStreamFormat,
-                        HighQuality = dto.HighQuality
+                        HighQuality = dto.HighQuality,
+                        FollowRedirect = dto.FollowRedirect
                     };
 
                     var createResult = await CreateAsync(createDto);

@@ -80,6 +80,20 @@
                                 Marcar filmes como 4K (Alta Qualidade)
                             </label>
                         </div>
+
+                        <div class="form-check mt-2">
+                            <input name="followRedirect"
+                                   id="batch_movie_followRedirect"
+                                   class="form-check-input"
+                                   type="checkbox"
+                                   value="true">
+                            <label for="batch_movie_followRedirect" class="form-check-label">
+                                Com redirecionamento
+                            </label>
+                            <div class="form-text">
+                                Marque quando os links acima redirecionam para o arquivo real em vez de apontar direto para ele.
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -151,22 +165,24 @@
 
                 <div data-batch-mode-panel="name" class="@(isBatchNameSearchDefault ? "" : "d-none")">
                     <div class="row mb-3">
-                        <div class="col-12 position-relative">
+                        <div class="col-12">
                             <label for="batch_titleSearch" class="form-label fw-bold">Pesquisar Filme por Nome</label>
-                            <input type="text"
-                                   id="batch_titleSearch"
-                                   class="form-control"
-                                   placeholder="Pesquise pelo nome..."
-                                   autocomplete="off"
-                                   role="combobox"
-                                   aria-expanded="false"
-                                   aria-autocomplete="list"
-                                   aria-controls="batch_titleSearchResults">
-                            <div id="batch_titleSearchResults"
-                                 class="list-group position-absolute w-100 shadow-sm"
-                                 style="z-index: 1060; max-height: 320px; overflow-y: auto;"
-                                 role="listbox"
-                                 hidden></div>
+                            <div class="position-relative">
+                                <input type="text"
+                                       id="batch_titleSearch"
+                                       class="form-control"
+                                       placeholder="Pesquise pelo nome..."
+                                       autocomplete="off"
+                                       role="combobox"
+                                       aria-expanded="false"
+                                       aria-autocomplete="list"
+                                       aria-controls="batch_titleSearchResults">
+                                <div id="batch_titleSearchResults"
+                                     class="list-group position-absolute w-100 shadow-sm"
+                                     style="z-index: 1060; max-height: 320px; overflow-y: auto;"
+                                     role="listbox"
+                                     hidden></div>
+                            </div>
                             <small class="text-muted">Pesquise o filme e clique em <i class="fa-solid fa-plus"></i> para adicioná-lo à lista abaixo.</small>
                         </div>
                     </div>
@@ -210,7 +226,7 @@
         const selectedMoviesList = document.getElementById('batch_selectedMoviesList');
         const form = document.getElementById('batchMoviesForm');
 
-        let currentMode = @(isBatchNameSearchDefault ? "'name'" : "'ids'");
+        let currentMode = '@(isBatchNameSearchDefault ? "name" : "ids")';
         let selectedMovies = [];
         let currentResults = [];
         let activeIndex = -1;

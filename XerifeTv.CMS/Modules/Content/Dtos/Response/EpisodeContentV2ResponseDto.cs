@@ -29,7 +29,7 @@ public class EpisodeContentV2ResponseDto
         {
             string uf = CryptographyHelper.Encrypt(entity.Video.Url, encryptKey);
             string sf = CryptographyHelper.Encrypt(entity.Video?.StreamFormat ?? string.Empty, encryptKey);
-            videoResolverPath = $"/MediaDeliveryProfiles/ResolveUrlFx?uf={Uri.EscapeDataString(uf)}&sf={Uri.EscapeDataString(sf)}";
+            videoResolverPath = $"/MediaDeliveryProfiles/ResolveUrlFx?uf={Uri.EscapeDataString(uf)}&sf={Uri.EscapeDataString(sf)}&fr={entity.Video.FollowRedirect}";
         }
 
         string? altResolverPath = null;
@@ -37,7 +37,7 @@ public class EpisodeContentV2ResponseDto
         {
             string auf = CryptographyHelper.Encrypt(entity.AlternativeVideoUrl, encryptKey);
             string asf = CryptographyHelper.Encrypt(entity.Video?.StreamFormat ?? "hls", encryptKey);
-            altResolverPath = $"/MediaDeliveryProfiles/ResolveUrlFx?uf={Uri.EscapeDataString(auf)}&sf={Uri.EscapeDataString(asf)}";
+            altResolverPath = $"/MediaDeliveryProfiles/ResolveUrlFx?uf={Uri.EscapeDataString(auf)}&sf={Uri.EscapeDataString(asf)}&fr={entity.Video?.FollowRedirect ?? false}";
         }
 
         return new()

@@ -271,6 +271,7 @@
                 VideoSubtitle = Model?.MovieDto?.Video?.Subtitle,
                 MediaDeliveryProfileId = Model?.MovieDto?.MediaDeliveryProfileId,
                 MediaRoute = Model?.MovieDto?.MediaRoute,
+                FollowRedirect = Model?.MovieDto?.Video?.FollowRedirect ?? false,
                 MediaDeliveryProfiles = Model?.MediaDeliveryProfiles ?? [],
                 StreamFormats = StreamFormatsHelper.Vod
             })

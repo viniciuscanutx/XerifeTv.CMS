@@ -11,6 +11,7 @@ public record VideoSettingViewModel
     public string? VideoSubtitle { get; set; }
     public string? MediaDeliveryProfileId { get; set; }
     public string? MediaRoute { get; set; }
+    public bool FollowRedirect { get; set; } = false;
 
     public IEnumerable<GetMediaDeliveryProfileResponseDto> MediaDeliveryProfiles { get; set; } = [];
     public IEnumerable<string> StreamFormats { get; set; } = [];

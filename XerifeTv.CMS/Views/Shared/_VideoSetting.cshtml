@@ -49,6 +49,24 @@
                 }
             </select>
         </div>
+
+        <div class="col-12 mt-3">
+            <div class="form-check">
+                <input type="checkbox"
+                       class="form-check-input"
+                       id="@($"{prefix}_followRedirect")"
+                       name="followRedirect"
+                       value="true"
+                       @(Model?.FollowRedirect == true ? "checked" : "")>
+                <label class="form-check-label" for="@($"{prefix}_followRedirect")">
+                    Com redirecionamento
+                </label>
+                <div class="form-text">
+                    Marque quando a URL acima nao aponta direto para o arquivo, e sim redireciona para ele.
+                    O link final e resolvido no momento de tocar, entao continua funcionando se o destino mudar a cada acesso.
+                </div>
+            </div>
+        </div>
     </div>
 
     <div id="@($"{prefix}_video-delivery-section")" class="@(!isDeliverySelected ? "d-none" : "")">

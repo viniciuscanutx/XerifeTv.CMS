@@ -118,6 +118,7 @@
                 VideoStreamFormat = Model?.ChannelDto?.Video?.StreamFormat,
                 MediaDeliveryProfileId = Model?.ChannelDto?.MediaDeliveryProfileId,
                 MediaRoute = Model?.ChannelDto?.MediaRoute,
+                FollowRedirect = Model?.ChannelDto?.Video?.FollowRedirect ?? false,
                 MediaDeliveryProfiles = Model?.MediaDeliveryProfiles ?? [],
                 StreamFormats = StreamFormatsHelper.Streaming,
                 IsShowVideoSubtitleInput = false

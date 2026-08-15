@@ -15,6 +15,7 @@ public class UpdateEpisodeRequestDto
     public long VideoDuration { get; init; }
     public string VideoStreamFormat { get; init; } = string.Empty;
     public string? VideoSubtitle { get; init; }
+    public bool FollowRedirect { get; init; } = false;
     public string? MediaDeliveryProfileId { get; init; }
     public string? MediaRoute { get; init; }
     public bool HighQuality { get; init; } = false;
@@ -29,7 +30,7 @@ public class UpdateEpisodeRequestDto
             BannerUrl = BannerUrl,
             Number = Number,
             Season = Season,
-            Video = new Video(VideoUrl, VideoDuration, VideoStreamFormat, VideoSubtitle),
+            Video = new Video(VideoUrl, VideoDuration, VideoStreamFormat, VideoSubtitle, FollowRedirect),
             AlternativeVideoUrl = string.IsNullOrWhiteSpace(AlternativeVideoUrl) ? null : AlternativeVideoUrl,
             MediaDeliveryProfileId = MediaDeliveryProfileId,
             MediaRoute = MediaRoute,

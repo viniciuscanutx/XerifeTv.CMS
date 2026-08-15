@@ -38,7 +38,7 @@ public class GetMovieContentResponseDto
         {
             string uf = CryptographyHelper.Encrypt(entity.Video?.Url ?? string.Empty, encryptKey);
             string sf = CryptographyHelper.Encrypt(entity.Video?.StreamFormat ?? string.Empty, encryptKey);
-            videoResolverPath = $"/ResolveUrlFx?uf={Uri.EscapeDataString(uf)}&sf={Uri.EscapeDataString(sf)}";
+            videoResolverPath = $"/ResolveUrlFx?uf={Uri.EscapeDataString(uf)}&sf={Uri.EscapeDataString(sf)}&fr={entity.Video?.FollowRedirect ?? false}";
         }
 
         string? altResolverPath = null;
@@ -46,7 +46,7 @@ public class GetMovieContentResponseDto
         {
             string auf = CryptographyHelper.Encrypt(entity.AlternativeVideoUrl, encryptKey);
             string asf = CryptographyHelper.Encrypt(entity.Video?.StreamFormat ?? "hls", encryptKey);
-            altResolverPath = $"/MediaDeliveryProfiles/ResolveUrlFx?uf={Uri.EscapeDataString(auf)}&sf={Uri.EscapeDataString(asf)}";
+            altResolverPath = $"/MediaDeliveryProfiles/ResolveUrlFx?uf={Uri.EscapeDataString(auf)}&sf={Uri.EscapeDataString(asf)}&fr={entity.Video?.FollowRedirect ?? false}";
         }
 
         return new GetMovieContentResponseDto

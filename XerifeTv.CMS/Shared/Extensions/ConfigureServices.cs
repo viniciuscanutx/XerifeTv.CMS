@@ -110,6 +110,16 @@ public static class ConfigureServices
 
 		services.AddScoped<IMediaDeliveryProfileService, MediaDeliveryProfileService>();
 		services.AddScoped<IMediaDeliveryUrlResolver, MediaDeliveryUrlResolver>();
+		services.AddScoped<IRedirectUrlResolver, RedirectUrlResolver>();
+
+		services
+			.AddHttpClient(RedirectUrlResolver.HttpClientName, client => client.Timeout = TimeSpan.FromSeconds(10))
+			.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+			{
+				AllowAutoRedirect = true,
+				MaxAutomaticRedirections = 10
+			});
+
 		services.AddScoped<IMediaDeliveryTokenStrategy, MediaDeliveryTokenNoneStrategy>();
 		services.AddScoped<IMediaDeliveryTokenStrategy, MediaDeliveryTokenStaticQueryStrategy>();
         services.AddScoped<IMediaDeliveryTokenStrategy, MediaDeliveryTokenSignedQueryStrategy>();

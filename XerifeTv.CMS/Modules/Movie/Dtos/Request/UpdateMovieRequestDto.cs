@@ -20,6 +20,7 @@ public class UpdateMovieRequestDto
     public long VideoDuration { get; init; }
     public string VideoStreamFormat { get; init; } = string.Empty;
     public string? VideoSubtitle { get; init; }
+    public bool FollowRedirect { get; init; } = false;
     public string? MediaDeliveryProfileId { get; init; }
     public string? MediaRoute { get; init; }
     public string? TrailerVideoYoutubeId { get; init; }
@@ -46,7 +47,7 @@ public class UpdateMovieRequestDto
             ReleaseYear = ReleaseYear,
             ParentalRating = ParentalRating,
             Review = Review,
-            Video = new Video(VideoUrl, VideoDuration, VideoStreamFormat, VideoSubtitle),
+            Video = new Video(VideoUrl, VideoDuration, VideoStreamFormat, VideoSubtitle, FollowRedirect),
             AlternativeVideoUrl = string.IsNullOrWhiteSpace(AlternativeVideoUrl) ? null : AlternativeVideoUrl,
             Disabled = Disabled,
             MediaRoute = MediaRoute,

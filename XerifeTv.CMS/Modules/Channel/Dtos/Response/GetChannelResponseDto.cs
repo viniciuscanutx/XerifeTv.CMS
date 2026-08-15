@@ -17,7 +17,7 @@ public class GetChannelResponseDto
     public string? UrlResolverPath
         => !string.IsNullOrWhiteSpace(MediaDeliveryProfileId)
             ? $"/MediaDeliveryProfiles/ResolveUrl?mediaDeliveryProfileId={MediaDeliveryProfileId}&mediaPath={Uri.EscapeDataString(MediaRoute ?? "")}"
-            : $"/MediaDeliveryProfiles/ResolveUrlFixed?urlFixed={Uri.EscapeDataString(Video?.Url ?? "")}&streamFormat={Video?.StreamFormat}";
+            : $"/MediaDeliveryProfiles/ResolveUrlFixed?urlFixed={Uri.EscapeDataString(Video?.Url ?? "")}&streamFormat={Video?.StreamFormat}&followRedirect={Video?.FollowRedirect ?? false}";
 
     public static GetChannelResponseDto FromEntity(ChannelEntity entity)
     {

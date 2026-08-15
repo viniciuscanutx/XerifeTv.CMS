@@ -88,9 +88,9 @@ public class MediaDeliveryProfilesController(
 
     [Authorize(Roles = "admin, common")]
     [HttpGet]
-    public async Task<IActionResult> ResolveUrlFixed(string urlFixed, string streamFormat)
+    public async Task<IActionResult> ResolveUrlFixed(string urlFixed, string streamFormat, bool followRedirect = false)
     {
-        var response = await _urlResolver.ResolveUrlFixedAsync(urlFixed, streamFormat);
+        var response = await _urlResolver.ResolveUrlFixedAsync(urlFixed, streamFormat, followRedirect);
 
         if (response.IsFailure)
             return StatusCode(int.Parse(response.Error.Code), response.Error.Description);
@@ -124,12 +124,12 @@ public class MediaDeliveryProfilesController(
 
     [AllowAnonymous]
     [HttpGet]
-    public async Task<IActionResult> ResolveUrlFx(string uf, string sf)
+    public async Task<IActionResult> ResolveUrlFx(string uf, string sf, bool fr = false)
     {
         string urlFixed = CryptographyHelper.Decrypt(uf, _configuration["SecuritySettings:ContentEncryptionKey"]!);
         string streamFormat = CryptographyHelper.Decrypt(sf, _configuration["SecuritySettings:ContentEncryptionKey"]!);
 
-        var response = await _urlResolver.ResolveUrlFixedAsync(urlFixed, streamFormat);
+        var response = await _urlResolver.ResolveUrlFixedAsync(urlFixed, streamFormat, fr);
 
         if (response.IsFailure)
             return StatusCode(int.Parse(response.Error.Code), response.Error.Description);

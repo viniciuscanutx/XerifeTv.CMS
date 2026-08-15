@@ -1,7 +1,8 @@
-﻿namespace XerifeTv.CMS.Modules.Abstractions.ValueObjects;
+namespace XerifeTv.CMS.Modules.Abstractions.ValueObjects;
 
 public record Video(
   string Url,
   long Duration,
   string StreamFormat,
-  string? Subtitle = null);
+  string? Subtitle = null,
+  bool FollowRedirect = false);

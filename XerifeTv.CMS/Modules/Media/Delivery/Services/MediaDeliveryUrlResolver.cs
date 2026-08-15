@@ -6,7 +6,8 @@ namespace XerifeTv.CMS.Modules.Media.Delivery.Services;
 
 public class MediaDeliveryUrlResolver(
     IEnumerable<IMediaDeliveryTokenStrategy> _mediaTokenStrategies,
-    IMediaDeliveryProfileService _service) : IMediaDeliveryUrlResolver
+    IMediaDeliveryProfileService _service,
+    IRedirectUrlResolver _redirectUrlResolver) : IMediaDeliveryUrlResolver
 {
     public async Task<Result<GetResolveUrlResponseDto>> ResolveUrlAsync(string mediaPath, string mediaDeliveryProfileId)
     {
@@ -47,8 +48,16 @@ public class MediaDeliveryUrlResolver(
         }
     }
 
-    public async Task<Result<GetResolveUrlResponseDto>> ResolveUrlFixedAsync(string urlFixed, string streamFormat)
+    public async Task<Result<GetResolveUrlResponseDto>> ResolveUrlFixedAsync(string urlFixed, string streamFormat, bool followRedirect = false)
     {
-        return await Task.FromResult(Result<GetResolveUrlResponseDto>.Success(new(urlFixed, streamFormat)));
+        if (!followRedirect || string.IsNullOrWhiteSpace(urlFixed))
+            return Result<GetResolveUrlResponseDto>.Success(new(urlFixed, streamFormat));
+
+        var finalUrlResult = await _redirectUrlResolver.ResolveFinalUrlAsync(urlFixed);
+
+        if (finalUrlResult.IsFailure)
+            return Result<GetResolveUrlResponseDto>.Failure(finalUrlResult.Error);
+
+        return Result<GetResolveUrlResponseDto>.Success(new(finalUrlResult.Data!, streamFormat));
     }
 }

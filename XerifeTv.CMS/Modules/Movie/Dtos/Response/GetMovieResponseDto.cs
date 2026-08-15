@@ -29,11 +29,11 @@ public sealed class GetMovieResponseDto
     public string? UrlResolverPath
         => !string.IsNullOrWhiteSpace(MediaDeliveryProfileId)
             ? $"/MediaDeliveryProfiles/ResolveUrl?mediaDeliveryProfileId={MediaDeliveryProfileId}&mediaPath={Uri.EscapeDataString(MediaRoute ?? "")}&isCached=false"
-            : $"/MediaDeliveryProfiles/ResolveUrlFixed?urlFixed={Uri.EscapeDataString(Video?.Url ?? "")}&streamFormat={Video?.StreamFormat}&isCached=false";
+            : $"/MediaDeliveryProfiles/ResolveUrlFixed?urlFixed={Uri.EscapeDataString(Video?.Url ?? "")}&streamFormat={Video?.StreamFormat}&followRedirect={Video?.FollowRedirect ?? false}&isCached=false";
 
     public string? AlternativeUrlResolverPath
         => !string.IsNullOrWhiteSpace(AlternativeVideoUrl)
-            ? $"/MediaDeliveryProfiles/ResolveUrlFixed?urlFixed={Uri.EscapeDataString(AlternativeVideoUrl)}&streamFormat={Video?.StreamFormat ?? "hls"}&isCached=false"
+            ? $"/MediaDeliveryProfiles/ResolveUrlFixed?urlFixed={Uri.EscapeDataString(AlternativeVideoUrl)}&streamFormat={Video?.StreamFormat ?? "hls"}&followRedirect={Video?.FollowRedirect ?? false}&isCached=false"
             : null;
 
     public static GetMovieResponseDto FromEntity(MovieEntity entity)
