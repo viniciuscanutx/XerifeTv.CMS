@@ -15,8 +15,11 @@ public class MediaDeliveryProfilesController(
     IActivityLogService _activityLogService,
     ILogger<MediaDeliveryProfilesController> _logger,
     ICacheService _cacheService,
-    IConfiguration _configuration) : Controller
+    IConfiguration _configuration,
+    IHttpClientFactory _httpClientFactory) : Controller
 {
+    public const string StreamHttpClientName = "media-stream-proxy";
+
     [Authorize(Roles = "admin")]
     public async Task<IActionResult> Create(CreateMediaDeliveryProfileRequestDto dto)
     {
@@ -135,5 +138,81 @@ public class MediaDeliveryProfilesController(
             return StatusCode(int.Parse(response.Error.Code), response.Error.Description);
 
         return Ok(new { response.Data?.Url, response.Data?.StreamFormat });
+    }
+
+    /// <summary>
+    /// Repassa os bytes de uma URL http:// externa pela origem https do proprio servidor.
+    /// Existe porque paginas https bloqueiam &lt;video src="http://..."&gt; (mixed content) -
+    /// esse bloqueio nao tem contorno client-side. "u" chega cifrado (ver AvoidMixedContent
+    /// em MediaDeliveryUrlResolver) para a URL de destino nunca ser controlavel pelo cliente.
+    /// </summary>
+    [AllowAnonymous]
+    [HttpGet]
+    public async Task<IActionResult> StreamMedia(string u)
+    {
+        string url;
+        try
+        {
+            url = CryptographyHelper.Decrypt(u, _configuration["SecuritySettings:ContentEncryptionKey"]!);
+        }
+        catch
+        {
+            return BadRequest();
+        }
+
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var targetUri)
+            || (targetUri.Scheme != Uri.UriSchemeHttp && targetUri.Scheme != Uri.UriSchemeHttps))
+            return BadRequest();
+
+        var client = _httpClientFactory.CreateClient(StreamHttpClientName);
+
+        using var upstreamRequest = new HttpRequestMessage(HttpMethod.Get, targetUri);
+
+        if (Request.Headers.TryGetValue("Range", out var rangeValues) && rangeValues.Count > 0)
+            upstreamRequest.Headers.TryAddWithoutValidation("Range", rangeValues.ToArray());
+
+        HttpResponseMessage upstreamResponse;
+        try
+        {
+            upstreamResponse = await client.SendAsync(upstreamRequest, HttpCompletionOption.ResponseHeadersRead, HttpContext.RequestAborted);
+        }
+        catch (OperationCanceledException)
+        {
+            return new EmptyResult();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning($"Failed to stream media from {targetUri}: {ex.Message}");
+            return StatusCode(502);
+        }
+
+        using (upstreamResponse)
+        {
+            Response.StatusCode = (int)upstreamResponse.StatusCode;
+
+            var contentType = upstreamResponse.Content.Headers.ContentType?.ToString();
+            Response.ContentType = string.IsNullOrWhiteSpace(contentType) ? "application/octet-stream" : contentType;
+
+            if (upstreamResponse.Content.Headers.ContentLength is long contentLength)
+                Response.ContentLength = contentLength;
+
+            foreach (var acceptRangesValue in upstreamResponse.Headers.AcceptRanges)
+                Response.Headers.Append("Accept-Ranges", acceptRangesValue);
+
+            if (upstreamResponse.Content.Headers.ContentRange is not null)
+                Response.Headers["Content-Range"] = upstreamResponse.Content.Headers.ContentRange.ToString();
+
+            try
+            {
+                await using var upstreamStream = await upstreamResponse.Content.ReadAsStreamAsync(HttpContext.RequestAborted);
+                await upstreamStream.CopyToAsync(Response.Body, HttpContext.RequestAborted);
+            }
+            catch (OperationCanceledException)
+            {
+                // cliente cancelou (fechou o player, fez seek) - esperado, nao e erro
+            }
+        }
+
+        return new EmptyResult();
     }
 }

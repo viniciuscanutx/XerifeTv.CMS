@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.OpenApi;
+using XerifeTv.CMS.Controllers;
 using XerifeTv.CMS.Modules.Abstractions.Interfaces;
 using XerifeTv.CMS.Modules.Abstractions.Services;
 using XerifeTv.CMS.Modules.Activity;
@@ -114,6 +115,19 @@ public static class ConfigureServices
 
 		services
 			.AddHttpClient(RedirectUrlResolver.HttpClientName, client => client.Timeout = TimeSpan.FromSeconds(10))
+			.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+			{
+				AllowAutoRedirect = true,
+				MaxAutomaticRedirections = 10
+			});
+
+		// Sem timeout: a conexao fica aberta pela duracao da reproducao/seek do video,
+		// nao e uma chamada rapida de API. O corte real e o RequestAborted do player.
+		// AllowAutoRedirect=true porque um 302 devolvido cru pelo proxy apontaria de volta
+		// pro http:// externo, e o browser bloqueia como mixed content olhando o destino
+		// final da cadeia - o proxy precisa entregar bytes do arquivo, nunca um redirect.
+		services
+			.AddHttpClient(MediaDeliveryProfilesController.StreamHttpClientName, client => client.Timeout = Timeout.InfiniteTimeSpan)
 			.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
 			{
 				AllowAutoRedirect = true,
