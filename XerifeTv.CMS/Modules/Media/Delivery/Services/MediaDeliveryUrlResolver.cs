@@ -9,7 +9,8 @@ public class MediaDeliveryUrlResolver(
     IEnumerable<IMediaDeliveryTokenStrategy> _mediaTokenStrategies,
     IMediaDeliveryProfileService _service,
     IRedirectUrlResolver _redirectUrlResolver,
-    IConfiguration _configuration) : IMediaDeliveryUrlResolver
+    IConfiguration _configuration,
+    IHttpContextAccessor _httpContextAccessor) : IMediaDeliveryUrlResolver
 {
     // hls/m3u8 sao playlists que referenciam outras URLs (segmentos/sub-playlists) - proxiar
     // so o manifesto nao resolve o mixed content dos segmentos. Streaming proxy cobre apenas
@@ -43,13 +44,44 @@ public class MediaDeliveryUrlResolver(
         // Absoluta, nao relativa: quem consome isso nao e so o admin (mesma origem do CMS) -
         // e tambem o site publico (Angular, hospedado em outra origem/dominio), que so recebe
         // o {url, streamFormat} de volta e faz video.src = url direto. Um path relativo iria
-        // resolver contra a origem do SITE, nao da API, e daria 404 la. Mesma convencao ja
-        // usada em EmailService pra montar o link de reset de senha.
-        string baseUrl = (_configuration["baseUrl"] ?? string.Empty).TrimEnd('/');
+        // resolver contra a origem do SITE, nao da API, e daria 404 la.
+        //
+        // Deriva host/esquema da propria requisicao em vez de confiar em appsettings "baseUrl" -
+        // esse valor so tem o placeholder de dev (localhost:5003) e nao ha variavel de ambiente
+        // equivalente configurada no Render, o que ja gerou uma URL absoluta porem apontando
+        // pro lugar errado. Detalhe de como isso e derivado em GetPublicBaseUrl().
+        string baseUrl = GetPublicBaseUrl();
         string encryptedUrl = CryptographyHelper.Encrypt(url, _configuration["SecuritySettings:ContentEncryptionKey"]!);
         string proxyPath = $"{baseUrl}/MediaDeliveryProfiles/StreamMedia/media.{safeExtension}?u={Uri.EscapeDataString(encryptedUrl)}";
 
         return new(proxyPath, streamFormat);
+    }
+
+    private string GetPublicBaseUrl()
+    {
+        var request = _httpContextAccessor.HttpContext?.Request;
+
+        // Sem HttpContext (nao deveria acontecer, isso so roda dentro de uma requisicao),
+        // cai pro appsettings como ultimo recurso.
+        if (request is null)
+            return (_configuration["baseUrl"] ?? string.Empty).TrimEnd('/');
+
+        // Nunca confia em request.Scheme como fallback: atras de um proxy que termina TLS
+        // (Render inclusive), o Kestrel muitas vezes enxerga a conexao interna como http
+        // mesmo quando o cliente externo usa https - foi exatamente esse tipo de valor
+        // errado que ja causou dois deploys quebrados nessa mesma linha (primeiro com
+        // baseUrl do appsettings apontando pro placeholder de dev, depois sem essa
+        // protecao). "https" fixo no fallback e seguro aqui porque essa URL so existe
+        // pra contornar mixed content - a pagina que a consome ja e https por definicao.
+        string scheme = request.Headers.TryGetValue("X-Forwarded-Proto", out var proto) && proto.Count > 0
+            ? proto[0]!
+            : "https";
+
+        string host = request.Headers.TryGetValue("X-Forwarded-Host", out var forwardedHost) && forwardedHost.Count > 0
+            ? forwardedHost[0]!
+            : request.Host.Value;
+
+        return $"{scheme}://{host}";
     }
 
     public async Task<Result<GetResolveUrlResponseDto>> ResolveUrlAsync(string mediaPath, string mediaDeliveryProfileId)
