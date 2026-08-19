@@ -261,6 +261,7 @@ public class MoviesController(
             FranchiseId = movie.FranchiseId,
             PosterUrl = movie.PosterUrl,
             BannerUrl = movie.BannerUrl,
+            LogoUrl = movie.LogoUrl,
             ReleaseYear = movie.ReleaseYear,
             ParentalRating = movie.ParentalRating,
             Review = movie.Review,

@@ -11,6 +11,7 @@ public class MovieContentV2ResponseDto
     public string[] Categories { get; private set; } = [];
     public string PosterURL { get; private set; } = string.Empty;
     public string BannerURL { get; private set; } = string.Empty;
+    public string? LogoURL { get; private set; }
     public string ParentalRating { get; private set; } = string.Empty;
     public int ReleaseYear { get; private set; }
     public string Synopsis { get; private set; } = string.Empty;
@@ -55,6 +56,7 @@ public class MovieContentV2ResponseDto
             Categories = [.. entity.Categories],
             PosterURL = entity.PosterUrl,
             BannerURL = entity.BannerUrl,
+            LogoURL = entity.LogoUrl,
             ParentalRating = entity.ParentalRating == 0 ? "L" : entity.ParentalRating.ToString(),
             ReleaseYear = entity.ReleaseYear,
             Synopsis = entity.Synopsis,

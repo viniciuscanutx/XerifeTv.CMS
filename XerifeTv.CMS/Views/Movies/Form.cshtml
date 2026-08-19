@@ -226,6 +226,10 @@
                 </div>
             </div>
 
+            @* Preenchido pelo autofill do TMDB e persistido junto do filme, para o front
+               nao precisar consultar o endpoint de imagens a cada render do hero. *@
+            <input type="hidden" id="logoUrl" name="logoUrl" value="@Model?.MovieDto?.LogoUrl">
+
             @await Html.PartialAsync("_FranchiseField", new FranchiseFieldViewModel(
                 "movie",
                 Model?.MovieDto?.FranchiseId,
@@ -368,6 +372,7 @@
             $('#review').val(String(response.voteAverage).replace(',', '.'));
             $('#posterUrl').val(response.posterUrl);
             $('#bannerUrl').val(response.bannerUrl);
+            $('#logoUrl').val(response.logoUrl || '');
             $('#videoDuration').val(response.durationInSeconds);
           }
           finally {
@@ -526,6 +531,7 @@
               $('#review').val(String(response.voteAverage).replace(',', '.'));
               $('#posterUrl').val(response.posterUrl);
               $('#bannerUrl').val(response.bannerUrl);
+              $('#logoUrl').val(response.logoUrl || '');
               $('#videoDuration').val(response.durationInSeconds);
             }
             finally {

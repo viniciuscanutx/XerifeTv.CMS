@@ -11,6 +11,7 @@ public class CreateMovieRequestDto
     public string? FranchiseId { get; init; }
     public string PosterUrl { get; init; } = string.Empty;
     public string BannerUrl { get; init; } = string.Empty;
+    public string? LogoUrl { get; init; }
     public int ReleaseYear { get; init; }
     public int ParentalRating { get; init; }
     public float Review { get; init; }
@@ -41,6 +42,7 @@ public class CreateMovieRequestDto
             Categories = categorieList,
             PosterUrl = PosterUrl,
             BannerUrl = BannerUrl,
+            LogoUrl = string.IsNullOrWhiteSpace(LogoUrl) ? null : LogoUrl,
             ReleaseYear = ReleaseYear,
             ParentalRating = ParentalRating,
             Review = Review,

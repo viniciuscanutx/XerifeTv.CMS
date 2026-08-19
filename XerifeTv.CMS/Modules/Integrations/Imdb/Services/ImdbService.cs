@@ -44,7 +44,8 @@ public class ImdbService(IConfiguration _configuration, IHttpClientFactory _http
             var url = $"https://api.themoviedb.org/3/movie/{imdbId}";
             var tmdbKey = _configuration["Tmdb:Key"];
 
-            var response = await client.GetAsync($"{url}?api_key={tmdbKey}&language=pt-BR&page=1");
+            var response = await client.GetAsync(
+                $"{url}?api_key={tmdbKey}&language=pt-BR&page=1&append_to_response=images&include_image_language=pt,en,null");
 
             if (!response.IsSuccessStatusCode)
                 return Result<GetMovieByImdbResponseDto?>.Failure(
@@ -207,7 +208,8 @@ public class ImdbService(IConfiguration _configuration, IHttpClientFactory _http
             var url = $"https://api.themoviedb.org/3/movie/{tmdbId}";
             var tmdbKey = _configuration["Tmdb:Key"];
 
-            var response = await client.GetAsync($"{url}?api_key={tmdbKey}&language=pt-BR");
+            var response = await client.GetAsync(
+                $"{url}?api_key={tmdbKey}&language=pt-BR&append_to_response=images&include_image_language=pt,en,null");
 
             if (!response.IsSuccessStatusCode)
                 return Result<GetMovieByImdbResponseDto?>.Failure(

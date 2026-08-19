@@ -44,5 +44,62 @@ public class GetMovieByImdbResponseDto
 
     public long DurationInSeconds => DurationInMinutes * 60L;
 
+    [JsonProperty("images")]
+    public ImagesDto? Images { get; set; }
+
+    /// <summary>
+    /// Logo (wordmark) com o titulo do filme escrito.
+    /// Logos sem idioma sao "textless" (so o simbolo), por isso ficam por ultimo.
+    /// </summary>
+    public string? LogoUrl
+    {
+        get
+        {
+            var filePath = Images?.Logos
+                .OrderByDescending(GetLogoScore)
+                .Select(logo => logo.FilePath)
+                .FirstOrDefault();
+
+            return string.IsNullOrWhiteSpace(filePath)
+                ? null
+                : $"https://image.tmdb.org/t/p/original{filePath}";
+        }
+    }
+
+    private static float GetLogoScore(LogoDto logo)
+    {
+        var score = logo.Language switch
+        {
+            "pt" => 40f,
+            "en" => 30f,
+            _ => string.IsNullOrEmpty(logo.Language) ? 10f : 0f
+        };
+
+        if (logo.AspectRatio >= 1.6f) score += 20f;
+
+        return score + logo.VoteAverage;
+    }
+
     public record GenreDto(int Id, string Name);
+
+    public class ImagesDto
+    {
+        [JsonProperty("logos")]
+        public List<LogoDto> Logos { get; set; } = [];
+    }
+
+    public class LogoDto
+    {
+        [JsonProperty("file_path")]
+        public string FilePath { get; set; } = string.Empty;
+
+        [JsonProperty("aspect_ratio")]
+        public float AspectRatio { get; set; }
+
+        [JsonProperty("iso_639_1")]
+        public string? Language { get; set; }
+
+        [JsonProperty("vote_average")]
+        public float VoteAverage { get; set; }
+    }
 }

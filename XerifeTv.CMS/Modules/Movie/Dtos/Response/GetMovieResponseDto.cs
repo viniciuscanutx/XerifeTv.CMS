@@ -13,6 +13,7 @@ public sealed class GetMovieResponseDto
     public string Categories { get; private set; } = string.Empty;
     public string PosterUrl { get; private set; } = string.Empty;
     public string BannerUrl { get; private set; } = string.Empty;
+    public string? LogoUrl { get; private set; }
     public int ReleaseYear { get; private set; }
     public int ParentalRating { get; private set; }
     public float Review { get; private set; }
@@ -48,6 +49,7 @@ public sealed class GetMovieResponseDto
             Categories = string.Join(", ", entity.Categories),
             PosterUrl = entity.PosterUrl,
             BannerUrl = entity.BannerUrl,
+            LogoUrl = entity.LogoUrl,
             ReleaseYear = entity.ReleaseYear,
             ParentalRating = entity.ParentalRating,
             Review = entity.Review,
