@@ -28,8 +28,20 @@ public class MediaDeliveryUrlResolver(
         // como mixed content. Encaminha pelo proxy de streaming do proprio servidor (https)
         // em vez de devolver a URL externa direto. A URL vai cifrada pra evitar SSRF via
         // manipulacao do parametro pelo cliente.
+        //
+        // O segmento "media.{ext}" no path (nao so na query) e obrigatorio: sem "type"
+        // explicito no <video>, o video.js so aceita tentar carregar uma fonte se conseguir
+        // adivinhar um formato plausivel pela EXTENSAO da URL. Uma URL so com query string
+        // (?u=...) e rejeitada de cara com "No compatible source", sem nenhuma requisicao de
+        // rede - foi exatamente o sintoma visto em producao. A extensao so serve pra passar
+        // nesse pre-check do video.js; quem manda na reproducao de verdade e o Content-Type
+        // real que o proxy repassa do servidor de origem.
+        string safeExtension = System.Text.RegularExpressions.Regex.IsMatch(streamFormat ?? string.Empty, "^[a-z0-9]{1,10}$", System.Text.RegularExpressions.RegexOptions.IgnoreCase)
+            ? streamFormat!.ToLowerInvariant()
+            : "mp4";
+
         string encryptedUrl = CryptographyHelper.Encrypt(url, _configuration["SecuritySettings:ContentEncryptionKey"]!);
-        string proxyPath = $"/MediaDeliveryProfiles/StreamMedia?u={Uri.EscapeDataString(encryptedUrl)}";
+        string proxyPath = $"/MediaDeliveryProfiles/StreamMedia/media.{safeExtension}?u={Uri.EscapeDataString(encryptedUrl)}";
 
         return new(proxyPath, streamFormat);
     }

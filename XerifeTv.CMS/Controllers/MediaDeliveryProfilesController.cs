@@ -147,8 +147,8 @@ public class MediaDeliveryProfilesController(
     /// em MediaDeliveryUrlResolver) para a URL de destino nunca ser controlavel pelo cliente.
     /// </summary>
     [AllowAnonymous]
-    [HttpGet]
-    public async Task<IActionResult> StreamMedia(string u)
+    [HttpGet("MediaDeliveryProfiles/StreamMedia/{fileName}")]
+    public async Task<IActionResult> StreamMedia(string fileName, string u)
     {
         string url;
         try
