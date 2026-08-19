@@ -40,8 +40,14 @@ public class MediaDeliveryUrlResolver(
             ? streamFormat!.ToLowerInvariant()
             : "mp4";
 
+        // Absoluta, nao relativa: quem consome isso nao e so o admin (mesma origem do CMS) -
+        // e tambem o site publico (Angular, hospedado em outra origem/dominio), que so recebe
+        // o {url, streamFormat} de volta e faz video.src = url direto. Um path relativo iria
+        // resolver contra a origem do SITE, nao da API, e daria 404 la. Mesma convencao ja
+        // usada em EmailService pra montar o link de reset de senha.
+        string baseUrl = (_configuration["baseUrl"] ?? string.Empty).TrimEnd('/');
         string encryptedUrl = CryptographyHelper.Encrypt(url, _configuration["SecuritySettings:ContentEncryptionKey"]!);
-        string proxyPath = $"/MediaDeliveryProfiles/StreamMedia/media.{safeExtension}?u={Uri.EscapeDataString(encryptedUrl)}";
+        string proxyPath = $"{baseUrl}/MediaDeliveryProfiles/StreamMedia/media.{safeExtension}?u={Uri.EscapeDataString(encryptedUrl)}";
 
         return new(proxyPath, streamFormat);
     }
