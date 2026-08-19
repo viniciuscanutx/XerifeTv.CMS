@@ -269,6 +269,7 @@ public class MoviesController(
             VideoDuration = movie.Video?.Duration ?? 0,
             VideoStreamFormat = movie.Video?.StreamFormat ?? "m3u8",
             VideoSubtitle = movie.Video?.Subtitle,
+            FollowRedirect = movie.Video?.FollowRedirect ?? false,
             MediaDeliveryProfileId = movie.MediaDeliveryProfileId,
             MediaRoute = movie.MediaRoute,
             TrailerVideoYoutubeId = movie.TrailerVideoYoutubeId,

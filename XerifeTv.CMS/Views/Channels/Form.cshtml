@@ -121,7 +121,8 @@
                 FollowRedirect = Model?.ChannelDto?.Video?.FollowRedirect ?? false,
                 MediaDeliveryProfiles = Model?.MediaDeliveryProfiles ?? [],
                 StreamFormats = StreamFormatsHelper.Streaming,
-                IsShowVideoSubtitleInput = false
+                IsShowVideoSubtitleInput = false,
+                IsShowAlternativeVideoUrlInput = false
             })
 
             @if (Model?.ChannelDto is GetChannelResponseDto channel)

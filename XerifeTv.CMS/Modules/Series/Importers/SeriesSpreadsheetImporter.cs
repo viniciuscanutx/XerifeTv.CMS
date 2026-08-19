@@ -1,4 +1,4 @@
-﻿using XerifeTv.CMS.Modules.Abstractions.Exceptions;
+using XerifeTv.CMS.Modules.Abstractions.Exceptions;
 using XerifeTv.CMS.Modules.Abstractions.Interfaces;
 using XerifeTv.CMS.Modules.Common;
 using XerifeTv.CMS.Modules.Common.Dtos;
@@ -223,6 +223,7 @@ public class SeriesSpreadsheetImporter(
                         VideoDuration = item.Video?.Duration ?? episode.Video?.Duration ??  0,
                         VideoStreamFormat = item.Video?.StreamFormat ?? episode.Video?.StreamFormat ?? string.Empty,
                         VideoSubtitle = item.Video?.Subtitle ?? episode.Video?.Subtitle ?? string.Empty,
+                        FollowRedirect = episode.Video?.FollowRedirect ?? false,
                         MediaDeliveryProfileId = item.MediaDeliveryProfileId ?? episode.MediaDeliveryProfileId,
                         MediaRoute = item.MediaRoute ?? episode.MediaRoute,
                         Disabled = false

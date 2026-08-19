@@ -267,6 +267,7 @@
             {
                 IdPrefix = "movie",
                 VideoUrl = Model?.MovieDto?.Video?.Url,
+                AlternativeVideoUrl = Model?.MovieDto?.AlternativeVideoUrl,
                 VideoStreamFormat = Model?.MovieDto?.Video?.StreamFormat,
                 VideoSubtitle = Model?.MovieDto?.Video?.Subtitle,
                 MediaDeliveryProfileId = Model?.MovieDto?.MediaDeliveryProfileId,
@@ -275,19 +276,6 @@
                 MediaDeliveryProfiles = Model?.MediaDeliveryProfiles ?? [],
                 StreamFormats = StreamFormatsHelper.Vod
             })
-
-            <div class="row mb-4">
-                <div class="col-12">
-                    <label for="alternativeVideoUrl" class="form-label">Link Legendado (URL)</label>
-                    <input type="text"
-                           class="form-control"
-                           id="alternativeVideoUrl"
-                           name="alternativeVideoUrl"
-                           placeholder="https://video.com/video-legendado.m3u8"
-                           value="@Model?.MovieDto?.AlternativeVideoUrl">
-                    <small class="text-muted">Insira o link do vídeo legendado (Caso exista)</small>
-                </div>
-            </div>
 
             <div class="row mb-4">
                 <div class="col-12">

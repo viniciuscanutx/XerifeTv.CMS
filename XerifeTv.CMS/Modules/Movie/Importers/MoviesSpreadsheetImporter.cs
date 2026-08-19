@@ -167,6 +167,7 @@ public class MoviesSpreadsheetImporter(
 						VideoDuration = movieByImdbIdResponse.Data!.Video?.Duration ?? 0,
 						VideoStreamFormat = !string.IsNullOrWhiteSpace(movieItem.Video?.StreamFormat) ? movieItem.Video.StreamFormat : (movieByImdbIdResponse.Data!.Video?.StreamFormat ?? string.Empty),
 						VideoSubtitle = movieItem.Video?.Subtitle ?? movieByImdbIdResponse.Data!.Video?.Subtitle,
+						FollowRedirect = movieByImdbIdResponse.Data!.Video?.FollowRedirect ?? false,
 						MediaDeliveryProfileId = movieItem.MediaDeliveryProfileId ?? movieByImdbIdResponse.Data!.MediaDeliveryProfileId,
 						MediaRoute = movieItem.MediaRoute ?? movieByImdbIdResponse.Data!.MediaRoute,
 						TrailerVideoYoutubeId = movieItem.TrailerVideoYoutubeId ?? movieByImdbIdResponse.Data!.TrailerVideoYoutubeId,

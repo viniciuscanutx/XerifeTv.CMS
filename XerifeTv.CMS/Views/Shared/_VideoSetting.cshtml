@@ -49,24 +49,6 @@
                 }
             </select>
         </div>
-
-        <div class="col-12 mt-3">
-            <div class="form-check">
-                <input type="checkbox"
-                       class="form-check-input"
-                       id="@($"{prefix}_followRedirect")"
-                       name="followRedirect"
-                       value="true"
-                       @(Model?.FollowRedirect == true ? "checked" : "")>
-                <label class="form-check-label" for="@($"{prefix}_followRedirect")">
-                    Com redirecionamento
-                </label>
-                <div class="form-text">
-                    Marque quando a URL acima nao aponta direto para o arquivo, e sim redireciona para ele.
-                    O link final e resolvido no momento de tocar, entao continua funcionando se o destino mudar a cada acesso.
-                </div>
-            </div>
-        </div>
     </div>
 
     <div id="@($"{prefix}_video-delivery-section")" class="@(!isDeliverySelected ? "d-none" : "")">
@@ -101,6 +83,50 @@
                        value="@Model?.MediaRoute"
                        placeholder="/path/to/stream.m3u8"
                        @(isDeliverySelected ? "required" : "")>
+            </div>
+        </div>
+    </div>
+
+    @* Assim como o checkbox abaixo, fica fora dos blocos alternados por videoSourceType:
+       o link legendado e sempre URL fixa, inclusive quando o link principal usa
+       Perfil de Entrega. *@
+    @if (Model?.IsShowAlternativeVideoUrlInput == true)
+    {
+        <div class="row mb-3">
+            <div class="col-12">
+                <label for="@($"{prefix}_alternativeVideoUrl")" class="form-label">Video - Legendado (URL)</label>
+                <input type="text"
+                       class="form-control"
+                       id="@($"{prefix}_alternativeVideoUrl")"
+                       name="alternativeVideoUrl"
+                       placeholder="https://video.com/video-legendado.m3u8"
+                       value="@Model?.AlternativeVideoUrl">
+                <small class="text-muted">Link primário acima = Dublado. Este link = Legendado (caso exista).</small>
+            </div>
+        </div>
+    }
+
+    @* Fica fora dos blocos alternados por videoSourceType de proposito: a flag vale
+       para qualquer URL fixa do cadastro, inclusive o link legendado, que continua
+       sendo URL fixa mesmo quando o link principal usa Perfil de Entrega. *@
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="form-check">
+                <input type="checkbox"
+                       class="form-check-input"
+                       id="@($"{prefix}_followRedirect")"
+                       name="followRedirect"
+                       value="true"
+                       @(Model?.FollowRedirect == true ? "checked" : "")>
+                <label class="form-check-label" for="@($"{prefix}_followRedirect")">
+                    Com redirecionamento
+                </label>
+                <div class="form-text">
+                    Marque quando a URL nao aponta direto para o arquivo, e sim redireciona para ele.
+                    Vale para o link dublado e tambem para o link legendado, quando houver.
+                    O link final e resolvido no momento de tocar, entao continua funcionando se o destino mudar a cada acesso.
+                    Nao se aplica a links montados por Perfil de Entrega.
+                </div>
             </div>
         </div>
     </div>

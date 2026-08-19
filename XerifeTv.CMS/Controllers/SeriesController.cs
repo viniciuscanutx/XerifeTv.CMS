@@ -350,7 +350,7 @@ public class SeriesController(
 
 	[Authorize(Roles = "admin, common")]
 	[HttpPost]
-	public async Task<IActionResult> QuickUpdateEpisodeVideoUrl(string serieId, string episodeId, int season, int number, string videoUrl, string? alternativeVideoUrl)
+	public async Task<IActionResult> QuickUpdateEpisodeVideoUrl(string serieId, string episodeId, int season, int number, string videoUrl, string? alternativeVideoUrl, bool followRedirect = false)
 	{
 		var episodeResult = await _service.GetEpisodesBySeasonAsync(serieId, season, includeDisabled: true);
 		if (episodeResult.IsFailure || episodeResult.Data?.Episodes is null)
@@ -379,6 +379,7 @@ public class SeriesController(
 			VideoDuration = episode.Video?.Duration ?? 0,
 			VideoStreamFormat = episode.Video?.StreamFormat ?? "m3u8",
 			VideoSubtitle = episode.Video?.Subtitle,
+			FollowRedirect = followRedirect,
 			MediaDeliveryProfileId = episode.MediaDeliveryProfileId,
 			MediaRoute = episode.MediaRoute,
 			HighQuality = episode.HighQuality,
