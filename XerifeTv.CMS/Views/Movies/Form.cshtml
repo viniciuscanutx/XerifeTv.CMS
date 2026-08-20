@@ -226,9 +226,17 @@
                 </div>
             </div>
 
-            @* Preenchido pelo autofill do TMDB e persistido junto do filme, para o front
-               nao precisar consultar o endpoint de imagens a cada render do hero. *@
-            <input type="hidden" id="logoUrl" name="logoUrl" value="@Model?.MovieDto?.LogoUrl">
+            <div class="row mb-3">
+                <div class="col-12">
+                    <label for="logoUrl" class="form-label">Logo (URL)</label>
+                    <input type="text"
+                           class="form-control"
+                           id="logoUrl"
+                           name="logoUrl"
+                           placeholder="Preenchido automaticamente ao importar do TMDB"
+                           value="@Model?.MovieDto?.LogoUrl">
+                </div>
+            </div>
 
             @await Html.PartialAsync("_FranchiseField", new FranchiseFieldViewModel(
                 "movie",
