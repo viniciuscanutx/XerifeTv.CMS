@@ -1,9 +1,19 @@
-﻿using Scalar.AspNetCore;
+﻿using Microsoft.Extensions.FileProviders;
+using Scalar.AspNetCore;
 using System.Globalization;
 using XerifeTv.CMS.Shared.Database.MongoDB;
 using XerifeTv.CMS.Shared.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Evita o uso de FileSystemWatcher (inotify) para o wwwroot: em ambientes como o Render,
+// o limite de instâncias inotify do container estoura e derruba o app com 500 ao renderizar
+// tags com asp-append-version. O wwwroot não muda em runtime, então polling é seguro aqui.
+builder.Environment.WebRootFileProvider = new PhysicalFileProvider(builder.Environment.WebRootPath)
+{
+	UsePollingFileWatcher = true,
+	UseActivePolling = false
+};
 
 var defaultCulture = new CultureInfo("en-US");
 CultureInfo.DefaultThreadCurrentCulture = defaultCulture;
