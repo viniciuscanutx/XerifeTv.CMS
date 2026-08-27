@@ -246,6 +246,19 @@
         </div>
       </div>
 
+      <div class="row mb-3">
+        <div class="col-12">
+          <label for="logoUrl" class="form-label">Logo (URL)</label>
+          <input
+            type="text"
+            class="form-control"
+            id="logoUrl"
+            name="logoUrl"
+            placeholder="Preenchido automaticamente ao importar do TMDB"
+            value="@Model?.SeriesDto?.LogoUrl">
+        </div>
+      </div>
+
       <div class="mb-4">
         <div class="col-12 col-md-6">
           <label for="numberSeasons" class="form-label">Qtde Temporadas</label>
@@ -326,6 +339,7 @@
         $('#review').val(String(response.voteAverage).replace(',', '.'));
         $('#posterUrl').val(response.posterUrl);
         $('#bannerUrl').val(response.bannerUrl);
+        $('#logoUrl').val(response.logoUrl || '');
         $('#numberSeasons').val(response.numberSeasons);
       }
       finally {
@@ -485,6 +499,7 @@
           $('#review').val(String(response.voteAverage).replace(',', '.'));
           $('#posterUrl').val(response.posterUrl);
           $('#bannerUrl').val(response.bannerUrl);
+          $('#logoUrl').val(response.logoUrl || '');
           $('#numberSeasons').val(response.numberSeasons);
         }
         finally {

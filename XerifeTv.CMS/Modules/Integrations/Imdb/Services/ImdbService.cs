@@ -84,7 +84,8 @@ public class ImdbService(IConfiguration _configuration, IHttpClientFactory _http
             var url = $"https://api.themoviedb.org/3/tv/{seriesResult.Id}";
             var tmdbKey = _configuration["Tmdb:Key"];
 
-            var response = await client.GetAsync($"{url}?api_key={tmdbKey}&language=pt-BR");
+            var response = await client.GetAsync(
+                $"{url}?api_key={tmdbKey}&language=pt-BR&append_to_response=images&include_image_language=pt,en,null");
 
             if (!response.IsSuccessStatusCode)
                 return Result<GetSeriesByImdbResponseDto?>.Failure(
@@ -239,7 +240,8 @@ public class ImdbService(IConfiguration _configuration, IHttpClientFactory _http
             var url = $"https://api.themoviedb.org/3/tv/{tmdbId}";
             var tmdbKey = _configuration["Tmdb:Key"];
 
-            var response = await client.GetAsync($"{url}?api_key={tmdbKey}&language=pt-BR&append_to_response=external_ids");
+            var response = await client.GetAsync(
+                $"{url}?api_key={tmdbKey}&language=pt-BR&append_to_response=external_ids,images&include_image_language=pt,en,null");
 
             if (!response.IsSuccessStatusCode)
                 return Result<GetSeriesByImdbResponseDto?>.Failure(

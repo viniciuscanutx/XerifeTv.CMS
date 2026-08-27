@@ -7,6 +7,7 @@ public sealed class SeriesEntity : MediaContent
     public string ImdbId { get; set; } = string.Empty;
     public string? FranchiseId { get; set; }
     public ICollection<string> Categories { get; set; } = [];
+    public string? LogoUrl { get; set; }
     public float Review { get; set; }
     public int NumberSeasons { get; set; } = 1;
     public ICollection<Episode> Episodes { get; set; } = [];
