@@ -13,5 +13,5 @@ public interface IMovieService
     Task<Result<string>> UpdateAsync(UpdateMovieRequestDto dto);
     Task<Result<bool>> DeleteAsync(string id);
     Task<Result<PagedList<GetMovieResponseDto>>> GetByFilterAsync(GetMoviesByFilterRequestDto dto);
-    Task<Result<int>> BatchAddMoviesAsync(BatchMoviesRequestDto dto);
+    Task<Result<int>> BatchAddMoviesAsync(BatchMoviesRequestDto dto, Func<BatchProgressReport, Task>? onProgress = null);
 }

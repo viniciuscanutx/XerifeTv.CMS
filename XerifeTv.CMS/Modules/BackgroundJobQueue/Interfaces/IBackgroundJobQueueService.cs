@@ -8,6 +8,8 @@ public interface IBackgroundJobQueueService
 {
     Task<Result<AddJobQueueResponseDto>> AddJobInQueueAsync(AddSpreadsheetJobQueueRequestDto dto);
     Task<Result<AddJobQueueResponseDto>> AddJobInQueueAsync(AddImportEpisodesJobQueueRequestDto dto);
+    Task<Result<AddJobQueueResponseDto>> AddJobInQueueAsync(AddBatchMoviesJobQueueRequestDto dto);
+    Task<Result<AddJobQueueResponseDto>> AddJobInQueueAsync(AddBatchEpisodeLinksJobQueueRequestDto dto);
     Task<Result<PagedList<GetBackgroundJobResponseDto>>> GetByFilterAsync(GetBackgroundJobsByFilterRequestDto dto);
     Task<Result<IEnumerable<GetJobsToNotifyResponseDto>>> GetJobsToNotifyAsync(string username);
 	Task<Result<string>> UpdateAsync(UpdateBackgroundJobRequestDto dto);

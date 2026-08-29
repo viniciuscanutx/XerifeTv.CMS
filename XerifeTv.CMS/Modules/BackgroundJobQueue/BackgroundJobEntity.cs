@@ -19,6 +19,7 @@ public class BackgroundJobEntity : BaseEntity
 	public ICollection<string> ErrorList { get; private set; } = [];
 	public string? SpreadsheetFileUrl { get; private set; } = null;
 	public string? SeriesIdImportEpisodes { get; private set; } = null;
+	public string? PayloadJson { get; private set; } = null;
 	public bool UserWasNotified { get; private set; } = false;
 
 	public static BackgroundJobEntity Create(
@@ -54,6 +55,22 @@ public class BackgroundJobEntity : BaseEntity
 			Status = EBackgroundJobStatus.PENDING,
 			RequestedByUserId = userId,
 			SeriesIdImportEpisodes = seriesId
+		};
+	}
+
+	public static BackgroundJobEntity Create(
+		EBackgroundJobType type,
+		string jobName,
+		string payloadJson,
+		string userId)
+	{
+		return new BackgroundJobEntity
+		{
+			Type = type,
+			JobName = jobName,
+			Status = EBackgroundJobStatus.PENDING,
+			RequestedByUserId = userId,
+			PayloadJson = payloadJson
 		};
 	}
 

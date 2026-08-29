@@ -1,10 +1,14 @@
 ﻿
+using System.Text.Json;
 using XerifeTv.CMS.Modules.Abstractions.Interfaces;
 using XerifeTv.CMS.Modules.BackgroundJobQueue.Dtos.Request;
 using XerifeTv.CMS.Modules.BackgroundJobQueue.Enums;
 using XerifeTv.CMS.Modules.BackgroundJobQueue.Interfaces;
 using XerifeTv.CMS.Modules.Channel.Interfaces;
+using XerifeTv.CMS.Modules.Common;
+using XerifeTv.CMS.Modules.Movie.Dtos.Request;
 using XerifeTv.CMS.Modules.Movie.Interfaces;
+using XerifeTv.CMS.Modules.Series.Dtos.Request;
 using XerifeTv.CMS.Modules.Series.Interfaces;
 
 namespace XerifeTv.CMS.Modules.BackgroundJobQueue;
@@ -69,6 +73,14 @@ public class BackgroundJobQueueWorker(
 
 				case EBackgroundJobType.IMPORT_EPISODES_FROM_SERIES_IMDB:
 					_ = ImportEpisodesSeriesAsync(backgroundJobQueueService, jobQueue.Id, jobQueue.SeriesIdImportEpisodes!);
+					break;
+
+				case EBackgroundJobType.BATCH_ADD_MOVIES:
+					_ = ProcessBatchMoviesAsync(backgroundJobQueueService, jobQueue.Id, jobQueue.PayloadJson ?? string.Empty);
+					break;
+
+				case EBackgroundJobType.BATCH_ADD_EPISODE_LINKS:
+					_ = ProcessBatchEpisodeLinksAsync(backgroundJobQueueService, jobQueue.Id, jobQueue.PayloadJson ?? string.Empty);
 					break;
 			}
 
@@ -191,6 +203,136 @@ public class BackgroundJobQueueWorker(
 		{
 			_processingJobIds.Remove(backgroundJobId);
 			_semaphore.Release();
+		}
+	}
+
+	private async Task ProcessBatchMoviesAsync(IBackgroundJobQueueService backgroundJobQueueService, string backgroundJobId, string payloadJson)
+	{
+		try
+		{
+			using var scope = _serviceProvider.CreateScope();
+			var movieService = scope.ServiceProvider.GetRequiredService<IMovieService>();
+
+			var dto = JsonSerializer.Deserialize<BatchMoviesRequestDto>(payloadJson) ?? new BatchMoviesRequestDto();
+
+			await RunBatchJobAsync(backgroundJobQueueService, backgroundJobId,
+				onProgress => movieService.BatchAddMoviesAsync(dto, onProgress));
+		}
+		catch (Exception ex)
+		{
+			_logger.Log(LogLevel.Error, ex.InnerException?.Message ?? ex.Message);
+			await MarkJobFailedSafeAsync(backgroundJobQueueService, backgroundJobId, ex.InnerException?.Message ?? ex.Message);
+		}
+		finally
+		{
+			_processingJobIds.Remove(backgroundJobId);
+			_semaphore.Release();
+		}
+	}
+
+	private async Task ProcessBatchEpisodeLinksAsync(IBackgroundJobQueueService backgroundJobQueueService, string backgroundJobId, string payloadJson)
+	{
+		try
+		{
+			using var scope = _serviceProvider.CreateScope();
+			var seriesService = scope.ServiceProvider.GetRequiredService<ISeriesService>();
+
+			var dto = JsonSerializer.Deserialize<BatchEpisodeLinksRequestDto>(payloadJson) ?? new BatchEpisodeLinksRequestDto();
+
+			await RunBatchJobAsync(backgroundJobQueueService, backgroundJobId,
+				onProgress => seriesService.BatchAddEpisodeLinksAsync(dto, onProgress));
+		}
+		catch (Exception ex)
+		{
+			_logger.Log(LogLevel.Error, ex.InnerException?.Message ?? ex.Message);
+			await MarkJobFailedSafeAsync(backgroundJobQueueService, backgroundJobId, ex.InnerException?.Message ?? ex.Message);
+		}
+		finally
+		{
+			_processingJobIds.Remove(backgroundJobId);
+			_semaphore.Release();
+		}
+	}
+
+	// Executa uma operacao em lote reportando o progresso para o job na fila.
+	// A atualizacao do progresso e limitada a cada mudanca de porcentagem para nao
+	// sobrecarregar o banco em lotes grandes.
+	private static async Task RunBatchJobAsync(
+		IBackgroundJobQueueService backgroundJobQueueService,
+		string backgroundJobId,
+		Func<Func<BatchProgressReport, Task>, Task<Result<int>>> runBatch)
+	{
+		int lastPct = -1;
+		BatchProgressReport last = default;
+
+		Func<BatchProgressReport, Task> onProgress = async report =>
+		{
+			last = report;
+			int pct = report.Total > 0 ? (int)(report.Processed * 100L / report.Total) : 100;
+			if (pct == lastPct) return;
+			lastPct = pct;
+
+			await backgroundJobQueueService.UpdateAsync(new UpdateBackgroundJobRequestDto
+			{
+				Id = backgroundJobId,
+				TotalRecordsToProcess = report.Total,
+				TotalProcessedRecords = report.Processed,
+				TotalSuccessfulRecords = report.Successful,
+				TotalFailedRecords = report.Processed - report.Successful,
+				Status = EBackgroundJobStatus.PROCESSING
+			});
+		};
+
+		var result = await runBatch(onProgress);
+
+		UpdateBackgroundJobRequestDto finalDto;
+
+		if (result.IsSuccess)
+		{
+			int total = last.Total;
+			int success = result.Data;
+
+			finalDto = new UpdateBackgroundJobRequestDto
+			{
+				Id = backgroundJobId,
+				TotalRecordsToProcess = total,
+				TotalProcessedRecords = total,
+				TotalSuccessfulRecords = success,
+				TotalFailedRecords = total - success < 0 ? 0 : total - success,
+				Status = EBackgroundJobStatus.COMPLETED
+			};
+		}
+		else
+		{
+			finalDto = new UpdateBackgroundJobRequestDto
+			{
+				Id = backgroundJobId,
+				TotalRecordsToProcess = last.Total,
+				TotalProcessedRecords = last.Processed,
+				TotalSuccessfulRecords = last.Successful,
+				TotalFailedRecords = last.Processed - last.Successful,
+				ErrorList = [result.Error?.Description ?? "Falha no processamento em lote"],
+				Status = EBackgroundJobStatus.FAILED
+			};
+		}
+
+		await backgroundJobQueueService.UpdateAsync(finalDto);
+	}
+
+	private async Task MarkJobFailedSafeAsync(IBackgroundJobQueueService backgroundJobQueueService, string backgroundJobId, string errorMessage)
+	{
+		try
+		{
+			await backgroundJobQueueService.UpdateAsync(new UpdateBackgroundJobRequestDto
+			{
+				Id = backgroundJobId,
+				Status = EBackgroundJobStatus.FAILED,
+				ErrorList = [errorMessage]
+			});
+		}
+		catch (Exception ex)
+		{
+			_logger.Log(LogLevel.Error, ex.InnerException?.Message ?? ex.Message);
 		}
 	}
 

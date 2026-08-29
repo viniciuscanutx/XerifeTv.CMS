@@ -177,7 +177,7 @@ public sealed class MovieService(
         }
     }
 
-    public async Task<Result<int>> BatchAddMoviesAsync(BatchMoviesRequestDto dto)
+    public async Task<Result<int>> BatchAddMoviesAsync(BatchMoviesRequestDto dto, Func<BatchProgressReport, Task>? onProgress = null)
     {
         try
         {
@@ -197,11 +197,16 @@ public sealed class MovieService(
                 return Result<int>.Failure(new Error("400", "Nenhum IMDB ID fornecido"));
 
             int processedCount = 0;
+            int total = imdbIds.Length;
 
             for (int i = 0; i < imdbIds.Length; i++)
             {
                 string rawImdbId = imdbIds[i];
-                if (string.IsNullOrWhiteSpace(rawImdbId)) continue;
+                if (string.IsNullOrWhiteSpace(rawImdbId))
+                {
+                    if (onProgress != null) await onProgress(new BatchProgressReport(i + 1, total, processedCount));
+                    continue;
+                }
 
                 if (rawImdbId.Contains('.')) rawImdbId = rawImdbId.Split('.')[0];
                 string imdbId = (!rawImdbId.StartsWith("tt", StringComparison.OrdinalIgnoreCase) && long.TryParse(rawImdbId, out _))
@@ -280,6 +285,8 @@ public sealed class MovieService(
                     var createResult = await CreateAsync(createDto);
                     if (createResult.IsSuccess) processedCount++;
                 }
+
+                if (onProgress != null) await onProgress(new BatchProgressReport(i + 1, total, processedCount));
             }
 
             return Result<int>.Success(processedCount);

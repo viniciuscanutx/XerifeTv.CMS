@@ -1,0 +1,139 @@
+@using XerifeTv.CMS.Modules.LinkTemplate.Dtos.Response
+
+@model GetLinkTemplateResponseDto?
+
+<div class="modal fade"
+     id="linkTemplateFormModal-@Model?.Id"
+     data-bs-backdrop="static"
+     data-bs-keyboard="false"
+     tabindex="-1"
+     aria-labelledby="linkTemplateFormModal-@Model?.Id-Label"
+     aria-hidden="true">
+
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <form class="modal-content"
+              asp-controller="LinkTemplates"
+              asp-action="@(string.IsNullOrEmpty(Model?.Id) ? "Create" : "Update")">
+
+            <input type="hidden" name="id" value="@Model?.Id" />
+
+            <div class="modal-header">
+                <h1 class="modal-title fs-5"
+                    id="linkTemplateFormModal-@Model?.Id-Label">
+                    @(string.IsNullOrEmpty(Model?.Id) ? "Cadastrar" : "Editar")
+                    Tipo de Link
+                </h1>
+
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body">
+
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <label for="lt-name-@Model?.Id" class="form-label">
+                            Nome do Tipo
+                        </label>
+                        <input type="text"
+                               class="form-control shadow-sm"
+                               id="lt-name-@Model?.Id"
+                               name="name"
+                               placeholder="Ex: Sventank"
+                               value="@Model?.Name"
+                               required />
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <label for="lt-urlTemplate-@Model?.Id" class="form-label">
+                            Modelo da URL
+                        </label>
+                        <input type="text"
+                               class="form-control shadow-sm"
+                               id="lt-urlTemplate-@Model?.Id"
+                               name="urlTemplate"
+                               placeholder="http://sventank.com/series/11982237031/luciano/{id}.mp4"
+                               value="@Model?.UrlTemplate"
+                               required />
+                        <small class="text-muted d-block mt-1">
+                            Coloque <code>{id}</code> onde entra o número que muda a cada episódio —
+                            ex: <code>.../luciano/{id}.mp4</code>. Você também pode colar um link real
+                            (ex: <code>.../luciano/92392.mp4</code>) que o número é detectado sozinho.
+                            Mantenha a extensão (<code>.mp4</code>) no final.
+                        </small>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <label for="lt-padding-@Model?.Id" class="form-label">
+                            Dígitos fixos do ID (opcional)
+                        </label>
+                        <input type="number"
+                               class="form-control shadow-sm"
+                               id="lt-padding-@Model?.Id"
+                               name="padding"
+                               min="0"
+                               value="@(Model?.Padding ?? 0)" />
+                        <small class="text-muted d-block mt-1">
+                            0 = usa o número como está. Ex: 5 gera <code>00042</code> em vez de <code>42</code>.
+                        </small>
+                    </div>
+                </div>
+
+                @if (Model is GetLinkTemplateResponseDto && !string.IsNullOrEmpty(Model?.Id))
+                {
+                    <div class="row mb-2">
+                        <div class="col-6">
+                            <div class="form-check">
+                                <input id="lt-isDisabled-@Model?.Id"
+                                       name="isDisabled"
+                                       class="form-check-input"
+                                       type="checkbox"
+                                       value="@(Model!.IsDisabled ? "true" : "false")"
+                                       @(Model!.IsDisabled ? "checked" : "") />
+
+                                <label class="form-check-label" for="lt-isDisabled-@Model?.Id">
+                                    Desativar
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                }
+
+            </div>
+
+            <div class="modal-footer d-flex justify-content-between">
+                <button type="submit" class="btn btn-primary">
+                    @(string.IsNullOrEmpty(Model?.Id) ? "Cadastrar" : "Salvar")
+                </button>
+
+                @if (!string.IsNullOrEmpty(Model?.Id))
+                {
+                    <a role="button"
+                       class="btn btn-danger btn-delete-link-template-@Model?.Id">
+                        <i class="fa fa-trash"></i>
+                        Remover
+                    </a>
+                }
+            </div>
+
+        </form>
+    </div>
+</div>
+
+<script>
+    document.getElementById('lt-isDisabled-@Model?.Id')?.addEventListener('change', function () {
+        this.value = this.checked;
+    });
+
+    document.querySelector('.btn-delete-link-template-@Model?.Id')?.addEventListener('click', function () {
+        if (!confirm('Deseja realmente remover este Tipo de Link?')) return;
+
+        location.href = '@Url.Action("Delete", "LinkTemplates", new { id = Model?.Id })';
+    });
+</script>

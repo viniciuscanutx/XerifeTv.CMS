@@ -1,4 +1,9 @@
 @using XerifeTv.CMS.Shared.Helpers
+@using XerifeTv.CMS.Modules.LinkTemplate.Dtos.Response
+
+@{
+    var linkTemplates = ViewBag.LinkTemplates as IEnumerable<GetLinkTemplateResponseDto> ?? [];
+}
 
 <div class="modal fade"
      id="batchEpisodeLinksModal"
@@ -150,6 +155,70 @@
                     </div>
                 </div>
 
+                <div class="row mb-3" id="batch_generator_container">
+                    <div class="col-12">
+                        <div class="card border-success-subtle bg-success-subtle p-3">
+                            <h6 class="fw-bold text-success-emphasis mb-1">
+                                <i class="fa-solid fa-wand-magic-sparkles me-1"></i> Gerador de Sequência (opcional)
+                            </h6>
+                            <p class="text-muted mb-3" style="font-size: 12px;">
+                                Informe <strong>um</strong> link e a quantidade — os demais são calculados incrementando o número final e preenchidos abaixo automaticamente.
+                            </p>
+
+                            <div class="btn-group btn-group-sm w-100 mb-3" role="group" aria-label="Origem do modelo">
+                                <input type="radio" class="btn-check" name="gen_source" id="gen_source_manual" value="manual" checked autocomplete="off">
+                                <label class="btn btn-outline-success" for="gen_source_manual">Link avulso</label>
+
+                                <input type="radio" class="btn-check" name="gen_source" id="gen_source_type" value="type" autocomplete="off" @(linkTemplates.Any() ? "" : "disabled")>
+                                <label class="btn btn-outline-success" for="gen_source_type">
+                                    Tipo de link salvo @(linkTemplates.Any() ? "" : "(nenhum cadastrado)")
+                                </label>
+                            </div>
+
+                            <div id="gen_manual_block" class="mb-2">
+                                <label for="gen_manual_url" class="form-label mb-1" style="font-size: 13px;">Link modelo (cole um episódio qualquer)</label>
+                                <input type="text" id="gen_manual_url" class="form-control form-control-sm" placeholder="http://sventank.com/series/11982237031/luciano/92395.mp4" autocomplete="off">
+                            </div>
+
+                            <div id="gen_type_block" class="mb-2 d-none">
+                                <label for="gen_type_select" class="form-label mb-1" style="font-size: 13px;">Tipo de link</label>
+                                <select id="gen_type_select" class="form-select form-select-sm">
+                                    @foreach (var t in linkTemplates)
+                                    {
+                                        <option value="@t.Id" data-template="@t.UrlTemplate" data-padding="@t.Padding">@t.Name</option>
+                                    }
+                                </select>
+                                <small class="text-muted d-block mt-1" style="font-size: 11px;">Modelo: <code id="gen_type_preview"></code></small>
+                            </div>
+
+                            <div class="row g-2 align-items-end mt-1">
+                                <div class="col-4">
+                                    <label for="gen_start_id" class="form-label mb-1" style="font-size: 13px;">ID inicial</label>
+                                    <input type="text" id="gen_start_id" class="form-control form-control-sm" inputmode="numeric" placeholder="92395" autocomplete="off">
+                                </div>
+                                <div class="col-4">
+                                    <label for="gen_count" class="form-label mb-1" style="font-size: 13px;">Quantidade</label>
+                                    <input type="number" id="gen_count" class="form-control form-control-sm" min="1" value="@(ViewBag.MaxEpisodeNumber ?? 1)">
+                                </div>
+                                <div class="col-4">
+                                    <label for="gen_target" class="form-label mb-1" style="font-size: 13px;">Aplicar em</label>
+                                    <select id="gen_target" class="form-select form-select-sm">
+                                        <option value="primary" selected>Links Primários</option>
+                                        <option value="secondary">Segundo Link (Legendado)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center mt-3 gap-2">
+                                <small id="gen_feedback" style="font-size: 12px;"></small>
+                                <button type="button" id="gen_btn" class="btn btn-sm btn-success flex-shrink-0">
+                                    <i class="fa-solid fa-list-ol me-1"></i> Gerar e preencher
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="row mb-3" id="batch_primary_links_container">
                     <div class="col-12">
                         <label for="videoUrlsText" class="form-label fw-bold">Links Primários (Opcional - Um link por linha)</label>
@@ -229,6 +298,7 @@
         const checkboxesContainer = document.getElementById("batch_checkboxes_container");
         const primaryLinksContainer = document.getElementById("batch_primary_links_container");
         const secondaryLinksContainer = document.getElementById("batch_secondary_links_container");
+        const generatorContainer = document.getElementById("batch_generator_container");
         const seasonCol = document.getElementById("batch_season_col");
         const startEpCol = document.getElementById("batch_startEpisode_col");
         const startEpLabel = document.getElementById("batch_startEpisode_label");
@@ -242,6 +312,7 @@
                 if (removeContainer) removeContainer.classList.remove("d-none");
                 if (formatContainer) formatContainer.classList.add("d-none");
                 if (checkboxesContainer) checkboxesContainer.classList.add("d-none");
+                if (generatorContainer) generatorContainer.classList.add("d-none");
                 if (primaryLinksContainer) primaryLinksContainer.classList.add("d-none");
                 if (secondaryLinksContainer) secondaryLinksContainer.classList.add("d-none");
 
@@ -280,6 +351,7 @@
                 if (removeContainer) removeContainer.classList.add("d-none");
                 if (formatContainer) formatContainer.classList.remove("d-none");
                 if (checkboxesContainer) checkboxesContainer.classList.remove("d-none");
+                if (generatorContainer) generatorContainer.classList.remove("d-none");
                 if (primaryLinksContainer) primaryLinksContainer.classList.remove("d-none");
                 if (secondaryLinksContainer) secondaryLinksContainer.classList.remove("d-none");
 
@@ -326,5 +398,176 @@
         if (modalEl) {
             modalEl.addEventListener("show.bs.modal", updateModeUI);
         }
+    });
+</script>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const sourceRadios = document.querySelectorAll('input[name="gen_source"]');
+        const manualBlock = document.getElementById("gen_manual_block");
+        const typeBlock = document.getElementById("gen_type_block");
+        const manualUrl = document.getElementById("gen_manual_url");
+        const typeSelect = document.getElementById("gen_type_select");
+        const typePreview = document.getElementById("gen_type_preview");
+        const startId = document.getElementById("gen_start_id");
+        const count = document.getElementById("gen_count");
+        const target = document.getElementById("gen_target");
+        const feedback = document.getElementById("gen_feedback");
+        const genBtn = document.getElementById("gen_btn");
+
+        if (!genBtn) return;
+
+        function setFeedback(message, isError) {
+            feedback.textContent = message;
+            feedback.className = isError ? "text-danger" : "text-success-emphasis";
+        }
+
+        function currentSource() {
+            const checked = document.querySelector('input[name="gen_source"]:checked');
+            return checked ? checked.value : "manual";
+        }
+
+        function toggleSource() {
+            const isType = currentSource() === "type";
+            manualBlock.classList.toggle("d-none", isType);
+            typeBlock.classList.toggle("d-none", !isType);
+            setFeedback("", false);
+            if (isType) updateTypePreview();
+        }
+
+        function updateTypePreview() {
+            if (!typeSelect) return;
+            const opt = typeSelect.options[typeSelect.selectedIndex];
+            const template = opt ? (opt.getAttribute("data-template") || "") : "";
+            if (typePreview) typePreview.textContent = template;
+
+            // Se o modelo foi salvo com o número real (sem {id}), sugere o ID inicial detectado
+            if (template && !template.includes("{id}")) {
+                const detected = detectNumber(template);
+                if (detected) startId.value = detected.number;
+            }
+        }
+
+        // Separa a query string / hash do restante da URL
+        function splitQueryHash(url) {
+            const i = url.search(/[?#]/);
+            if (i === -1) return { core: url, tail: "" };
+            return { core: url.slice(0, i), tail: url.slice(i) };
+        }
+
+        // Detecta o ultimo grupo de digitos do nome do arquivo, ignorando a extensao.
+        // Ex: ".../luciano/92395.mp4" -> number "92395" (nao pega o "4" de mp4).
+        function detectNumber(url) {
+            const parts = splitQueryHash((url || "").trim());
+            const extMatch = parts.core.match(/\.[A-Za-z0-9]+$/);
+            const ext = extMatch ? extMatch[0] : "";
+            const stem = ext ? parts.core.slice(0, parts.core.length - ext.length) : parts.core;
+            const numMatch = stem.match(/(\d+)(?!.*\d)/);
+            if (!numMatch) return null;
+            const idx = numMatch.index;
+            const num = numMatch[1];
+            return {
+                prefix: stem.slice(0, idx),
+                suffix: stem.slice(idx + num.length) + ext + parts.tail,
+                number: num
+            };
+        }
+
+        function pad(value, width) {
+            let s = String(value);
+            while (width > 0 && s.length < width) s = "0" + s;
+            return s;
+        }
+
+        function buildLines(prefix, suffix, start, total, padding) {
+            const lines = [];
+            for (let i = 0; i < total; i++) lines.push(prefix + pad(start + i, padding) + suffix);
+            return lines.join("\n");
+        }
+
+        // No modo avulso, ao colar/editar a URL detecta o numero e sugere o ID inicial
+        if (manualUrl) {
+            manualUrl.addEventListener("input", function () {
+                if (!manualUrl.value.trim()) { setFeedback("", false); return; }
+                const detected = detectNumber(manualUrl.value);
+                if (!detected) {
+                    setFeedback("Nenhum número encontrado no final do link.", true);
+                    return;
+                }
+                startId.value = detected.number;
+                setFeedback("Número detectado: " + detected.number, false);
+            });
+        }
+
+        sourceRadios.forEach(function (radio) {
+            radio.addEventListener("change", toggleSource);
+        });
+
+        if (typeSelect) typeSelect.addEventListener("change", updateTypePreview);
+
+        genBtn.addEventListener("click", function () {
+            const total = parseInt(count.value, 10);
+            if (!total || total < 1) {
+                setFeedback("Informe uma quantidade válida.", true);
+                return;
+            }
+
+            const startValue = (startId.value || "").trim();
+            const start = parseInt(startValue, 10);
+            if (isNaN(start)) {
+                setFeedback("Informe o ID inicial (apenas números).", true);
+                return;
+            }
+
+            let prefix, suffix, padding;
+
+            if (currentSource() === "type") {
+                const opt = typeSelect ? typeSelect.options[typeSelect.selectedIndex] : null;
+                const template = opt ? (opt.getAttribute("data-template") || "") : "";
+                const storedPadding = parseInt(opt ? opt.getAttribute("data-padding") : "0", 10) || 0;
+
+                if (template.includes("{id}")) {
+                    const split = template.split("{id}");
+                    prefix = split[0];
+                    suffix = split.slice(1).join("{id}");
+                    padding = storedPadding;
+                } else {
+                    // Modelo salvo com o número real: detecta e usa como posição do ID
+                    const detected = detectNumber(template);
+                    if (!detected) {
+                        setFeedback("O modelo precisa ter {id} ou um número no final.", true);
+                        return;
+                    }
+                    prefix = detected.prefix;
+                    suffix = detected.suffix;
+                    padding = storedPadding > 0 ? storedPadding : (detected.number.startsWith("0") ? detected.number.length : 0);
+                }
+            } else {
+                const detected = detectNumber(manualUrl.value);
+                if (!detected) {
+                    setFeedback("Cole um link válido com número no final.", true);
+                    return;
+                }
+                prefix = detected.prefix;
+                suffix = detected.suffix;
+                // Mantem zeros a esquerda se o ID digitado (ou detectado) comeca com 0
+                const padSource = startValue.startsWith("0") ? startValue : detected.number;
+                padding = padSource.startsWith("0") ? padSource.length : 0;
+            }
+
+            const textarea = target.value === "secondary"
+                ? document.getElementById("alternativeVideoUrlsText")
+                : document.getElementById("videoUrlsText");
+
+            if (!textarea) return;
+
+            textarea.value = buildLines(prefix, suffix, start, total, padding);
+            textarea.dispatchEvent(new Event("input", { bubbles: true }));
+
+            const targetLabel = target.value === "secondary" ? "Segundo Link" : "Links Primários";
+            setFeedback(total + " link(s) gerado(s) em \"" + targetLabel + "\".", false);
+        });
+
+        toggleSource();
     });
 </script>

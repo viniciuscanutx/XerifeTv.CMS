@@ -282,7 +282,7 @@ public class SeriesService(
         }
     }
 
-    public async Task<Result<int>> BatchAddEpisodeLinksAsync(BatchEpisodeLinksRequestDto dto)
+    public async Task<Result<int>> BatchAddEpisodeLinksAsync(BatchEpisodeLinksRequestDto dto, Func<BatchProgressReport, Task>? onProgress = null)
     {
         try
         {
@@ -344,6 +344,8 @@ public class SeriesService(
                         var updateResult = await UpdateEpisodeAsync(updateDto);
                         if (updateResult.IsSuccess) removedCount++;
                     }
+
+                    if (onProgress != null) await onProgress(new BatchProgressReport(i + 1, episodesToClear, removedCount));
                 }
 
                 return Result<int>.Success(removedCount);
@@ -421,6 +423,8 @@ public class SeriesService(
                     var createResult = await CreateEpisodeAsync(createDto);
                     if (createResult.IsSuccess) updatedCount++;
                 }
+
+                if (onProgress != null) await onProgress(new BatchProgressReport(i + 1, maxCount, updatedCount));
             }
 
             return Result<int>.Success(updatedCount);

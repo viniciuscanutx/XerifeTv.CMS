@@ -1,4 +1,5 @@
-﻿using XerifeTv.CMS.Modules.Abstractions.Interfaces;
+﻿using System.Text.Json;
+using XerifeTv.CMS.Modules.Abstractions.Interfaces;
 using XerifeTv.CMS.Modules.BackgroundJobQueue.Dtos.Request;
 using XerifeTv.CMS.Modules.BackgroundJobQueue.Dtos.Response;
 using XerifeTv.CMS.Modules.BackgroundJobQueue.Enums;
@@ -85,6 +86,74 @@ public class BackgroundJobQueueService(
 			return Result<AddJobQueueResponseDto>.Failure(error);
 		}
 	}
+
+	public async Task<Result<AddJobQueueResponseDto>> AddJobInQueueAsync(AddBatchMoviesJobQueueRequestDto dto)
+	{
+		try
+		{
+			var userResult = await _userService.GetByUsernameAsync(dto.RequestedByUsername);
+
+			if (userResult.IsFailure)
+				return Result<AddJobQueueResponseDto>.Failure(userResult.Error);
+
+			var total = CountLines(dto.Payload.ImdbIdsText);
+			var payloadJson = JsonSerializer.Serialize(dto.Payload);
+
+			var backgroundJob = BackgroundJobEntity.Create(
+				type: EBackgroundJobType.BATCH_ADD_MOVIES,
+				jobName: $"Cadastro/Atualizacao de Filmes em Lote ({total} item(s))",
+				payloadJson: payloadJson,
+				userId: userResult?.Data?.Id ?? string.Empty);
+
+			var resultId = await _repository.CreateAsync(backgroundJob);
+
+			return Result<AddJobQueueResponseDto>.Success(new AddJobQueueResponseDto(resultId));
+		}
+		catch (Exception ex)
+		{
+			var error = new Error("500", ex.InnerException?.Message ?? ex.Message);
+			return Result<AddJobQueueResponseDto>.Failure(error);
+		}
+	}
+
+	public async Task<Result<AddJobQueueResponseDto>> AddJobInQueueAsync(AddBatchEpisodeLinksJobQueueRequestDto dto)
+	{
+		try
+		{
+			var userResult = await _userService.GetByUsernameAsync(dto.RequestedByUsername);
+
+			if (userResult.IsFailure)
+				return Result<AddJobQueueResponseDto>.Failure(userResult.Error);
+
+			var isRemoveMode = dto.Payload.Mode != null && dto.Payload.Mode.Equals("remove", StringComparison.OrdinalIgnoreCase);
+			var payloadJson = JsonSerializer.Serialize(dto.Payload);
+
+			var serieLabel = string.IsNullOrWhiteSpace(dto.SerieTitle) ? string.Empty : $" - {dto.SerieTitle}";
+			var jobName = isRemoveMode
+				? $"Limpeza de Links de Episodios em Lote{serieLabel} (T{dto.Payload.Season})"
+				: $"Cadastro/Atualizacao de Links de Episodios em Lote{serieLabel} (T{dto.Payload.Season})";
+
+			var backgroundJob = BackgroundJobEntity.Create(
+				type: EBackgroundJobType.BATCH_ADD_EPISODE_LINKS,
+				jobName: jobName,
+				payloadJson: payloadJson,
+				userId: userResult?.Data?.Id ?? string.Empty);
+
+			var resultId = await _repository.CreateAsync(backgroundJob);
+
+			return Result<AddJobQueueResponseDto>.Success(new AddJobQueueResponseDto(resultId));
+		}
+		catch (Exception ex)
+		{
+			var error = new Error("500", ex.InnerException?.Message ?? ex.Message);
+			return Result<AddJobQueueResponseDto>.Failure(error);
+		}
+	}
+
+	private static int CountLines(string? text)
+		=> (text ?? string.Empty)
+			.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+			.Length;
 
 	public async Task<Result<PagedList<GetBackgroundJobResponseDto>>> GetByFilterAsync(GetBackgroundJobsByFilterRequestDto dto)
 	{

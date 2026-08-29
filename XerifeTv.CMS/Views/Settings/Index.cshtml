@@ -378,6 +378,18 @@
                                 Perfis de Entrega de Midia
                             </button>
                         </li>
+
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link"
+                                    id="link-templates-tab"
+                                    data-bs-toggle="tab"
+                                    data-bs-target="#link-templates"
+                                    type="button"
+                                    role="tab"
+                                    aria-selected="false">
+                                Tipos de Link
+                            </button>
+                        </li>
                     </ul>
 
                     <div class="tab-content">
@@ -388,6 +400,15 @@
                              aria-labelledby="media-delivery-tab">
 
                             @await Html.PartialAsync("_MediaDeliveryProfiles", Model.MediaDeliveryProfiles)
+
+                        </div>
+
+                        <div class="tab-pane fade"
+                             id="link-templates"
+                             role="tabpanel"
+                             aria-labelledby="link-templates-tab">
+
+                            @await Html.PartialAsync("_LinkTemplates", Model.LinkTemplates)
 
                         </div>
 

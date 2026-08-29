@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using XerifeTv.CMS.Modules.Abstractions.Interfaces;
 using XerifeTv.CMS.Modules.Activity.Interfaces;
+using XerifeTv.CMS.Modules.BackgroundJobQueue.Dtos.Request;
+using XerifeTv.CMS.Modules.BackgroundJobQueue.Interfaces;
 using XerifeTv.CMS.Modules.Movie.Enums;
 using XerifeTv.CMS.Modules.Movie.Interfaces;
 using XerifeTv.CMS.Modules.Movie.Dtos.Request;
@@ -26,6 +28,7 @@ public class MoviesController(
   ILogger<MoviesController> _logger,
   ISpreadsheetBatchImporter<IMovieService> _spreadsheetBatchImporter,
   IMediaDeliveryProfileService _mediaDeliveryProfileService,
+  IBackgroundJobQueueService _backgroundJobQueueService,
   IFranchiseService _franchiseService) : Controller
 {
     private const int limitResultsPage = 20;
@@ -216,13 +219,15 @@ public class MoviesController(
     {
         if (dto.IsBackgroundJob)
         {
-            _ = Task.Run(async () =>
+            var enqueueResult = await _backgroundJobQueueService.AddJobInQueueAsync(new AddBatchMoviesJobQueueRequestDto
             {
-                await _service.BatchAddMoviesAsync(dto);
+                RequestedByUsername = User.Identity?.Name ?? string.Empty,
+                Payload = dto
             });
 
-            TempData["Notification"] = MessageViewHelper
-                .SuccessJson("Processamento em lote de filmes iniciado em segundo plano com sucesso!");
+            TempData["Notification"] = enqueueResult.IsFailure
+                ? MessageViewHelper.ErrorJson(enqueueResult.Error.Description ?? string.Empty)
+                : MessageViewHelper.SuccessJson("Processamento em lote de filmes adicionado à fila com sucesso!");
 
             return RedirectToAction("Index");
         }

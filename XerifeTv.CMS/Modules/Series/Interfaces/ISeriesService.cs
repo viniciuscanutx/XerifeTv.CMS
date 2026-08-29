@@ -17,5 +17,5 @@ public interface ISeriesService
     Task<Result<string>> CreateEpisodeAsync(CreateEpisodeRequestDto dto);
     Task<Result<string>> UpdateEpisodeAsync(UpdateEpisodeRequestDto dto);
     Task<Result<bool>> DeleteEpisodeAsync(string serieId, string id);
-    Task<Result<int>> BatchAddEpisodeLinksAsync(BatchEpisodeLinksRequestDto dto);
+    Task<Result<int>> BatchAddEpisodeLinksAsync(BatchEpisodeLinksRequestDto dto, Func<BatchProgressReport, Task>? onProgress = null);
 }

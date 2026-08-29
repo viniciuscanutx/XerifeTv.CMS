@@ -1,0 +1,88 @@
+@using XerifeTv.CMS.Modules.LinkTemplate.Dtos.Response
+
+@model IEnumerable<GetLinkTemplateResponseDto>
+
+@{
+    var linkTemplateDtoEmpty = new GetLinkTemplateResponseDto();
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    @await Html.PartialAsync("_LinkTemplateFormModal", linkTemplateDtoEmpty)
+
+    <div>
+        <small class="text-muted">
+            Modelos de link com o marcador <code>{id}</code> para gerar sequências de episódios automaticamente.
+        </small>
+    </div>
+
+    <button class="btn btn-primary btn-sm shadow-sm"
+            role="button"
+            data-bs-toggle="modal"
+            data-bs-target="#linkTemplateFormModal-@linkTemplateDtoEmpty.Id">
+        <i class="fa-solid fa-plus"></i>
+        Novo tipo
+    </button>
+</div>
+
+<table class="table table-striped table-hover align-middle">
+    <thead class="table">
+        <tr>
+            <th>Nome</th>
+            <th>Modelo da URL</th>
+            <th class="text-center">Dígitos</th>
+            <th class="text-center">Status</th>
+            <th class="text-end">...</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (!Model.Any())
+        {
+            <tr>
+                <td colspan="5" class="text-center text-muted py-4">
+                    Nenhum registro encontrado.
+                </td>
+            </tr>
+        }
+        else
+        {
+            foreach (var item in Model)
+            {
+                <tr>
+                    <td>@item.Name</td>
+                    <td class="text-truncate" style="max-width: 320px;">
+                        <code>@item.UrlTemplate</code>
+                    </td>
+                    <td class="text-center">
+                        @(item.Padding > 0 ? item.Padding.ToString() : "-")
+                    </td>
+                    <td class="text-center">
+                        @if (item.IsDisabled)
+                        {
+                            <span class="badge bg-secondary">Desativado</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-success">Ativo</span>
+                        }
+                    </td>
+                    <td class="text-end">
+                        <button class="btn btn-sm btn-outline-primary shadow-sm"
+                                data-bs-toggle="modal"
+                                data-bs-target="#linkTemplateFormModal-@item.Id"
+                                title="Editar tipo de link">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                        </button>
+                    </td>
+                </tr>
+            }
+        }
+    </tbody>
+</table>
+
+@if (Model.Any())
+{
+    foreach (var item in Model)
+    {
+        @await Html.PartialAsync("_LinkTemplateFormModal", item)
+    }
+}

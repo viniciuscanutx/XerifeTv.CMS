@@ -18,6 +18,7 @@ public class GetBackgroundJobResponseDto
 	public DateTime? LastUpdatDate { get; private set; }
 	public string? SpreadsheetFileUrl { get; private set; } = null;
 	public string? SeriesIdImportEpisodes { get; private set; } = null;
+	public string? PayloadJson { get; private set; } = null;
 
 	public static GetBackgroundJobResponseDto FromEntity(BackgroundJobEntity entity)
 	{
@@ -37,6 +38,7 @@ public class GetBackgroundJobResponseDto
 			LastUpdatDate = entity.FinishedAt ?? entity.UpdateAt,
 			SeriesIdImportEpisodes = entity.SeriesIdImportEpisodes,
 			SpreadsheetFileUrl = entity.SpreadsheetFileUrl,
+			PayloadJson = entity.PayloadJson,
 		};
 	}
 }

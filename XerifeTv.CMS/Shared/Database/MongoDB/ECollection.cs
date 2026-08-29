@@ -14,5 +14,6 @@ public enum ECollection
     ACTIVITIES,
     SITE_USERS,
     SITE_ROLES,
-    SITE_WATCH_PROGRESS
+    SITE_WATCH_PROGRESS,
+    LINK_TEMPLATES
 }

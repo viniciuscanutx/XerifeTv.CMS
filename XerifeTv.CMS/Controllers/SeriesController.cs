@@ -2,11 +2,15 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using XerifeTv.CMS.Modules.Abstractions.Interfaces;
 using XerifeTv.CMS.Modules.Activity.Interfaces;
+using XerifeTv.CMS.Modules.BackgroundJobQueue.Dtos.Request;
+using XerifeTv.CMS.Modules.BackgroundJobQueue.Interfaces;
 using XerifeTv.CMS.Modules.Common;
 using XerifeTv.CMS.Modules.Franchise.Dtos.Response;
 using XerifeTv.CMS.Modules.Franchise.Interfaces;
 using XerifeTv.CMS.Modules.Integrations.Imdb.Dtos;
 using XerifeTv.CMS.Modules.Integrations.Imdb.Services;
+using XerifeTv.CMS.Modules.LinkTemplate.Dtos.Response;
+using XerifeTv.CMS.Modules.LinkTemplate.Interfaces;
 using XerifeTv.CMS.Modules.Media.Delivery.Dtos.Response;
 using XerifeTv.CMS.Modules.Media.Delivery.Intefaces;
 using XerifeTv.CMS.Modules.Series.Dtos.Request;
@@ -27,6 +31,8 @@ public class SeriesController(
   IEpisodesImporter _episodesImporter,
   ISpreadsheetBatchImporter<ISeriesService> _spreadsheetBatchImporter,
   IMediaDeliveryProfileService _mediaDeliveryProfileService,
+  ILinkTemplateService _linkTemplateService,
+  IBackgroundJobQueueService _backgroundJobQueueService,
   IFranchiseService _franchiseService) : Controller
 {
 	private const int limitResultsPage = 20;
@@ -164,6 +170,11 @@ public class SeriesController(
             IEnumerable<GetMediaDeliveryProfileResponseDto> mediaDeliveryProfiles = [];
             var mediaProfilesResponse = await _mediaDeliveryProfileService.GetAllAsync(isIncludeDisabled: false);
             if (mediaProfilesResponse.IsSuccess) mediaDeliveryProfiles = mediaProfilesResponse.Data ?? [];
+
+            IEnumerable<GetLinkTemplateResponseDto> linkTemplates = [];
+            var linkTemplatesResponse = await _linkTemplateService.GetAllAsync(isIncludeDisabled: false);
+            if (linkTemplatesResponse.IsSuccess) linkTemplates = linkTemplatesResponse.Data ?? [];
+            ViewBag.LinkTemplates = linkTemplates;
 
             return View(new EpisodesModelView(response.Data, mediaDeliveryProfiles));
 		}
@@ -325,13 +336,15 @@ public class SeriesController(
 	{
 		if (dto.IsBackgroundJob)
 		{
-			_ = Task.Run(async () =>
+			var enqueueResult = await _backgroundJobQueueService.AddJobInQueueAsync(new AddBatchEpisodeLinksJobQueueRequestDto
 			{
-				await _service.BatchAddEpisodeLinksAsync(dto);
+				RequestedByUsername = User.Identity?.Name ?? string.Empty,
+				Payload = dto
 			});
 
-			TempData["Notification"] = MessageViewHelper
-				.SuccessJson("Processamento em lote de episódios iniciado em segundo plano com sucesso!");
+			TempData["Notification"] = enqueueResult.IsFailure
+				? MessageViewHelper.ErrorJson(enqueueResult.Error.Description ?? string.Empty)
+				: MessageViewHelper.SuccessJson("Processamento em lote de episódios adicionado à fila com sucesso!");
 
 			return RedirectToAction("Episodes", new { id = dto.SerieId, seasonFilter = dto.Season });
 		}
