@@ -17,6 +17,6 @@ RUN apt-get update && apt-get install -y ca-certificates
 
 COPY --from=build /app/publish .
 
-EXPOSE 88
+EXPOSE 8080
 
 ENTRYPOINT ["dotnet","XerifeTv.CMS.dll"]
