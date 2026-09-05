@@ -12,6 +12,7 @@
 }
 
 <div class="container">
+    @await Html.PartialAsync("_ChangePasswordModal")
     @await Html.PartialAsync("_UserFormModal", userDtoEmpty)
     @await Html.PartialAsync("_SiteUserFormModal", siteUserDtoEmpty)
 
@@ -87,6 +88,13 @@
                                     </td>
 
                                     <td class="text-end">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary shadow-sm"
+                                                data-bs-toggle="modal" data-bs-target="#changePasswordModal"
+                                                data-user-id="@user.Id" data-user-name="@user.UserName"
+                                                data-action="@Url.Action("ChangeCmsPassword", "Users")"
+                                                title="Trocar senha" aria-label="Trocar senha de @user.UserName">
+                                            <i class="fa-solid fa-key" aria-hidden="true"></i>
+                                        </button>
                                         <button class="btn btn-sm btn-outline-primary shadow-sm"
                                                 data-bs-toggle="modal"
                                                 data-bs-target="#userFormModal-@user.Id"
@@ -154,6 +162,13 @@
                                     </td>
 
                                     <td class="text-end">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary shadow-sm"
+                                                data-bs-toggle="modal" data-bs-target="#changePasswordModal"
+                                                data-user-id="@siteUser.Id" data-user-name="@siteUser.Name"
+                                                data-action="@Url.Action("ChangeSitePassword", "Users")"
+                                                title="Trocar senha" aria-label="Trocar senha de @siteUser.Name">
+                                            <i class="fa-solid fa-key" aria-hidden="true"></i>
+                                        </button>
                                         <button class="btn btn-sm btn-outline-primary shadow-sm"
                                                 data-bs-toggle="modal"
                                                 data-bs-target="#siteUserFormModal-@siteUser.Id"
@@ -186,6 +201,7 @@
 </div>
 
 @section scripts {
+    <script src="~/js/users-password.js" asp-append-version="true" defer></script>
     <script defer>
         function deleteUser(id) {
           if (!confirm('Deseja realmente remover o usuário?')) return;

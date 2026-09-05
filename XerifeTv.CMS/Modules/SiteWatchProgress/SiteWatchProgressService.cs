@@ -31,7 +31,7 @@ public sealed class SiteWatchProgressService(
             if (string.IsNullOrWhiteSpace(dto.ContentId))
                 return Result<GetWatchProgressResponseDto>.Failure(new Error("400", "ContentId obrigatorio"));
 
-            if (dto.Duration <= 0)
+            if (!double.IsFinite(dto.Duration) || !double.IsFinite(dto.CurrentTime) || dto.Duration <= 0 || dto.CurrentTime < 0)
                 return Result<GetWatchProgressResponseDto>.Failure(new Error("400", "Duration invalida"));
 
             var progressPercentage = (int)Math.Round(Math.Clamp(dto.CurrentTime / dto.Duration * 100, 0, 100));

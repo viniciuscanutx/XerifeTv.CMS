@@ -6,6 +6,8 @@ public class GetSiteUserResponseDto
 {
     public string Id { get; private set; } = string.Empty;
     public string Name { get; private set; } = string.Empty;
+    public string? AvatarUrl { get; private set; }
+    public string? AvatarGiphyId { get; private set; }
     public string Email { get; private set; } = string.Empty;
     public string? RoleId { get; private set; }
     public string? RoleName { get; private set; }
@@ -17,6 +19,8 @@ public class GetSiteUserResponseDto
         {
             Id = entity.Id,
             Name = entity.Name,
+            AvatarUrl = entity.AvatarUrl,
+            AvatarGiphyId = entity.AvatarGiphyId,
             Email = entity.Email,
             RoleId = entity.RoleId,
             RoleName = role?.Name,

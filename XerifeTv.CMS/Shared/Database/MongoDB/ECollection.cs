@@ -1,4 +1,4 @@
-﻿namespace XerifeTv.CMS.Shared.Database.MongoDB;
+namespace XerifeTv.CMS.Shared.Database.MongoDB;
 
 public enum ECollection
 {
@@ -15,5 +15,7 @@ public enum ECollection
     SITE_USERS,
     SITE_ROLES,
     SITE_WATCH_PROGRESS,
-    LINK_TEMPLATES
+    LINK_TEMPLATES,
+    SITE_FAVORITES,
+    SITE_REVIEWS
 }

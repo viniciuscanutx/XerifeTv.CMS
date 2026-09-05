@@ -111,6 +111,8 @@ public class AuthController(
 		{
 			id = user.Id,
 			name = user.Name,
+            avatarUrl = user.AvatarUrl,
+            avatarGiphyId = user.AvatarGiphyId,
 			email = user.Email,
 			roleId = user.RoleId,
 			roleName = user.RoleName,

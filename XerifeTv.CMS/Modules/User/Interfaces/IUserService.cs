@@ -6,6 +6,7 @@ namespace XerifeTv.CMS.Modules.User.Interfaces;
 
 public interface IUserService
 {
+    Task<Result<bool>> ChangePasswordByAdminAsync(AdminChangePasswordRequestDto dto);
     Task<Result<string>> RegisterAsync(RegisterUserRequestDto dto);
     Task<Result<PagedList<GetUserResponseDto>>> GetAsync(int currentPage, int limit, bool includeAdmin = false);
     Task<Result<GetUserResponseDto?>> GetByUsernameAsync(string userName);

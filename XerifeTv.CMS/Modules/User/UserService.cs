@@ -295,4 +295,21 @@ public sealed class UserService(
             return Result<bool>.Failure(error);
         }
     }
+
+    public async Task<Result<bool>> ChangePasswordByAdminAsync(AdminChangePasswordRequestDto dto)
+    {
+        if (string.IsNullOrWhiteSpace(dto.Id) || string.IsNullOrWhiteSpace(dto.NewPassword)
+            || dto.NewPassword.Length > 256 || dto.NewPassword != dto.ConfirmPassword)
+            return Result<bool>.Failure(new Error("400", "Informe uma senha válida e confirme a mesma senha."));
+        try
+        {
+            var updated = await _repository.ChangePasswordAsync(dto.Id, _hashPassword.Encrypt(dto.NewPassword));
+            return updated ? Result<bool>.Success(true)
+                : Result<bool>.Failure(new Error("404", "Usuário não encontrado."));
+        }
+        catch (Exception)
+        {
+            return Result<bool>.Failure(new Error("500", "Não foi possível trocar a senha. Tente novamente."));
+        }
+    }
 }

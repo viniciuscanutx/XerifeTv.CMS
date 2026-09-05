@@ -9,12 +9,17 @@ namespace XerifeTv.CMS.Modules.SiteWatchProgress;
 public sealed class SiteWatchProgressRepository(IOptions<DBSettings> options)
     : BaseRepository<WatchProgressEntity>(ECollection.SITE_WATCH_PROGRESS, options), ISiteWatchProgressRepository
 {
+    public Task<List<WatchProgressEntity>> GetRecentMoviesAsync(string userId, int page, int pageSize, string contentType = "movie")
+        => _collection.Find(x => x.SiteUserId == userId && (contentType == "all" ? x.Type == "movie" || x.Type == "series" : x.Type == contentType) && x.CurrentTime >= 5)
+            .SortByDescending(x => x.UpdateAt).ThenBy(x => x.Id)
+            .Skip((page - 1) * pageSize).Limit(pageSize + 1).ToListAsync();
+
     public async Task<IEnumerable<WatchProgressEntity>> GetBySiteUserIdAsync(string siteUserId, int limit)
     {
         return await _collection
             .Find(r => r.SiteUserId == siteUserId)
             .SortByDescending(r => r.UpdateAt)
-            .Limit(limit)
+            .Limit(Math.Clamp(limit, 1, 100))
             .ToListAsync();
     }
 

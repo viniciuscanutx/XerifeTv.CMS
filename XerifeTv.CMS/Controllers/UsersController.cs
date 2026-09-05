@@ -304,4 +304,34 @@ public class UsersController(
 
 		return RedirectToAction("SignIn");
 	}
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Authorize(Roles = "admin")]
+    public async Task<IActionResult> ChangeCmsPassword(AdminChangePasswordRequestDto dto)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(new { message = "Informe a nova senha e uma confirmação igual, com até 256 caracteres." });
+        var response = await _userService.ChangePasswordByAdminAsync(dto);
+        if (response.IsFailure)
+            return BadRequest(new { message = response.Error.Description });
+        await _activityLogService.LogAsync(User.Identity?.Name ?? "desconhecido", "Usuários", "updated",
+            $"trocou a senha do usuário Cms com id = {dto.Id}");
+        return Ok(new { message = "Senha alterada com sucesso." });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Authorize(Roles = "admin")]
+    public async Task<IActionResult> ChangeSitePassword(AdminChangePasswordRequestDto dto)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(new { message = "Informe a nova senha e uma confirmação igual, com até 256 caracteres." });
+        var response = await _siteUserService.ChangePasswordByAdminAsync(dto);
+        if (response.IsFailure)
+            return BadRequest(new { message = response.Error.Description });
+        await _activityLogService.LogAsync(User.Identity?.Name ?? "desconhecido", "Usuários", "updated",
+            $"trocou a senha do usuário Site com id = {dto.Id}");
+        return Ok(new { message = "Senha alterada com sucesso." });
+    }
 }

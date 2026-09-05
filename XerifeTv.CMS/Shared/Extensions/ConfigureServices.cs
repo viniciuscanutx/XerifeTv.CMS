@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.OpenApi;
+using XerifeTv.CMS.Modules.SiteProfile;
+using XerifeTv.CMS.Modules.SiteReview;
 using XerifeTv.CMS.Controllers;
 using XerifeTv.CMS.Modules.Abstractions.Interfaces;
 using XerifeTv.CMS.Modules.Abstractions.Services;
@@ -78,6 +80,8 @@ public static class ConfigureServices
 		services.AddScoped<ISiteUserRepository, SiteUserRepository>();
 		services.AddScoped<ISiteRoleRepository, SiteRoleRepository>();
 		services.AddScoped<ISiteWatchProgressRepository, SiteWatchProgressRepository>();
+        services.AddScoped<ISiteFavoriteRepository, SiteFavoriteRepository>();
+        services.AddScoped<ISiteReviewRepository, SiteReviewRepository>();
 		return services;
 	}
 
@@ -149,6 +153,8 @@ public static class ConfigureServices
         services.AddScoped<ISiteTokenService, SiteTokenService>();
         services.AddScoped<ISiteAuthService, SiteAuthService>();
         services.AddScoped<ISiteWatchProgressService, SiteWatchProgressService>();
+        services.AddScoped<ISiteProfileService, SiteProfileService>();
+        services.AddScoped<ISiteReviewService, SiteReviewService>();
 
         services.AddHostedService<BackgroundJobQueueWorker>();
 

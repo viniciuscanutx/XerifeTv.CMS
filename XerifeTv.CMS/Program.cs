@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.FileProviders;
 using Scalar.AspNetCore;
 using System.Globalization;
 using XerifeTv.CMS.Shared.Database.MongoDB;
@@ -59,6 +59,9 @@ if (!app.Environment.IsDevelopment())
 app.UseStatusCodePages(context =>
 {
 	var response = context.HttpContext.Response;
+    var path = context.HttpContext.Request.Path;
+    if (path.StartsWithSegments("/Api/Profile") || path.StartsWithSegments("/Api/Reviews"))
+        return Task.CompletedTask;
 
 	if (response.StatusCode == 401)
 	{

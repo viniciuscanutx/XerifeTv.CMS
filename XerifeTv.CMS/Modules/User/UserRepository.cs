@@ -23,4 +23,12 @@ public sealed class UserRepository(IOptions<DBSettings> options)
           => await _collection
                   .Find(r => r.ResetPasswordGuid.Equals(guid))
                   .FirstOrDefaultAsync();
+
+    public async Task<bool> ChangePasswordAsync(string id, string passwordHash)
+    {
+        var result = await _collection.UpdateOneAsync(x => x.Id == id,
+            Builders<UserEntity>.Update.Set(x => x.Password, passwordHash)
+                .Set(x => x.UpdateAt, DateTime.UtcNow).Set(x => x.ResetPasswordGuid, Guid.Empty));
+        return result.MatchedCount > 0;
+    }
 }

@@ -1,3 +1,4 @@
+using XerifeTv.CMS.Modules.User.Dtos.Request;
 using XerifeTv.CMS.Modules.Common;
 using XerifeTv.CMS.Modules.SiteUser.Dtos.Request;
 using XerifeTv.CMS.Modules.SiteUser.Dtos.Response;
@@ -6,6 +7,7 @@ namespace XerifeTv.CMS.Modules.SiteUser.Interfaces;
 
 public interface ISiteUserService
 {
+    Task<Result<bool>> ChangePasswordByAdminAsync(AdminChangePasswordRequestDto dto);
     Task<Result<IEnumerable<GetSiteUserResponseDto>>> GetAllAsync();
     Task<Result<GetSiteUserResponseDto?>> GetByIdAsync(string id);
     Task<Result<GetSiteUserResponseDto?>> GetByEmailAsync(string email);
