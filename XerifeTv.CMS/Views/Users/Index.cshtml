@@ -169,6 +169,7 @@
                                                 title="Trocar senha" aria-label="Trocar senha de @siteUser.Name">
                                             <i class="fa-solid fa-key" aria-hidden="true"></i>
                                         </button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#userBadges-@siteUser.Id" title="Atribuir badges" aria-label="Badges de @siteUser.Name"><i class="fa-solid fa-certificate" aria-hidden="true"></i> Badges</button>
                                         <button class="btn btn-sm btn-outline-primary shadow-sm"
                                                 data-bs-toggle="modal"
                                                 data-bs-target="#siteUserFormModal-@siteUser.Id"
@@ -194,7 +195,11 @@
 
             @if (siteUsers.Any())
             {
-                @foreach (var siteUser in siteUsers) @await Html.PartialAsync("_SiteUserFormModal", siteUser)
+                @foreach (var siteUser in siteUsers)
+                {
+                    @await Html.PartialAsync("_SiteUserFormModal", siteUser)
+                    @await Html.PartialAsync("_SiteUserBadgesModal", siteUser)
+                }
             }
         </div>
     </div>
@@ -221,5 +226,10 @@
             document.getElementById('btnCreateCmsUser').classList.toggle('d-none', isSite);
             document.getElementById('btnCreateSiteUser').classList.toggle('d-none', !isSite);
         });
+        if (new URLSearchParams(location.search).get('view') === 'site') {
+            const select = document.getElementById('userViewSelect');
+            select.value = 'site';
+            select.dispatchEvent(new Event('change'));
+        }
     </script>
 }

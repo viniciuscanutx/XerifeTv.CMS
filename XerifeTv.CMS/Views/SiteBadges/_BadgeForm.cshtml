@@ -1,0 +1,23 @@
+@model XerifeTv.CMS.Modules.SiteBadge.SaveSiteBadgeRequest
+@{ var key = Model.Id ?? "new"; }
+<div class="modal fade" id="badgeForm-@key" tabindex="-1" aria-labelledby="badgeTitle-@key" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content" asp-controller="SiteBadges" asp-action="Save" method="post">
+            <input type="hidden" name="Id" value="@Model.Id" />
+            <div class="modal-header">
+                <h2 class="modal-title fs-5" id="badgeTitle-@key">@(Model.Id is null ? "Cadastrar badge" : "Editar badge")</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <label class="form-label" for="badgeName-@key">Nome</label>
+                <input class="form-control mb-3" id="badgeName-@key" name="Name" value="@Model.Name" required maxlength="40" />
+                <label class="form-label" for="badgeColor-@key">Cor do badge</label>
+                <input class="form-control form-control-color badge-color-picker" id="badgeColor-@key" type="color" name="Color" value="@Model.Color" required />
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Salvar badge</button>
+            </div>
+        </form>
+    </div>
+</div>

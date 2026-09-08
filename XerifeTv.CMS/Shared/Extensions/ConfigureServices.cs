@@ -1,3 +1,4 @@
+using XerifeTv.CMS.Modules.SiteBadge;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.OpenApi;
 using XerifeTv.CMS.Modules.SiteProfile;
@@ -153,6 +154,8 @@ public static class ConfigureServices
         services.AddScoped<ISiteTokenService, SiteTokenService>();
         services.AddScoped<ISiteAuthService, SiteAuthService>();
         services.AddScoped<ISiteWatchProgressService, SiteWatchProgressService>();
+        services.AddScoped<ISiteBadgeRepository, SiteBadgeRepository>();
+        services.AddScoped<ISiteBadgeService, SiteBadgeService>();
         services.AddScoped<ISiteProfileService, SiteProfileService>();
         services.AddScoped<ISiteReviewService, SiteReviewService>();
 

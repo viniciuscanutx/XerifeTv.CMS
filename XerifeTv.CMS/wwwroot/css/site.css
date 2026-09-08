@@ -989,3 +989,13 @@ html {
   justify-content: center;
   align-items: center;
 }
+.badge-color-picker {
+  color-scheme: light;
+  background-color: #fff;
+  border-color: #ced4da;
+}
+[data-bs-theme="dark"] .badge-color-picker {
+  color-scheme: dark;
+  background-color: #212529;
+  border-color: #495057;
+}

@@ -1,3 +1,4 @@
+using XerifeTv.CMS.Modules.SiteBadge;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
 using XerifeTv.CMS.Modules.SiteProfile;
@@ -10,7 +11,7 @@ namespace XerifeTv.CMS.Controllers.ContentAPI;
 
 [Route("Api/Profile")]
 public sealed class ProfileController(ISiteUserRepository users, ISiteProfileService profiles,
-    ISiteReviewService reviews, ISiteWatchProgressRepository progress) : SiteAccountController(users)
+    ISiteReviewService reviews, ISiteWatchProgressRepository progress, ISiteBadgeService badges) : SiteAccountController(users)
 {
     [HttpGet]
     public async Task<IActionResult> Get() => Ok(await profiles.GetAsync(CurrentUserId));
@@ -18,6 +19,13 @@ public sealed class ProfileController(ISiteUserRepository users, ISiteProfileSer
     [HttpPut]
     public async Task<IActionResult> Update(UpdateSiteProfileRequest request)
         => Ok(await profiles.UpdateAsync(CurrentUserId, request));
+
+    [HttpPut("Badge")]
+    public async Task<IActionResult> SelectBadge(SelectSiteBadgeRequest request)
+    {
+        await badges.SelectAsync(CurrentUserId, request.BadgeId);
+        return Ok(await profiles.GetAsync(CurrentUserId));
+    }
 
     [HttpGet("Favorites")]
     public async Task<IActionResult> Favorites([FromQuery, Range(1, 10000)] int page = 1,

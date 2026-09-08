@@ -5,6 +5,7 @@ namespace XerifeTv.CMS.Modules.SiteUser.Dtos.Response;
 public class GetSiteUserResponseDto
 {
     public string Id { get; private set; } = string.Empty;
+    public List<string> BadgeIds { get; private set; } = [];
     public string Name { get; private set; } = string.Empty;
     public string? AvatarUrl { get; private set; }
     public string? AvatarGiphyId { get; private set; }
@@ -19,6 +20,7 @@ public class GetSiteUserResponseDto
         {
             Id = entity.Id,
             Name = entity.Name,
+            BadgeIds = entity.BadgeIds ?? [],
             AvatarUrl = entity.AvatarUrl,
             AvatarGiphyId = entity.AvatarGiphyId,
             Email = entity.Email,

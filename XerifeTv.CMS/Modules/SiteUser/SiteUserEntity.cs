@@ -20,6 +20,9 @@ public class SiteUserEntity : BaseEntity
         }
     }
 
+    public List<string> BadgeIds { get; set; } = [];
+    public string? SelectedBadgeId { get; set; }
+
     public string? AvatarUrl { get; set; }
     public string? AvatarGiphyId { get; set; }
 

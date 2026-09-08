@@ -17,5 +17,6 @@ public enum ECollection
     SITE_WATCH_PROGRESS,
     LINK_TEMPLATES,
     SITE_FAVORITES,
+    SITE_BADGES,
     SITE_REVIEWS
 }

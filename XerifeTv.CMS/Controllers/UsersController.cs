@@ -1,3 +1,4 @@
+using XerifeTv.CMS.Modules.SiteBadge;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using XerifeTv.CMS.Modules.Activity.Interfaces;
@@ -15,6 +16,7 @@ namespace XerifeTv.CMS.Controllers;
 
 public class UsersController(
 	IUserService _userService,
+    ISiteBadgeService _badges,
 	IAuthService _authService,
 	ISiteUserService _siteUserService,
 	ISiteRoleService _siteRoleService,
@@ -41,6 +43,7 @@ public class UsersController(
 
 		ViewBag.SiteRoles = siteRolesResponse.Data ?? [];
 		ViewBag.SiteUsers = siteUsersResponse.Data ?? [];
+        ViewBag.SiteBadges = await _badges.GetAllAsync();
 
 		if (response.IsSuccess)
 			return View(response.Data?.Items);
@@ -333,5 +336,22 @@ public class UsersController(
         await _activityLogService.LogAsync(User.Identity?.Name ?? "desconhecido", "Usuários", "updated",
             $"trocou a senha do usuário Site com id = {dto.Id}");
         return Ok(new { message = "Senha alterada com sucesso." });
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    [Authorize(Roles = "admin")]
+    public async Task<IActionResult> AssignSiteBadges(AssignSiteBadgesRequest request)
+    {
+        try
+        {
+            if (!ModelState.IsValid) throw new ArgumentException("Selecione um usuário válido.");
+            await _badges.AssignAsync(request);
+            TempData["Notification"] = MessageViewHelper.SuccessJson("Badges do usuário atualizados.");
+        }
+        catch (Exception ex) when (ex is ArgumentException or KeyNotFoundException)
+        {
+            TempData["Notification"] = MessageViewHelper.ErrorJson(ex.Message);
+        }
+        return RedirectToAction(nameof(Index), new { view = "site" });
     }
 }

@@ -1,3 +1,4 @@
+using XerifeTv.CMS.Modules.SiteBadge;
 using System.ComponentModel.DataAnnotations;
 using XerifeTv.CMS.Modules.Movie;
 using XerifeTv.CMS.Modules.SiteUser;
@@ -9,7 +10,8 @@ public record UpdateSiteProfileRequest(
     [StringLength(2048)] string? AvatarUrl,
     [StringLength(100), RegularExpression("^[a-zA-Z0-9]+$")] string? AvatarGiphyId = null);
 
-public record SiteProfileResponse(string Id, string Name, string? AvatarUrl, DateTime JoinedAt, string? AvatarGiphyId = null)
+public record SiteProfileResponse(string Id, string Name, string? AvatarUrl, DateTime JoinedAt, string? AvatarGiphyId = null,
+    IReadOnlyList<SiteBadgeResponse>? Badges = null, SiteBadgeResponse? SelectedBadge = null)
 {
     public static SiteProfileResponse FromEntity(SiteUserEntity user)
         => new(user.Id, user.Name, user.AvatarUrl, user.CreateAt, user.AvatarGiphyId);

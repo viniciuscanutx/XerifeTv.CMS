@@ -1,3 +1,4 @@
+using XerifeTv.CMS.Modules.SiteBadge;
 using XerifeTv.CMS.Modules.Movie.Interfaces;
 using XerifeTv.CMS.Modules.Series.Interfaces;
 using XerifeTv.CMS.Modules.SiteUser.Interfaces;
@@ -17,11 +18,14 @@ public interface ISiteProfileService
 public sealed class SiteProfileService(
     ISiteUserRepository users,
     ISiteFavoriteRepository favorites,
-    IMovieRepository movies, ISeriesRepository series) : ISiteProfileService
+    IMovieRepository movies, ISeriesRepository series, ISiteBadgeService badges) : ISiteProfileService
 {
     public async Task<SiteProfileResponse> GetAsync(string userId)
-        => SiteProfileResponse.FromEntity(await users.GetAsync(userId)
-            ?? throw new KeyNotFoundException("Perfil não encontrado."));
+    {
+        var user = await users.GetAsync(userId) ?? throw new KeyNotFoundException("Perfil não encontrado.");
+        var assigned = await badges.GetAssignedAsync(user.BadgeIds ?? []);
+        return SiteProfileResponse.FromEntity(user) with { Badges = assigned, SelectedBadge = assigned.FirstOrDefault(x => x.Id == user.SelectedBadgeId) };
+    }
 
     public async Task<SiteProfileResponse> UpdateAsync(string userId, UpdateSiteProfileRequest request)
     {
@@ -45,7 +49,7 @@ public sealed class SiteProfileService(
 
         var user = await users.UpdateProfileAsync(userId, name, avatarUrl, avatarGiphyId)
             ?? throw new KeyNotFoundException("Perfil não encontrado.");
-        return SiteProfileResponse.FromEntity(user);
+        return await GetAsync(user.Id);
     }
 
     public async Task<ProfilePage<FavoriteResponse>> GetFavoritesAsync(string userId, int page, int pageSize, string contentType = "movie")
