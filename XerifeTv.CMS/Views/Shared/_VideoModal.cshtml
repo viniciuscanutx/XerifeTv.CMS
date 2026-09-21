@@ -48,8 +48,80 @@
     let currentSourceUrl = null
 
     function getSources(data) {
-        const sources = data.sources || data.Sources || []
+        const sources = data.sources || data.Sources || data.streams || []
         return Array.isArray(sources) ? sources : []
+    }
+
+    function extractSourceUrl(value) {
+        if (typeof value !== 'string') return ''
+
+        const normalized = value.trim()
+            .replace(/\\\[/g, '[')
+            .replace(/\\\]/g, ']')
+            .replace(/\\_/g, '_')
+        const markdownStart = normalized.indexOf('](')
+        const url = normalized.startsWith('[') && markdownStart > 0
+            ? normalized.slice(markdownStart + 2).replace(/\)$/, '')
+            : normalized
+
+        return url.trim().replace(/^<|>$/g, '')
+    }
+
+    function getStreamFormat(url) {
+        const path = String(url || '').split('?')[0].split('#')[0]
+        const extension = path.split('.').pop()?.toLowerCase()
+        return extension || (url.includes('.m3u8') ? 'hls' : 'mp4')
+    }
+
+    function getQuality(...values) {
+        const pattern = /(?<![a-z0-9])(4k|2160p|1440p|1080p|720p|576p|480p|360p)(?![a-z0-9])/i
+        for (const value of values) {
+            const match = pattern.exec(typeof value === 'string' ? value : '')
+            if (!match) continue
+
+            const raw = match[1].toLowerCase()
+            return {
+                key: raw,
+                label: raw === '4k' ? '4K' : raw
+            }
+        }
+
+        return { key: 'auto', label: 'Auto' }
+    }
+
+    function qualityRank(value) {
+        if (value === '4k') return 2160
+        const rank = Number.parseInt(value, 10)
+        return Number.isFinite(rank) ? rank : 0
+    }
+
+    function normalizeSources(data) {
+        const unique = new Map()
+
+        getSources(data).forEach(source => {
+            const url = extractSourceUrl(source.url || source.Url)
+            if (!url) return
+
+            const quality = getQuality(
+                source.quality || source.Quality,
+                source.name || source.Name,
+                source.title || source.Title,
+                url
+            )
+
+            if (unique.has(quality.key)) return
+
+            unique.set(quality.key, {
+                ...source,
+                url,
+                quality: quality.label,
+                streamFormat: source.streamFormat || source.StreamFormat || getStreamFormat(url)
+            })
+        })
+
+        return [...unique.entries()]
+            .sort(([left], [right]) => qualityRank(right) - qualityRank(left))
+            .map(([, source]) => source)
     }
 
     function updateQualitySelector(sources) {
@@ -62,7 +134,7 @@
 
         sources.forEach(source => {
             const quality = source.quality || source.Quality || 'Auto'
-            const url = source.url || source.Url
+            const url = extractSourceUrl(source.url || source.Url)
             if (!url) return
 
             const option = document.createElement('option')
@@ -79,12 +151,49 @@
         }
     }
 
-    async function playSource(source) {
-        const url = source.url || source.Url
-        const streamFormat = (source.streamFormat || source.StreamFormat || '').toLowerCase()
-        if (!url) return
+    const resolvedSourceCache = new Map()
 
-        currentSourceUrl = url
+    async function getPlayableSource(source) {
+        const sourceUrl = extractSourceUrl(source.url || source.Url)
+        if (!sourceUrl) return null
+        if (resolvedSourceCache.has(sourceUrl)) return resolvedSourceCache.get(sourceUrl)
+
+        const streamFormat = (source.streamFormat || source.StreamFormat || getStreamFormat(sourceUrl)).toLowerCase()
+        const params = new URLSearchParams({
+            urlFixed: sourceUrl,
+            streamFormat: streamFormat || 'mp4',
+            followRedirect: 'false'
+        })
+
+        const promise = fetch('/MediaDeliveryProfiles/ResolveUrlFixed?' + params.toString(), {
+            credentials: 'same-origin',
+            headers: { Accept: 'application/json' }
+        })
+            .then(response => {
+                if (!response.ok) throw new Error('Erro ao gerar o proxy da fonte')
+                return response.json()
+            })
+            .then(data => ({
+                ...source,
+                url: data.url || data.Url || sourceUrl,
+                streamFormat: data.streamFormat || data.StreamFormat || streamFormat
+            }))
+
+        resolvedSourceCache.set(sourceUrl, promise)
+        return promise
+    }
+
+    async function playSource(source) {
+        const sourceUrl = extractSourceUrl(source.url || source.Url)
+        if (!sourceUrl) return
+
+        const playableSource = await getPlayableSource(source)
+        if (!playableSource) return
+
+        const url = playableSource.url
+        const streamFormat = (playableSource.streamFormat || playableSource.StreamFormat || '').toLowerCase()
+
+        currentSourceUrl = sourceUrl
         const playlistMimeTypes = {
             hls: 'application/x-mpegURL',
             m3u8: 'application/x-mpegURL'
@@ -102,7 +211,7 @@
             const data = await response.json()
             const url = data.url || data.Url
             const streamFormat = data.streamFormat || data.StreamFormat
-            const sources = getSources(data)
+            const sources = normalizeSources(data)
 
             if (sources.length > 0) {
                 updateQualitySelector(sources)
@@ -111,7 +220,7 @@
             }
 
             updateQualitySelector([])
-            await playSource({ url, streamFormat })
+            await playSource({ url: extractSourceUrl(url), streamFormat })
         }
         catch (err) {
             console.error('Erro ao carregar vídeo:', err)
