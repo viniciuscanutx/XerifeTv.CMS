@@ -54,6 +54,14 @@ namespace XerifeTv.CMS.Shared.Extensions;
 
 public static class ConfigureServices
 {
+	// Alguns hosts de origem (ex: froststream/Cloudflare) devolvem 403 para requests
+	// sem User-Agent de browser. Localmente passa pelo IP residencial, mas do datacenter
+	// do Render o request "pelado" e bloqueado. Os clients que batem no host externo
+	// precisam se identificar como browser.
+	private const string ExternalOriginUserAgent =
+		"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
+		"(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+
 	public static IServiceCollection AddConfiguration(
 	  this IServiceCollection services, IConfiguration _configuration)
 	{
@@ -124,7 +132,11 @@ public static class ConfigureServices
 		services.AddScoped<IStreamCatalogResolver, StreamCatalogResolver>();
 
 		services
-			.AddHttpClient(RedirectUrlResolver.HttpClientName, client => client.Timeout = TimeSpan.FromSeconds(10))
+			.AddHttpClient(RedirectUrlResolver.HttpClientName, client =>
+			{
+				client.Timeout = TimeSpan.FromSeconds(10);
+				client.DefaultRequestHeaders.UserAgent.ParseAdd(ExternalOriginUserAgent);
+			})
 			.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
 			{
 				AllowAutoRedirect = true,
@@ -132,7 +144,11 @@ public static class ConfigureServices
 			});
 
 		services
-			.AddHttpClient(StreamCatalogResolver.HttpClientName, client => client.Timeout = TimeSpan.FromSeconds(10))
+			.AddHttpClient(StreamCatalogResolver.HttpClientName, client =>
+			{
+				client.Timeout = TimeSpan.FromSeconds(10);
+				client.DefaultRequestHeaders.UserAgent.ParseAdd(ExternalOriginUserAgent);
+			})
 			.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
 			{
 				AllowAutoRedirect = true,
@@ -145,7 +161,11 @@ public static class ConfigureServices
 		// pro http:// externo, e o browser bloqueia como mixed content olhando o destino
 		// final da cadeia - o proxy precisa entregar bytes do arquivo, nunca um redirect.
 		services
-			.AddHttpClient(MediaDeliveryProfilesController.StreamHttpClientName, client => client.Timeout = Timeout.InfiniteTimeSpan)
+			.AddHttpClient(MediaDeliveryProfilesController.StreamHttpClientName, client =>
+			{
+				client.Timeout = Timeout.InfiniteTimeSpan;
+				client.DefaultRequestHeaders.UserAgent.ParseAdd(ExternalOriginUserAgent);
+			})
 			.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
 			{
 				AllowAutoRedirect = true,
