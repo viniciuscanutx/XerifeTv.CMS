@@ -285,6 +285,8 @@
                 MediaDeliveryProfileId = Model?.MovieDto?.MediaDeliveryProfileId,
                 MediaRoute = Model?.MovieDto?.MediaRoute,
                 FollowRedirect = Model?.MovieDto?.Video?.FollowRedirect ?? false,
+                CatalogContentType = "movie",
+                CatalogImdbId = Model?.MovieDto?.ImdbId,
                 MediaDeliveryProfiles = Model?.MediaDeliveryProfiles ?? [],
                 StreamFormats = StreamFormatsHelper.Vod
             })

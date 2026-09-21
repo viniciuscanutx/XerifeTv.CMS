@@ -77,7 +77,7 @@ public class MediaDeliveryProfilesController(
         var responseCache = _cacheService.GetValue<GetResolveUrlResponseDto?>(cacheKey);
 
         if (responseCache != null && isCached)
-            return Ok(new { responseCache?.Url, responseCache?.StreamFormat });
+            return Ok(responseCache);
 
         var response = await _urlResolver.ResolveUrlAsync(mediaPath, mediaDeliveryProfileId);
 
@@ -86,7 +86,7 @@ public class MediaDeliveryProfilesController(
         
         _cacheService.SetValue<GetResolveUrlResponseDto?>(cacheKey, response.Data);
 
-        return Ok(new { response.Data?.Url, response.Data?.StreamFormat });
+        return Ok(response.Data);
     }
 
     [Authorize(Roles = "admin, common")]
@@ -98,7 +98,7 @@ public class MediaDeliveryProfilesController(
         if (response.IsFailure)
             return StatusCode(int.Parse(response.Error.Code), response.Error.Description);
 
-        return Ok(new { response.Data?.Url, response.Data?.StreamFormat });
+        return Ok(response.Data);
     }
 
     [AllowAnonymous]
@@ -113,7 +113,7 @@ public class MediaDeliveryProfilesController(
         var responseCache = _cacheService.GetValue<GetResolveUrlResponseDto?>(cacheKey);
 
         if (responseCache != null)
-            return Ok(new { responseCache?.Url, responseCache?.StreamFormat });
+            return Ok(responseCache);
 
         var response = await _urlResolver.ResolveUrlAsync(mediaPath, mediaDeliveryProfileId);
 
@@ -122,7 +122,7 @@ public class MediaDeliveryProfilesController(
         
         _cacheService.SetValue<GetResolveUrlResponseDto?>(cacheKey, response.Data);
 
-        return Ok(new { response.Data?.Url, response.Data?.StreamFormat });
+        return Ok(response.Data);
     }
 
     [AllowAnonymous]
@@ -137,7 +137,7 @@ public class MediaDeliveryProfilesController(
         if (response.IsFailure)
             return StatusCode(int.Parse(response.Error.Code), response.Error.Description);
 
-        return Ok(new { response.Data?.Url, response.Data?.StreamFormat });
+        return Ok(response.Data);
     }
 
     /// <summary>

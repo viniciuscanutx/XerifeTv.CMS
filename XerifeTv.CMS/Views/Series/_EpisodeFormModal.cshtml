@@ -134,6 +134,10 @@
                     MediaDeliveryProfileId = Model?.Episode?.MediaDeliveryProfileId,
                     MediaRoute = Model?.Episode?.MediaRoute,
                     FollowRedirect = Model?.Episode?.Video?.FollowRedirect ?? false,
+                    CatalogContentType = "series",
+                    CatalogImdbId = Model?.SeriesImdbId,
+                    CatalogSeason = Model?.Episode?.Season,
+                    CatalogEpisode = Model?.Episode?.Number,
                     MediaDeliveryProfiles = Model?.MediaDeliveryProfiles ?? [],
                     StreamFormats = StreamFormatsHelper.Vod
                 })

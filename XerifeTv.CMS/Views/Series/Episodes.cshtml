@@ -23,7 +23,10 @@
 <div class="container">
     @await Html.PartialAsync("_VideoModal")
     @await Html.PartialAsync("_BatchEpisodeLinksModal")
-    @await Html.PartialAsync("_EpisodeFormModal", new EpisodeFormModelView(episodeEmpty, Model?.MediaDeliveryProfiles ?? []))
+    @await Html.PartialAsync("_EpisodeFormModal", new EpisodeFormModelView(episodeEmpty, Model?.MediaDeliveryProfiles ?? [])
+    {
+        SeriesImdbId = Model?.EpisodesDto?.SerieImdbId ?? string.Empty
+    })
 
     <header>
         <div class="d-flex align-items-center justify-content-between gap-4">
@@ -144,7 +147,10 @@
                 </div>
             </div>
 
-            @await Html.PartialAsync("_EpisodeFormModal", new EpisodeFormModelView(episode, Model?.MediaDeliveryProfiles ?? []))
+            @await Html.PartialAsync("_EpisodeFormModal", new EpisodeFormModelView(episode, Model?.MediaDeliveryProfiles ?? [])
+            {
+                SeriesImdbId = Model?.EpisodesDto?.SerieImdbId ?? string.Empty
+            })
 
             @if (!User.IsInRole("visitor"))
             {

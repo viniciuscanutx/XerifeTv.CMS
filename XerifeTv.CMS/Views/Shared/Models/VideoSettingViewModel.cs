@@ -13,6 +13,10 @@ public record VideoSettingViewModel
     public string? MediaDeliveryProfileId { get; set; }
     public string? MediaRoute { get; set; }
     public bool FollowRedirect { get; set; } = false;
+    public string? CatalogContentType { get; set; }
+    public string? CatalogImdbId { get; set; }
+    public int? CatalogSeason { get; set; }
+    public int? CatalogEpisode { get; set; }
 
     public IEnumerable<GetMediaDeliveryProfileResponseDto> MediaDeliveryProfiles { get; set; } = [];
     public IEnumerable<string> StreamFormats { get; set; } = [];

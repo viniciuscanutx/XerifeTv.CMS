@@ -5,4 +5,7 @@ namespace XerifeTv.CMS.Views.Series.Models;
 
 public record EpisodeFormModelView(
     Episode Episode,
-    IEnumerable<GetMediaDeliveryProfileResponseDto> MediaDeliveryProfiles);
+    IEnumerable<GetMediaDeliveryProfileResponseDto> MediaDeliveryProfiles)
+{
+    public string SeriesImdbId { get; init; } = string.Empty;
+}

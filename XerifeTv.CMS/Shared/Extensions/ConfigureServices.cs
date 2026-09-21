@@ -121,9 +121,18 @@ public static class ConfigureServices
 		services.AddScoped<ILinkTemplateService, LinkTemplateService>();
 		services.AddScoped<IMediaDeliveryUrlResolver, MediaDeliveryUrlResolver>();
 		services.AddScoped<IRedirectUrlResolver, RedirectUrlResolver>();
+		services.AddScoped<IStreamCatalogResolver, StreamCatalogResolver>();
 
 		services
 			.AddHttpClient(RedirectUrlResolver.HttpClientName, client => client.Timeout = TimeSpan.FromSeconds(10))
+			.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+			{
+				AllowAutoRedirect = true,
+				MaxAutomaticRedirections = 10
+			});
+
+		services
+			.AddHttpClient(StreamCatalogResolver.HttpClientName, client => client.Timeout = TimeSpan.FromSeconds(10))
 			.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
 			{
 				AllowAutoRedirect = true,

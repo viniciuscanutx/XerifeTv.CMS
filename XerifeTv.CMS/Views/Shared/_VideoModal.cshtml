@@ -30,6 +30,10 @@
                     </button>
                 </div>
             </div>
+            <div class="modal-footer justify-content-center" id="videoQualitySwitcher" style="display: none;">
+                <label for="videoQualitySelect" class="form-label mb-0">Qualidade</label>
+                <select class="form-select form-select-sm w-auto" id="videoQualitySelect" aria-label="Qualidade do vídeo"></select>
+            </div>
         </div>
     </div>
 </div>
@@ -40,8 +44,57 @@
     let currentDubResolver = null
     let currentLegResolver = null
     let currentLang = 'dub'
+    let currentSources = []
+    let currentSourceUrl = null
 
-    async function resolveAndPlay(resolverUrl, lang) {
+    function getSources(data) {
+        const sources = data.sources || data.Sources || []
+        return Array.isArray(sources) ? sources : []
+    }
+
+    function updateQualitySelector(sources) {
+        const switcher = document.getElementById('videoQualitySwitcher')
+        const select = document.getElementById('videoQualitySelect')
+        if (!switcher || !select) return
+
+        select.innerHTML = ''
+        currentSources = sources
+
+        sources.forEach(source => {
+            const quality = source.quality || source.Quality || 'Auto'
+            const url = source.url || source.Url
+            if (!url) return
+
+            const option = document.createElement('option')
+            option.value = url
+            option.textContent = quality
+            select.appendChild(option)
+        })
+
+        switcher.style.display = sources.length > 1 ? 'flex' : 'none'
+        select.value = currentSourceUrl || (sources[0]?.url || sources[0]?.Url || '')
+        select.onchange = async () => {
+            const selectedSource = currentSources.find(source => (source.url || source.Url) === select.value)
+            if (selectedSource) await playSource(selectedSource)
+        }
+    }
+
+    async function playSource(source) {
+        const url = source.url || source.Url
+        const streamFormat = (source.streamFormat || source.StreamFormat || '').toLowerCase()
+        if (!url) return
+
+        currentSourceUrl = url
+        const playlistMimeTypes = {
+            hls: 'application/x-mpegURL',
+            m3u8: 'application/x-mpegURL'
+        }
+
+        const playlistType = playlistMimeTypes[streamFormat]
+        player.src(playlistType ? { src: url, type: playlistType } : { src: url })
+    }
+
+    async function resolveAndPlay(resolverUrl) {
         try {
             const response = await fetch(resolverUrl)
             if (!response.ok) throw new Error('Erro ao resolver URL')
@@ -49,19 +102,16 @@
             const data = await response.json()
             const url = data.url || data.Url
             const streamFormat = data.streamFormat || data.StreamFormat
+            const sources = getSources(data)
 
-            // Só hls/m3u8 são playlist e precisam do type explícito para o video.js
-            // acionar o motor de HLS. Arquivo progressivo vai sem type: o browser usa
-            // o Content-Type da resposta, então continua tocando mesmo quando o
-            // Stream Format cadastrado não bate com o arquivo real.
-            const playlistMimeTypes = {
-                hls: 'application/x-mpegURL',
-                m3u8: 'application/x-mpegURL'
+            if (sources.length > 0) {
+                updateQualitySelector(sources)
+                await playSource(sources[0])
+                return
             }
 
-            const playlistType = playlistMimeTypes[streamFormat]
-
-            player.src(playlistType ? { src: url, type: playlistType } : { src: url })
+            updateQualitySelector([])
+            await playSource({ url, streamFormat })
         }
         catch (err) {
             console.error('Erro ao carregar vídeo:', err)
@@ -97,6 +147,8 @@
 
             currentDubResolver = button.getAttribute('data-bs-video-resolver')
             currentLegResolver = button.getAttribute('data-bs-video-alternative-resolver')
+            currentSourceUrl = null
+            updateQualitySelector([])
 
             const hasDub = currentDubResolver && currentDubResolver.trim() !== ''
             const hasLeg = currentLegResolver && currentLegResolver.trim() !== ''

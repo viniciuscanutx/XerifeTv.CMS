@@ -9,6 +9,7 @@ public class MediaDeliveryUrlResolver(
     IEnumerable<IMediaDeliveryTokenStrategy> _mediaTokenStrategies,
     IMediaDeliveryProfileService _service,
     IRedirectUrlResolver _redirectUrlResolver,
+    IStreamCatalogResolver _streamCatalogResolver,
     IConfiguration _configuration,
     IHttpContextAccessor _httpContextAccessor) : IMediaDeliveryUrlResolver
 {
@@ -61,21 +62,12 @@ public class MediaDeliveryUrlResolver(
     {
         var request = _httpContextAccessor.HttpContext?.Request;
 
-        // Sem HttpContext (nao deveria acontecer, isso so roda dentro de uma requisicao),
-        // cai pro appsettings como ultimo recurso.
         if (request is null)
             return (_configuration["baseUrl"] ?? string.Empty).TrimEnd('/');
 
-        // Nunca confia em request.Scheme como fallback: atras de um proxy que termina TLS
-        // (Render inclusive), o Kestrel muitas vezes enxerga a conexao interna como http
-        // mesmo quando o cliente externo usa https - foi exatamente esse tipo de valor
-        // errado que ja causou dois deploys quebrados nessa mesma linha (primeiro com
-        // baseUrl do appsettings apontando pro placeholder de dev, depois sem essa
-        // protecao). "https" fixo no fallback e seguro aqui porque essa URL so existe
-        // pra contornar mixed content - a pagina que a consome ja e https por definicao.
         string scheme = request.Headers.TryGetValue("X-Forwarded-Proto", out var proto) && proto.Count > 0
             ? proto[0]!
-            : "https";
+            : request.Scheme;
 
         string host = request.Headers.TryGetValue("X-Forwarded-Host", out var forwardedHost) && forwardedHost.Count > 0
             ? forwardedHost[0]!
@@ -114,7 +106,11 @@ public class MediaDeliveryUrlResolver(
                 Query = tokenResult.Data
             };
 
-            return Result<GetResolveUrlResponseDto>.Success(AvoidMixedContent(urlBuilder.ToString(), mediaProfile.StreamFormat));
+            var resolvedUrl = urlBuilder.ToString();
+            if (_streamCatalogResolver.CanHandle(resolvedUrl))
+                return await ResolveStreamCatalogAsync(resolvedUrl, mediaProfile.StreamFormat);
+
+            return Result<GetResolveUrlResponseDto>.Success(AvoidMixedContent(resolvedUrl, mediaProfile.StreamFormat));
         }
         catch (Exception ex)
         {
@@ -125,6 +121,9 @@ public class MediaDeliveryUrlResolver(
 
     public async Task<Result<GetResolveUrlResponseDto>> ResolveUrlFixedAsync(string urlFixed, string streamFormat, bool followRedirect = false)
     {
+        if (_streamCatalogResolver.CanHandle(urlFixed))
+            return await ResolveStreamCatalogAsync(urlFixed, streamFormat);
+
         if (!followRedirect || string.IsNullOrWhiteSpace(urlFixed))
             return Result<GetResolveUrlResponseDto>.Success(AvoidMixedContent(urlFixed, streamFormat));
 
@@ -134,5 +133,26 @@ public class MediaDeliveryUrlResolver(
             return Result<GetResolveUrlResponseDto>.Failure(finalUrlResult.Error);
 
         return Result<GetResolveUrlResponseDto>.Success(AvoidMixedContent(finalUrlResult.Data!, streamFormat));
+    }
+
+    private async Task<Result<GetResolveUrlResponseDto>> ResolveStreamCatalogAsync(string url, string streamFormat)
+    {
+        var catalogResult = await _streamCatalogResolver.ResolveAsync(url, streamFormat);
+        if (catalogResult.IsFailure || catalogResult.Data is null)
+            return catalogResult;
+
+        var primary = AvoidMixedContent(catalogResult.Data.Url, catalogResult.Data.StreamFormat);
+        var sources = catalogResult.Data.Sources
+            .Select(source =>
+            {
+                var resolvedSource = AvoidMixedContent(source.Url, source.StreamFormat);
+                return new GetResolveUrlSourceResponseDto(
+                    resolvedSource.Url,
+                    resolvedSource.StreamFormat,
+                    source.Quality);
+            })
+            .ToArray();
+
+        return Result<GetResolveUrlResponseDto>.Success(primary with { Sources = sources });
     }
 }

@@ -1,12 +1,19 @@
 ﻿@using XerifeTv.CMS.Views.Shared.Models
 @using XerifeTv.CMS.Shared.Helpers
 
+@inject IConfiguration Configuration
+
 @model VideoSettingViewModel
 
 @{
     var prefix = Model?.IdPrefix ?? string.Empty;
     bool isDeliverySelected = !string.IsNullOrWhiteSpace(Model?.MediaDeliveryProfileId);
+    bool isStreamCatalog = !string.IsNullOrWhiteSpace(Model?.VideoUrl)
+        && (Model.VideoUrl.Contains("/stream/", StringComparison.OrdinalIgnoreCase)
+            || Model.VideoUrl.StartsWith("stream/", StringComparison.OrdinalIgnoreCase)
+            || Model.VideoUrl.EndsWith(".json", StringComparison.OrdinalIgnoreCase));
 
+    var streamCatalogBaseUrl = (Configuration["StreamCatalog:BaseUrl"] ?? string.Empty).TrimEnd('/');
     var streamFormats = (Model?.StreamFormats != null && Model.StreamFormats.Any())
                         ? Model.StreamFormats
                         : StreamFormatsHelper.Vod;
@@ -32,13 +39,14 @@
             <select class="form-select"
                     id="@($"{prefix}_videoStreamFormat")"
                     name="videoStreamFormat"
-                    @(isDeliverySelected ? "" : "required")>
+                    @(isDeliverySelected || isStreamCatalog ? "" : "required")>
 
                 <option selected value="">Selecione uma opção</option>
 
                 @foreach (var format in streamFormats)
                 {
-                    if (format == Model?.VideoStreamFormat)
+                    if ((isStreamCatalog && string.IsNullOrWhiteSpace(Model?.VideoStreamFormat) && format == "mp4")
+                        || format == Model?.VideoStreamFormat)
                     {
                         <option value="@format" selected>@format</option>
                     }
@@ -50,6 +58,29 @@
             </select>
         </div>
     </div>
+
+    @if (!string.IsNullOrWhiteSpace(Model?.CatalogContentType))
+    {
+        <div class="row mb-3">
+            <div class="col-12">
+                <div class="form-check">
+                    <input type="checkbox"
+                           class="form-check-input"
+                           id="@($"{prefix}_catalogByImdb")"
+                           data-catalog-content-type="@Model.CatalogContentType"
+                           data-catalog-imdb-id="@Model.CatalogImdbId"
+                           data-catalog-season="@Model.CatalogSeason"
+                           data-catalog-episode="@Model.CatalogEpisode"
+                           data-catalog-episode-id="@Model.IdPrefix.Replace("episode_", string.Empty)"
+                           data-catalog-base-url="@streamCatalogBaseUrl"
+                           @(isStreamCatalog ? "checked" : "")>
+                    <label class="form-check-label" for="@($"{prefix}_catalogByImdb")">
+                        Pegar link por IMDb ID
+                    </label>
+                </div>
+            </div>
+        </div>
+    }
 
     <div id="@($"{prefix}_video-delivery-section")" class="@(!isDeliverySelected ? "d-none" : "")">
         <div class="row mb-3">
