@@ -48,7 +48,8 @@ public sealed class StreamCatalogResolver(
         {
             var client = _httpClientFactory.CreateClient(HttpClientName);
 
-            var payloadResult = await FetchCatalogPayloadAsync(client, catalogUriResult.Data!, cancellationToken);
+            var fetchUri = BuildFetchUri(catalogUriResult.Data!);
+            var payloadResult = await FetchCatalogPayloadAsync(client, fetchUri, cancellationToken);
             if (payloadResult.IsFailure)
                 return Result<GetResolveUrlResponseDto>.Failure(payloadResult.Error);
 
@@ -157,6 +158,22 @@ public sealed class StreamCatalogResolver(
         return Result<string>.Failure(new Error(
             "502",
             $"O catálogo de streams respondeu {(int)lastStatusCode}"));
+    }
+
+    // O IP de datacenter do Render toma 403 do Cloudflare do froststream de forma
+    // intermitente e pegajosa. Se StreamCatalog:ProxyBaseUrl estiver configurado,
+    // o GET do catálogo sai por um proxy (Cloudflare Worker) que tem IP confiável,
+    // contornando o bloqueio. Sem a config, busca direto (comportamento local).
+    private Uri BuildFetchUri(Uri catalogUri)
+    {
+        var proxyBaseUrl = _configuration["StreamCatalog:ProxyBaseUrl"];
+        if (string.IsNullOrWhiteSpace(proxyBaseUrl)
+            || !Uri.TryCreate(proxyBaseUrl.Trim(), UriKind.Absolute, out var proxyBase))
+            return catalogUri;
+
+        var separator = string.IsNullOrEmpty(proxyBase.Query) ? "?" : "&";
+        var proxied = $"{proxyBase.AbsoluteUri}{separator}url={Uri.EscapeDataString(catalogUri.AbsoluteUri)}";
+        return new Uri(proxied);
     }
 
     private Result<Uri> CreateCatalogUri(string url)
