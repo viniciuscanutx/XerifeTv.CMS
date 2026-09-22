@@ -8,6 +8,7 @@ using XerifeTv.CMS.Modules.Integrations.Webhook.Dtos.Response;
 using XerifeTv.CMS.Modules.Integrations.Webhook.Enums;
 using XerifeTv.CMS.Modules.Integrations.Webhook.Interfaces;
 using XerifeTv.CMS.Modules.LinkTemplate.Interfaces;
+using XerifeTv.CMS.Modules.CatalogProvider.Interfaces;
 using XerifeTv.CMS.Modules.Media.Delivery.Intefaces;
 using XerifeTv.CMS.Modules.User.Dtos.Request;
 using XerifeTv.CMS.Modules.User.Enums;
@@ -24,6 +25,7 @@ public class SettingsController(
     IWebhookService _webhookService,
     IMediaDeliveryProfileService _mediaDeliveryProfileService,
     ILinkTemplateService _linkTemplateService,
+    ICatalogProviderService _catalogProviderService,
     ISystemSettingsService _systemSettingsService,
     ICacheService _cacheService,
     IActivityLogService _activityLogService,
@@ -44,12 +46,15 @@ public class SettingsController(
         var linkTemplatesResponse = await _linkTemplateService.GetAllAsync(isIncludeDisabled: true);
         if (linkTemplatesResponse.IsFailure) return RedirectToAction("Index", "Home");
 
+        var catalogProvidersResponse = await _catalogProviderService.GetAllAsync(isIncludeDisabled: true);
+        if (catalogProvidersResponse.IsFailure) return RedirectToAction("Index", "Home");
+
         ViewBag.EnableMoviesSpreadsheetImport = userResponse.Data?.EnableMoviesSpreadsheetImport ?? _systemSettingsService.IsMoviesSpreadsheetImportEnabled();
         ViewBag.EnableSeriesSpreadsheetImport = userResponse.Data?.EnableSeriesSpreadsheetImport ?? _systemSettingsService.IsSeriesSpreadsheetImportEnabled();
         ViewBag.EnableChannelsSpreadsheetImport = userResponse.Data?.EnableChannelsSpreadsheetImport ?? _systemSettingsService.IsChannelsSpreadsheetImportEnabled();
         ViewBag.ImdbSearchMode = userResponse.Data?.ImdbSearchMode ?? _systemSettingsService.GetDefaultImdbSearchMode();
 
-        SettingsModelView model = new(userResponse.Data!, webhooksResponse.Data?.Items ?? [], mediaDeliveryProfilesResponse.Data ?? [], linkTemplatesResponse.Data ?? []);
+        SettingsModelView model = new(userResponse.Data!, webhooksResponse.Data?.Items ?? [], mediaDeliveryProfilesResponse.Data ?? [], linkTemplatesResponse.Data ?? [], catalogProvidersResponse.Data ?? []);
 
         return View(model);
     }

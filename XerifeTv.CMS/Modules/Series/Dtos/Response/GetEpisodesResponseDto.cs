@@ -20,11 +20,12 @@ public class GetEpisodesResponseDto
         };
     }
 
-    public void SetUrlResolverPathEpisodes(string encryptKey)
+    // CMS (admin): resolver plano pra habilitar o browser-first no preview.
+    public void SetUrlResolverPathEpisodes()
     {
         foreach (var episode in Episodes)
         {
-            episode.SetUrlResolverPath(encryptKey);
+            episode.SetUrlResolverPathCms();
         }
     }
 }

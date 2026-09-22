@@ -14,6 +14,8 @@
             || Model.VideoUrl.EndsWith(".json", StringComparison.OrdinalIgnoreCase));
 
     var streamCatalogBaseUrl = (Configuration["StreamCatalog:BaseUrl"] ?? string.Empty).TrimEnd('/');
+    var catalogProviders = ViewBag.CatalogProviders as IEnumerable<XerifeTv.CMS.Modules.CatalogProvider.Dtos.Response.GetCatalogProviderResponseDto>
+                           ?? Enumerable.Empty<XerifeTv.CMS.Modules.CatalogProvider.Dtos.Response.GetCatalogProviderResponseDto>();
     var streamFormats = (Model?.StreamFormats != null && Model.StreamFormats.Any())
                         ? Model.StreamFormats
                         : StreamFormatsHelper.Vod;
@@ -78,6 +80,27 @@
                         Pegar link por IMDb ID
                     </label>
                 </div>
+            </div>
+
+            <div class="col-12 mt-2">
+                <label for="@($"{prefix}_catalogProvider")" class="form-label mb-1" style="font-size: 13px;">Provedor do catálogo</label>
+                <select class="form-select form-select-sm" id="@($"{prefix}_catalogProvider")">
+                    @if (!catalogProviders.Any() && !string.IsNullOrWhiteSpace(streamCatalogBaseUrl))
+                    {
+                        <option value="@streamCatalogBaseUrl" selected>Padrão</option>
+                    }
+                    @foreach (var p in catalogProviders)
+                    {
+                        if (p.IsDefault)
+                        {
+                            <option value="@p.BaseUrl" selected>@p.Name</option>
+                        }
+                        else
+                        {
+                            <option value="@p.BaseUrl">@p.Name</option>
+                        }
+                    }
+                </select>
             </div>
         </div>
     }

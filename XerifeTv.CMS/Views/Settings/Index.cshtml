@@ -390,6 +390,18 @@
                                 Tipos de Link
                             </button>
                         </li>
+
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link"
+                                    id="catalog-providers-tab"
+                                    data-bs-toggle="tab"
+                                    data-bs-target="#catalog-providers"
+                                    type="button"
+                                    role="tab"
+                                    aria-selected="false">
+                                Provedores de Catálogo
+                            </button>
+                        </li>
                     </ul>
 
                     <div class="tab-content">
@@ -409,6 +421,15 @@
                              aria-labelledby="link-templates-tab">
 
                             @await Html.PartialAsync("_LinkTemplates", Model.LinkTemplates)
+
+                        </div>
+
+                        <div class="tab-pane fade"
+                             id="catalog-providers"
+                             role="tabpanel"
+                             aria-labelledby="catalog-providers-tab">
+
+                            @await Html.PartialAsync("_CatalogProviders", Model.CatalogProviders)
 
                         </div>
 

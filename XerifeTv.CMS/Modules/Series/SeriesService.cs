@@ -189,7 +189,7 @@ public class SeriesService(
                   .Failure(new Error("404", "Conteudo nao encontrado"));
 
             var result = GetEpisodesResponseDto.FromEntity(response);
-            result.SetUrlResolverPathEpisodes(_configuration["SecuritySettings:ContentEncryptionKey"]!);
+            result.SetUrlResolverPathEpisodes();
 
             return Result<GetEpisodesResponseDto>.Success(result);
         }
@@ -220,9 +220,11 @@ public class SeriesService(
                 return Result<string>.Failure(
                     new Error("409", $"Episodio nao cadastrado. [{seriesResponse.ImdbId}|T{dto.Season}:EP{dto.Number}] duplicado"));
 
-            await _repository.CreateEpisodeAsync(seriesResponse.Id, dto.ToEntity());
+            var episode = dto.ToEntity();
 
-            return Result<string>.Success(dto.ToEntity().Id);
+            await _repository.CreateEpisodeAsync(seriesResponse.Id, episode);
+
+            return Result<string>.Success(episode.Id);
         }
         catch (Exception ex)
         {
@@ -251,7 +253,9 @@ public class SeriesService(
                 return Result<string>.Failure(
                     new Error("409", $"Episodio nao atualizado. [{seriesResponse.ImdbId}|T{dto.Season}:EP{dto.Number}] duplicado"));
 
-            await _repository.UpdateEpisodeAsync(seriesResponse.Id, dto.ToEntity());
+            var episode = dto.ToEntity();
+
+            await _repository.UpdateEpisodeAsync(seriesResponse.Id, episode);
 
             return Result<string>.Success(seriesResponse.Id);
         }

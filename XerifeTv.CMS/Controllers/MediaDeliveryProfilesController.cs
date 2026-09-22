@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using XerifeTv.CMS.Modules.Abstractions.Interfaces;
 using XerifeTv.CMS.Modules.Activity.Interfaces;
+using XerifeTv.CMS.Modules.CatalogProvider.Interfaces;
 using XerifeTv.CMS.Modules.Media.Delivery.Dtos.Request;
 using XerifeTv.CMS.Modules.Media.Delivery.Dtos.Response;
 using XerifeTv.CMS.Modules.Media.Delivery.Intefaces;
@@ -16,6 +17,7 @@ public class MediaDeliveryProfilesController(
     ILogger<MediaDeliveryProfilesController> _logger,
     ICacheService _cacheService,
     IConfiguration _configuration,
+    ICatalogProviderService _catalogProviderService,
     IHttpClientFactory _httpClientFactory) : Controller
 {
     public const string StreamHttpClientName = "media-stream-proxy";
@@ -130,7 +132,8 @@ public class MediaDeliveryProfilesController(
         if (responseCache != null)
             return Ok(responseCache);
 
-        var response = await _urlResolver.ResolveStreamCatalogFromPayloadAsync(dto.Payload, dto.StreamFormat);
+        var providerName = await GetProviderNameForUrlAsync(dto.UrlFixed);
+        var response = await _urlResolver.ResolveStreamCatalogFromPayloadAsync(dto.Payload, dto.StreamFormat, providerName);
 
         if (response.IsFailure)
             return StatusCode(int.Parse(response.Error.Code), response.Error.Description);
@@ -138,6 +141,22 @@ public class MediaDeliveryProfilesController(
         _cacheService.SetValue<GetResolveUrlResponseDto?>(cacheKey, response.Data);
 
         return Ok(response.Data);
+    }
+
+    // Descobre o nome do provedor (CMS) a partir da URL do catálogo, casando pela Base URL.
+    private async Task<string?> GetProviderNameForUrlAsync(string url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return null;
+
+        var providersResult = await _catalogProviderService.GetAllAsync(isIncludeDisabled: true);
+        if (providersResult.IsFailure || providersResult.Data is null) return null;
+
+        return providersResult.Data
+            .Where(p => !string.IsNullOrWhiteSpace(p.BaseUrl)
+                        && url.StartsWith(p.BaseUrl.TrimEnd('/'), StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(p => p.BaseUrl.Length)
+            .Select(p => p.Name)
+            .FirstOrDefault();
     }
 
     [AllowAnonymous]

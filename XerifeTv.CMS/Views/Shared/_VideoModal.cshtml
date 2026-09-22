@@ -1,4 +1,11 @@
 @inject IConfiguration Configuration
+@inject XerifeTv.CMS.Modules.CatalogProvider.Interfaces.ICatalogProviderService CatalogProviderService
+
+@{
+    var _catalogProviders = (await CatalogProviderService.GetAllAsync()).Data
+        ?? Enumerable.Empty<XerifeTv.CMS.Modules.CatalogProvider.Dtos.Response.GetCatalogProviderResponseDto>();
+    var _catalogProviderBasesJson = System.Text.Json.JsonSerializer.Serialize(_catalogProviders.Select(p => p.BaseUrl));
+}
 
 <div class="modal fade"
      id="videoModal"
@@ -47,13 +54,23 @@
                     </button>
                 </div>
             </div>
-            <div class="modal-footer justify-content-center" id="videoQualitySwitcher" style="display: none;">
-                <label for="videoQualitySelect" class="form-label mb-0">Qualidade</label>
-                <select class="form-select form-select-sm w-auto" id="videoQualitySelect" aria-label="Qualidade do vídeo"></select>
-            </div>
         </div>
     </div>
 </div>
+
+<style>
+    /* Botão de Fonte na barra do player: mostra a fonte atual como texto (sem ícone) */
+    .video-js .vjs-fonte-menu-button { width: auto; }
+    .video-js .vjs-fonte-menu-button .vjs-icon-placeholder {
+        font-family: inherit;
+        font-size: 1em;
+        font-weight: 600;
+        line-height: 3em;
+        padding: 0 .5em;
+    }
+    .video-js .vjs-fonte-menu-button .vjs-icon-placeholder:before { content: none; }
+    .video-js .vjs-fonte-menu-button .vjs-menu-content { max-height: 20em; }
+</style>
 
 <script defer>
     const modal = document.getElementById('videoModal')
@@ -63,8 +80,76 @@
     let currentLang = 'dub'
     let currentSources = []
     let currentSourceUrl = null
+    let fonteButton = null
+
+    // Botão de menu "Fonte" na barra do player: lista todas as fontes do array e troca a fonte ao clicar.
+    function ensureFonteComponent() {
+        if (typeof videojs === 'undefined' || videojs.getComponent('FonteMenuButton')) return
+        const MenuButton = videojs.getComponent('MenuButton')
+        const MenuItem = videojs.getComponent('MenuItem')
+
+        class FonteMenuItem extends MenuItem {
+            constructor(player, options) {
+                super(player, { label: options.label, selectable: true, selected: !!options.selected })
+                this._source = options.source
+                this._parentButton = options.parentButton
+            }
+            handleClick() {
+                super.handleClick()
+                if (this._parentButton) this._parentButton.selectSource(this._source)
+            }
+        }
+
+        class FonteMenuButton extends MenuButton {
+            constructor(player, options) {
+                super(player, options)
+                this.controlText('Fonte')
+                this.addClass('vjs-fonte-menu-button')
+            }
+            setData(sources, currentUrl, onSelect) {
+                this._sources = sources || []
+                this._currentUrl = currentUrl
+                this._onSelect = onSelect
+                this.update()
+                this.refreshLabel()
+            }
+            refreshLabel() {
+                const list = this._sources || []
+                const cur = list.find(s => (s.url || s.Url) === this._currentUrl) || list[0]
+                const text = cur ? (cur.quality || cur.Quality || 'Fonte') : 'Fonte'
+                const placeholder = this.el().querySelector('.vjs-icon-placeholder')
+                if (placeholder) placeholder.textContent = text
+            }
+            // Atualiza a fonte atual sem disparar o onSelect (usado no auto-fallback de erro)
+            setCurrent(url) {
+                this._currentUrl = url
+                this.update()
+                this.refreshLabel()
+            }
+            selectSource(source) {
+                this._currentUrl = source.url || source.Url
+                this.update()
+                this.refreshLabel()
+                this.unpressButton()
+                if (this._onSelect) this._onSelect(source)
+            }
+            createItems() {
+                return (this._sources || []).map(source => new FonteMenuItem(this.player(), {
+                    label: source.quality || source.Quality || 'Fonte',
+                    source,
+                    selected: (source.url || source.Url) === this._currentUrl,
+                    parentButton: this
+                }))
+            }
+        }
+
+        videojs.registerComponent('FonteMenuItem', FonteMenuItem)
+        videojs.registerComponent('FonteMenuButton', FonteMenuButton)
+    }
     // URL do Worker (cache KV compartilhado). Vazio = pula o Worker e vai direto no froststream.
     const streamCatalogProxyBaseUrl = '@((Configuration["StreamCatalog:ProxyBaseUrl"] ?? string.Empty).TrimEnd('/'))'
+    // Bases dos provedores na ordem de fallback (1, 2, 3...). Vazio = usa só a URL cadastrada.
+    const CATALOG_PROVIDER_BASES = @Html.Raw(_catalogProviderBasesJson)
 
     function setLoading(visible, text) {
         const overlay = document.getElementById('videoLoadingOverlay')
@@ -138,59 +223,39 @@
     }
 
     function normalizeSources(data) {
+        // Dedup por URL (não por qualidade) pra manter TODAS as fontes do array.
+        // O rótulo já vem do servidor (nome da fonte de mídia).
         const unique = new Map()
 
         getSources(data).forEach(source => {
             const url = extractSourceUrl(source.url || source.Url)
-            if (!url) return
+            if (!url || unique.has(url)) return
 
-            const quality = getQuality(
-                source.quality || source.Quality,
-                source.name || source.Name,
-                source.title || source.Title,
-                url
-            )
-
-            if (unique.has(quality.key)) return
-
-            unique.set(quality.key, {
+            unique.set(url, {
                 ...source,
                 url,
-                quality: quality.label,
+                quality: source.quality || source.Quality
+                    || getQuality(null, source.name || source.Name, source.title || source.Title, url).label,
                 streamFormat: source.streamFormat || source.StreamFormat || getStreamFormat(url)
             })
         })
 
-        return [...unique.entries()]
-            .sort(([left], [right]) => qualityRank(right) - qualityRank(left))
-            .map(([, source]) => source)
+        // Mantém a ordem que o servidor mandou (já vem por qualidade desc).
+        return [...unique.values()]
     }
 
-    function updateQualitySelector(sources) {
-        const switcher = document.getElementById('videoQualitySwitcher')
-        const select = document.getElementById('videoQualitySelect')
-        if (!switcher || !select) return
+    function updateSourceMenu(sources) {
+        currentSources = sources || []
+        if (!fonteButton) return
 
-        select.innerHTML = ''
-        currentSources = sources
+        const initialUrl = currentSourceUrl
+            || (currentSources[0] && (currentSources[0].url || currentSources[0].Url))
+            || null
 
-        sources.forEach(source => {
-            const quality = source.quality || source.Quality || 'Auto'
-            const url = extractSourceUrl(source.url || source.Url)
-            if (!url) return
+        fonteButton.setData(currentSources, initialUrl, async (source) => { await playSource(source) })
 
-            const option = document.createElement('option')
-            option.value = url
-            option.textContent = quality
-            select.appendChild(option)
-        })
-
-        switcher.style.display = sources.length > 1 ? 'flex' : 'none'
-        select.value = currentSourceUrl || (sources[0]?.url || sources[0]?.Url || '')
-        select.onchange = async () => {
-            const selectedSource = currentSources.find(source => (source.url || source.Url) === select.value)
-            if (selectedSource) await playSource(selectedSource)
-        }
+        if (currentSources.length > 1) fonteButton.show()
+        else fonteButton.hide()
     }
 
     const resolvedSourceCache = new Map()
@@ -236,13 +301,23 @@
         const streamFormat = (playableSource.streamFormat || playableSource.StreamFormat || '').toLowerCase()
 
         currentSourceUrl = sourceUrl
-        const playlistMimeTypes = {
+        // type explícito por formato: fontes sem extensão na URL (ex: koyeb do fenixflix)
+        // seriam rejeitadas de cara pelo video.js sem essa dica.
+        const mimeTypes = {
             hls: 'application/x-mpegURL',
-            m3u8: 'application/x-mpegURL'
+            m3u8: 'application/x-mpegURL',
+            mp4: 'video/mp4',
+            m4v: 'video/mp4',
+            mkv: 'video/x-matroska',
+            webm: 'video/webm',
+            mov: 'video/quicktime',
+            ogv: 'video/ogg'
         }
 
-        const playlistType = playlistMimeTypes[streamFormat]
-        player.src(playlistType ? { src: url, type: playlistType } : { src: url })
+        const type = mimeTypes[streamFormat]
+        player.src(type ? { src: url, type } : { src: url })
+
+        if (fonteButton) fonteButton.setCurrent(sourceUrl)
     }
 
     function isCatalogUrl(value) {
@@ -256,6 +331,45 @@
     // Então buscamos o catálogo aqui no browser e mandamos o JSON pro servidor só montar
     // as fontes - sem o servidor precisar falar com o froststream. Se qualquer passo
     // falhar, retorna null e o fluxo cai no resolver do servidor (comportamento antigo).
+    function catalogHasStreams(text) {
+        try {
+            const parsed = JSON.parse(text)
+            return Array.isArray(parsed.streams) && parsed.streams.length > 0
+        } catch {
+            return false
+        }
+    }
+
+    // Busca o catálogo de UMA URL: tenta o KV do Worker primeiro; no miss, busca no
+    // navegador (IP residencial passa) e grava no Worker pra próxima. Retorna o texto ou null.
+    async function fetchCatalogPayload(url) {
+        if (streamCatalogProxyBaseUrl) {
+            try {
+                const kv = await fetch(
+                    `${streamCatalogProxyBaseUrl}/?kvOnly=1&url=${encodeURIComponent(url)}`,
+                    { headers: { Accept: 'application/json' } })
+                if (kv.ok) return await kv.text()
+            } catch { /* segue pro browser */ }
+        }
+
+        try {
+            const r = await fetch(url, { headers: { Accept: 'application/json' } })
+            if (!r.ok) return null
+            const text = await r.text()
+
+            if (streamCatalogProxyBaseUrl) {
+                fetch(`${streamCatalogProxyBaseUrl}/?url=${encodeURIComponent(url)}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: text
+                }).catch(() => {})
+            }
+            return text
+        } catch {
+            return null
+        }
+    }
+
     async function resolveCatalogViaBrowser(resolverUrl) {
         let parsed
         try {
@@ -272,40 +386,41 @@
         const streamFormat = parsed.searchParams.get('streamFormat') || 'mp4'
         const followRedirect = (parsed.searchParams.get('followRedirect') || 'false').toLowerCase() === 'true'
 
-        let payload = null
+        // Monta a lista de URLs candidatas: cada provedor (na ordem de fallback) + o
+        // sufixo /stream/...json extraído da URL cadastrada. A URL original entra por
+        // último como garantia. Assim, se o provedor 1 não tiver o título, tenta o 2, 3...
+        const suffixIdx = urlFixed.indexOf('/stream/')
+        const suffix = suffixIdx >= 0 ? urlFixed.substring(suffixIdx) : null
 
-        // 1) Worker primeiro: se o catálogo já está no KV, pega de lá (zero froststream)
-        if (streamCatalogProxyBaseUrl) {
-            try {
-                const kvResponse = await fetch(
-                    `${streamCatalogProxyBaseUrl}/?kvOnly=1&url=${encodeURIComponent(urlFixed)}`,
-                    { headers: { Accept: 'application/json' } })
-                if (kvResponse.ok) payload = await kvResponse.text()
-            } catch { /* miss/erro: cai no browser abaixo */ }
+        const candidates = []
+        if (suffix && Array.isArray(CATALOG_PROVIDER_BASES)) {
+            CATALOG_PROVIDER_BASES.forEach(base => {
+                const candidate = String(base).replace(/\/$/, '') + suffix
+                if (!candidates.includes(candidate)) candidates.push(candidate)
+            })
         }
+        if (!candidates.includes(urlFixed)) candidates.push(urlFixed)
 
-        // 2) Miss: navegador busca direto no froststream e grava no Worker pra próxima vez
-        if (!payload) {
-            const catalogResponse = await fetch(urlFixed, { headers: { Accept: 'application/json' } })
-            if (!catalogResponse.ok) throw new Error('Falha ao buscar catálogo direto do froststream')
-            payload = await catalogResponse.text()
-
-            if (streamCatalogProxyBaseUrl) {
-                // fire-and-forget: não trava a reprodução esperando a gravação
-                fetch(`${streamCatalogProxyBaseUrl}/?url=${encodeURIComponent(urlFixed)}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: payload
-                }).catch(() => {})
+        let payload = null
+        let chosenUrl = null
+        for (const candidate of candidates) {
+            const text = await fetchCatalogPayload(candidate)
+            if (text && catalogHasStreams(text)) {
+                payload = text
+                chosenUrl = candidate
+                break
             }
         }
 
-        // 3) Servidor monta as fontes (probe + proxy) a partir do catálogo
+        // Nenhum provedor tinha o título: deixa cair no fallback do servidor
+        if (!payload) return null
+
+        // Servidor monta as fontes (probe + proxy) a partir do catálogo escolhido
         const response = await fetch('/MediaDeliveryProfiles/ResolveCatalogFromPayload', {
             method: 'POST',
             credentials: 'same-origin',
             headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-            body: JSON.stringify({ urlFixed, streamFormat, followRedirect, payload })
+            body: JSON.stringify({ urlFixed: chosenUrl, streamFormat, followRedirect, payload })
         })
         if (!response.ok) throw new Error('Falha ao resolver catálogo por payload')
         return await response.json()
@@ -334,13 +449,13 @@
             const sources = normalizeSources(data)
 
             if (sources.length > 0) {
-                updateQualitySelector(sources)
+                updateSourceMenu(sources)
                 await playSource(sources[0])
                 setLoading(false)
                 return
             }
 
-            updateQualitySelector([])
+            updateSourceMenu([])
             await playSource({ url: extractSourceUrl(url), streamFormat })
             setLoading(false)
         }
@@ -372,15 +487,35 @@
                     }
                 })
 
-                player.hlsQualitySelector({
-                    displayCurrentQuality: true
+                // Botão de Fonte na barra (substitui o dropdown de baixo e o quality do HLS)
+                ensureFonteComponent()
+                const fsToggle = player.controlBar.getChild('fullscreenToggle')
+                const insertIndex = fsToggle ? player.controlBar.children().indexOf(fsToggle) : undefined
+                fonteButton = player.controlBar.addChild('FonteMenuButton', {}, insertIndex)
+                fonteButton.hide()
+
+                // Auto-fallback: se a fonte atual falhar, tenta a próxima da lista.
+                // Só mostra erro quando todas as fontes falharem.
+                player.on('error', () => {
+                    const idx = currentSources.findIndex(s => (s.url || s.Url) === currentSourceUrl)
+                    const next = idx >= 0 ? currentSources[idx + 1] : null
+                    if (next) {
+                        console.warn('Fonte falhou, tentando a próxima:', currentSourceUrl)
+                        setLoading(true, 'Tentando outra fonte...')
+                        playSource(next)
+                    } else {
+                        showError('Não foi possível carregar o vídeo em nenhuma fonte.')
+                    }
                 })
+
+                player.on('playing', () => setLoading(false))
+                player.on('loadeddata', () => setLoading(false))
             }
 
             currentDubResolver = button.getAttribute('data-bs-video-resolver')
             currentLegResolver = button.getAttribute('data-bs-video-alternative-resolver')
             currentSourceUrl = null
-            updateQualitySelector([])
+            updateSourceMenu([])
 
             const hasDub = currentDubResolver && currentDubResolver.trim() !== ''
             const hasLeg = currentLegResolver && currentLegResolver.trim() !== ''

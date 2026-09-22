@@ -6,6 +6,9 @@ using XerifeTv.CMS.Shared.Helpers;
 
 namespace XerifeTv.CMS.Modules.Series;
 
+// Ignora campos extras no documento (ex: episódios que ficaram com um "ImdbId"
+// órfão de uma versão anterior) - sem isso a desserialização quebra.
+[BsonIgnoreExtraElements]
 public class Episode : BaseEntity
 {
     public string Title { get; set; } = string.Empty;
@@ -21,6 +24,30 @@ public class Episode : BaseEntity
     public bool Disabled { get; set; } = false;
     public string? UrlResolverPath { get; private set; }
     public string? AlternativeUrlResolverPath { get; private set; }
+
+    // Versão para o CMS (páginas admin): resolver PLANO, igual ao filme
+    // (GetMovieResponseDto). A URL fica visível, o que permite o browser-first do
+    // _VideoModal buscar o catálogo direto (evita 403/502 no preview de episódio).
+    // NÃO usar no público - lá vale o SetUrlResolverPath (cifrado) abaixo.
+    public void SetUrlResolverPathCms()
+    {
+        if (!string.IsNullOrWhiteSpace(MediaDeliveryProfileId))
+        {
+            UrlResolverPath = $"/MediaDeliveryProfiles/ResolveUrl?mediaDeliveryProfileId={MediaDeliveryProfileId}&mediaPath={Uri.EscapeDataString(MediaRoute ?? string.Empty)}&isCached=false";
+        }
+        else if (!string.IsNullOrWhiteSpace(Video?.Url))
+        {
+            UrlResolverPath = $"/MediaDeliveryProfiles/ResolveUrlFixed?urlFixed={Uri.EscapeDataString(Video.Url)}&streamFormat={Video.StreamFormat}&followRedirect={Video.FollowRedirect}&isCached=false";
+        }
+        else
+        {
+            UrlResolverPath = null;
+        }
+
+        AlternativeUrlResolverPath = !string.IsNullOrWhiteSpace(AlternativeVideoUrl)
+            ? $"/MediaDeliveryProfiles/ResolveUrlFixed?urlFixed={Uri.EscapeDataString(AlternativeVideoUrl)}&streamFormat={Video?.StreamFormat ?? "hls"}&followRedirect={Video?.FollowRedirect ?? false}&isCached=false"
+            : null;
+    }
 
     public void SetUrlResolverPath(string encryptKey)
     {

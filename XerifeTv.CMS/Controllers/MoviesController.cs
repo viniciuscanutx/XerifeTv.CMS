@@ -17,6 +17,7 @@ using XerifeTv.CMS.Shared.Helpers;
 using XerifeTv.CMS.Views.Movies.Models;
 using XerifeTv.CMS.Modules.Media.Delivery.Intefaces;
 using XerifeTv.CMS.Modules.Media.Delivery.Dtos.Response;
+using XerifeTv.CMS.Modules.CatalogProvider.Interfaces;
 
 namespace XerifeTv.CMS.Controllers;
 
@@ -28,6 +29,7 @@ public class MoviesController(
   ILogger<MoviesController> _logger,
   ISpreadsheetBatchImporter<IMovieService> _spreadsheetBatchImporter,
   IMediaDeliveryProfileService _mediaDeliveryProfileService,
+  ICatalogProviderService _catalogProviderService,
   IBackgroundJobQueueService _backgroundJobQueueService,
   IFranchiseService _franchiseService) : Controller
 {
@@ -80,6 +82,9 @@ public class MoviesController(
 
         var mediaProfilesResponse = await _mediaDeliveryProfileService.GetAllAsync(isIncludeDisabled: false);
         if (mediaProfilesResponse.IsSuccess) mediaDeliveryProfiles = mediaProfilesResponse.Data ?? [];
+
+        var catalogProvidersResponse = await _catalogProviderService.GetAllAsync(isIncludeDisabled: false);
+        ViewBag.CatalogProviders = catalogProvidersResponse.IsSuccess ? (catalogProvidersResponse.Data ?? []) : [];
 
         if (id is not null)
         {

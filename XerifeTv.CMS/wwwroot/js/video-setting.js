@@ -47,11 +47,17 @@
             return /^\d+$/.test(imdbId) ? `tt${imdbId}` : imdbId;
         }
 
+        const $catalogProvider = $(`#${prefix}_catalogProvider`);
+
         function getCatalogUrl() {
             if ($catalogByImdb.length === 0 || !$catalogByImdb.prop('checked')) return null;
 
             const contentType = String($catalogByImdb.data('catalog-content-type') || '').toLowerCase();
-            const baseUrl = String($catalogByImdb.data('catalog-base-url') || '').replace(/\/$/, '');
+            // base vem do provedor selecionado; se não houver dropdown, cai no data-attr (appsettings)
+            const providerBase = $catalogProvider.length > 0 && $catalogProvider.val()
+                ? String($catalogProvider.val())
+                : String($catalogByImdb.data('catalog-base-url') || '');
+            const baseUrl = providerBase.replace(/\/$/, '');
             let imdbId = $catalogByImdb.data('catalog-imdb-id');
 
             if (contentType === 'movie') {
@@ -86,6 +92,10 @@
         }
 
         $catalogByImdb.off(`change.vs_${prefix}`).on(`change.vs_${prefix}`, function () {
+            updateCatalogUrl();
+        });
+
+        $catalogProvider.off(`change.vs_${prefix}`).on(`change.vs_${prefix}`, function () {
             updateCatalogUrl();
         });
 

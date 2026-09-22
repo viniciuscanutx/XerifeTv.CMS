@@ -1,8 +1,17 @@
 @using XerifeTv.CMS.Shared.Helpers
 @using XerifeTv.CMS.Modules.LinkTemplate.Dtos.Response
 
+@inject IConfiguration Configuration
+
 @{
     var linkTemplates = ViewBag.LinkTemplates as IEnumerable<GetLinkTemplateResponseDto> ?? [];
+    var serieImdbId = (ViewBag.SerieImdbId as string) ?? string.Empty;
+    var streamCatalogBaseUrl = (Configuration["StreamCatalog:BaseUrl"] ?? string.Empty).TrimEnd('/');
+    var catalogProviders = ViewBag.CatalogProviders as IEnumerable<XerifeTv.CMS.Modules.CatalogProvider.Dtos.Response.GetCatalogProviderResponseDto>
+                           ?? Enumerable.Empty<XerifeTv.CMS.Modules.CatalogProvider.Dtos.Response.GetCatalogProviderResponseDto>();
+    var hasCatalogBase = catalogProviders.Any() || !string.IsNullOrWhiteSpace(streamCatalogBaseUrl);
+    // O imdb da série já está salvo - o gerador usa direto + o provedor escolhido.
+    var canGenerateByImdb = !string.IsNullOrWhiteSpace(serieImdbId) && hasCatalogBase;
 }
 
 <div class="modal fade"
@@ -173,6 +182,37 @@
                                 <label class="btn btn-outline-success" for="gen_source_type">
                                     Tipo de link salvo @(linkTemplates.Any() ? "" : "(nenhum cadastrado)")
                                 </label>
+
+                                <input type="radio" class="btn-check" name="gen_source" id="gen_source_imdb" value="imdb" autocomplete="off" @(canGenerateByImdb ? "" : "disabled")>
+                                <label class="btn btn-outline-success" for="gen_source_imdb">
+                                    Links por ID IMDB @(canGenerateByImdb ? "" : "(indisponível)")
+                                </label>
+                            </div>
+
+                            <div id="gen_imdb_block" class="mb-2 d-none">
+                                <label for="gen_imdb_provider" class="form-label mb-1" style="font-size: 13px;">Provedor do catálogo</label>
+                                <select id="gen_imdb_provider" class="form-select form-select-sm">
+                                    @if (!catalogProviders.Any() && !string.IsNullOrWhiteSpace(streamCatalogBaseUrl))
+                                    {
+                                        <option value="@streamCatalogBaseUrl" selected>Padrão</option>
+                                    }
+                                    @foreach (var p in catalogProviders)
+                                    {
+                                        if (p.IsDefault)
+                                        {
+                                            <option value="@p.BaseUrl" selected>@p.Name</option>
+                                        }
+                                        else
+                                        {
+                                            <option value="@p.BaseUrl">@p.Name</option>
+                                        }
+                                    }
+                                </select>
+                                <small class="text-muted d-block mt-1" style="font-size: 11px;">
+                                    Usa o IMDb da série (<code>@(string.IsNullOrWhiteSpace(serieImdbId) ? "—" : serieImdbId)</code>)
+                                    + <strong>Temporada</strong> + <strong>Episódio Inicial</strong> + quantidade.
+                                    Monta: <code>{provedor}/stream/series/&lt;imdb&gt;:&lt;temp&gt;:&lt;ep&gt;.json</code>
+                                </small>
                             </div>
 
                             <div id="gen_manual_block" class="mb-2">
@@ -192,7 +232,7 @@
                             </div>
 
                             <div class="row g-2 align-items-end mt-1">
-                                <div class="col-4">
+                                <div class="col-4" id="gen_start_id_col">
                                     <label for="gen_start_id" class="form-label mb-1" style="font-size: 13px;">ID inicial</label>
                                     <input type="text" id="gen_start_id" class="form-control form-control-sm" inputmode="numeric" placeholder="92395" autocomplete="off">
                                 </div>
@@ -410,12 +450,23 @@
         const typeSelect = document.getElementById("gen_type_select");
         const typePreview = document.getElementById("gen_type_preview");
         const startId = document.getElementById("gen_start_id");
+        const startIdCol = document.getElementById("gen_start_id_col");
+        const imdbBlock = document.getElementById("gen_imdb_block");
         const count = document.getElementById("gen_count");
         const target = document.getElementById("gen_target");
         const feedback = document.getElementById("gen_feedback");
         const genBtn = document.getElementById("gen_btn");
 
+        // Injetados via Razor (Html.Raw + JSON evita o encoding que quebra strings em <script>)
+        const SERIES_IMDB_ID = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(serieImdbId));
+        const STREAM_CATALOG_BASE_URL = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(streamCatalogBaseUrl));
+
         if (!genBtn) return;
+
+        function normalizeImdbId(value) {
+            const id = String(value || "").trim();
+            return /^\d+$/.test(id) ? "tt" + id : id;
+        }
 
         function setFeedback(message, isError) {
             feedback.textContent = message;
@@ -428,9 +479,14 @@
         }
 
         function toggleSource() {
-            const isType = currentSource() === "type";
-            manualBlock.classList.toggle("d-none", isType);
+            const source = currentSource();
+            const isType = source === "type";
+            const isImdb = source === "imdb";
+            manualBlock.classList.toggle("d-none", isType || isImdb);
             typeBlock.classList.toggle("d-none", !isType);
+            if (imdbBlock) imdbBlock.classList.toggle("d-none", !isImdb);
+            // No modo IMDB o episódio vem da Temporada + Episódio Inicial, não de um ID avulso
+            if (startIdCol) startIdCol.classList.toggle("d-none", isImdb);
             setFeedback("", false);
             if (isType) updateTypePreview();
         }
@@ -509,6 +565,45 @@
             const total = parseInt(count.value, 10);
             if (!total || total < 1) {
                 setFeedback("Informe uma quantidade válida.", true);
+                return;
+            }
+
+            // Modo IMDB: monta os links do catálogo por temporada/episódio usando o imdb da série
+            if (currentSource() === "imdb") {
+                const imdbId = normalizeImdbId(SERIES_IMDB_ID);
+                const providerSelect = document.getElementById("gen_imdb_provider");
+                const providerBase = providerSelect && providerSelect.value ? providerSelect.value : STREAM_CATALOG_BASE_URL;
+                const base = (providerBase || "").replace(/\/$/, "");
+                if (!imdbId || !base) {
+                    setFeedback("Série sem IMDb ID salvo ou nenhum provedor de catálogo selecionado.", true);
+                    return;
+                }
+
+                const season = parseInt(document.getElementById("batch_season")?.value, 10) || 1;
+                const startEp = parseInt(document.getElementById("batch_startEpisodeNumber")?.value, 10) || 1;
+
+                const imdbLines = [];
+                for (let i = 0; i < total; i++) {
+                    imdbLines.push(`${base}/stream/series/${imdbId}:${season}:${startEp + i}.json`);
+                }
+
+                const imdbTextarea = target.value === "secondary"
+                    ? document.getElementById("alternativeVideoUrlsText")
+                    : document.getElementById("videoUrlsText");
+                if (!imdbTextarea) return;
+
+                imdbTextarea.value = imdbLines.join("\n");
+                imdbTextarea.dispatchEvent(new Event("input", { bubbles: true }));
+
+                // Catálogo é resolvido como mp4 (o resolver escolhe as qualidades reais)
+                const formatSelect = document.getElementById("batch_videoStreamFormat");
+                if (formatSelect) {
+                    const mp4Option = Array.from(formatSelect.options).find(o => o.value.toLowerCase() === "mp4");
+                    if (mp4Option) formatSelect.value = mp4Option.value;
+                }
+
+                const imdbTargetLabel = target.value === "secondary" ? "Segundo Link" : "Links Primários";
+                setFeedback(`${total} link(s) IMDB gerado(s) em "${imdbTargetLabel}" (T${season}, a partir do EP${startEp}).`, false);
                 return;
             }
 

@@ -126,6 +126,7 @@ public sealed class SeriesRepository(IOptions<DBSettings> options)
           {
               Id = r.Id,
               Title = r.Title,
+              ImdbId = r.ImdbId,
               NumberSeasons = r.NumberSeasons,
               Episodes = r.Episodes
               .Where(e => e.Season == season && (!e.Disabled || includeDisabled) && (e.Number == specificEpisode || specificEpisode == null))

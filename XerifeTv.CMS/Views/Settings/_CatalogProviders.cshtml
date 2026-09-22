@@ -1,0 +1,98 @@
+@using XerifeTv.CMS.Modules.CatalogProvider.Dtos.Response
+
+@model IEnumerable<GetCatalogProviderResponseDto>
+
+@{
+    var catalogProviderDtoEmpty = new GetCatalogProviderResponseDto();
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    @await Html.PartialAsync("_CatalogProviderFormModal", catalogProviderDtoEmpty)
+
+    <div>
+        <small class="text-muted">
+            Provedores de catálogo (froststream, fenixflix...). O link é montado como
+            <code>{BaseUrl}/stream/series/{imdb}:{temp}:{ep}.json</code>.
+        </small>
+    </div>
+
+    <button class="btn btn-primary btn-sm shadow-sm"
+            role="button"
+            data-bs-toggle="modal"
+            data-bs-target="#catalogProviderFormModal-@catalogProviderDtoEmpty.Id">
+        <i class="fa-solid fa-plus"></i>
+        Novo provedor
+    </button>
+</div>
+
+<table class="table table-striped table-hover align-middle">
+    <thead class="table">
+        <tr>
+            <th class="text-center">Ordem</th>
+            <th>Nome</th>
+            <th>Base URL</th>
+            <th class="text-center">Padrão</th>
+            <th class="text-center">Status</th>
+            <th class="text-end">...</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (!Model.Any())
+        {
+            <tr>
+                <td colspan="6" class="text-center text-muted py-4">
+                    Nenhum provedor cadastrado.
+                </td>
+            </tr>
+        }
+        else
+        {
+            foreach (var item in Model)
+            {
+                <tr>
+                    <td class="text-center">@item.Order</td>
+                    <td>@item.Name</td>
+                    <td class="text-truncate" style="max-width: 320px;">
+                        <code>@item.BaseUrl</code>
+                    </td>
+                    <td class="text-center">
+                        @if (item.IsDefault)
+                        {
+                            <span class="badge bg-primary">Padrão</span>
+                        }
+                        else
+                        {
+                            <span class="text-muted">-</span>
+                        }
+                    </td>
+                    <td class="text-center">
+                        @if (item.IsDisabled)
+                        {
+                            <span class="badge bg-secondary">Desativado</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-success">Ativo</span>
+                        }
+                    </td>
+                    <td class="text-end">
+                        <button class="btn btn-sm btn-outline-primary shadow-sm"
+                                data-bs-toggle="modal"
+                                data-bs-target="#catalogProviderFormModal-@item.Id"
+                                title="Editar provedor">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                        </button>
+                    </td>
+                </tr>
+            }
+        }
+    </tbody>
+</table>
+
+@if (Model.Any())
+{
+    foreach (var item in Model)
+    {
+        @await Html.PartialAsync("_CatalogProviderFormModal", item)
+    }
+}

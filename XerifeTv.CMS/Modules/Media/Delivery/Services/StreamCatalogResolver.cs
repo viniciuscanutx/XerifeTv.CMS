@@ -2,6 +2,7 @@ using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
+using XerifeTv.CMS.Modules.CatalogProvider.Interfaces;
 using XerifeTv.CMS.Modules.Common;
 using XerifeTv.CMS.Modules.Media.Delivery.Dtos.Response;
 using XerifeTv.CMS.Modules.Media.Delivery.Intefaces;
@@ -11,6 +12,7 @@ namespace XerifeTv.CMS.Modules.Media.Delivery.Services;
 public sealed class StreamCatalogResolver(
     IHttpClientFactory _httpClientFactory,
     IConfiguration _configuration,
+    ICatalogProviderService _catalogProviderService,
     ILogger<StreamCatalogResolver> _logger) : IStreamCatalogResolver
 {
     public const string HttpClientName = "stream-catalog-resolver";
@@ -40,31 +42,89 @@ public sealed class StreamCatalogResolver(
         string fallbackStreamFormat,
         CancellationToken cancellationToken = default)
     {
-        var catalogUriResult = CreateCatalogUri(url);
-        if (catalogUriResult.IsFailure)
-            return Result<GetResolveUrlResponseDto>.Failure(catalogUriResult.Error);
+        // Tenta os provedores na ordem de fallback (1, 2, 3...). Se um não tiver o título
+        // (catálogo vazio) ou não tiver fonte funcional, passa pro próximo. A URL cadastrada
+        // entra por último como garantia.
+        var candidateUrls = await BuildProviderCandidateUrlsAsync(url);
 
-        Result<string> payloadResult;
-        try
+        Result<GetResolveUrlResponseDto> lastResult =
+            Result<GetResolveUrlResponseDto>.Failure(new Error("404", "Nenhum provedor de catálogo retornou streams"));
+
+        foreach (var candidate in candidateUrls)
         {
-            var client = _httpClientFactory.CreateClient(HttpClientName);
-            var fetchUri = BuildFetchUri(catalogUriResult.Data!);
-            payloadResult = await FetchCatalogPayloadAsync(client, fetchUri, cancellationToken);
-        }
-        catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested)
-        {
-            return Result<GetResolveUrlResponseDto>.Failure(new Error("504", "Tempo esgotado ao consultar o catálogo de streams"));
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning("Failed to fetch stream catalog: {Message}", ex.Message);
-            return Result<GetResolveUrlResponseDto>.Failure(new Error("502", ex.InnerException?.Message ?? ex.Message));
+            var catalogUriResult = CreateCatalogUri(candidate.Url);
+            if (catalogUriResult.IsFailure)
+            {
+                lastResult = Result<GetResolveUrlResponseDto>.Failure(catalogUriResult.Error);
+                continue;
+            }
+
+            Result<string> payloadResult;
+            try
+            {
+                var client = _httpClientFactory.CreateClient(HttpClientName);
+                var fetchUri = BuildFetchUri(catalogUriResult.Data!);
+                payloadResult = await FetchCatalogPayloadAsync(client, fetchUri, cancellationToken);
+            }
+            catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                return Result<GetResolveUrlResponseDto>.Failure(new Error("504", "Tempo esgotado ao consultar o catálogo de streams"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning("Failed to fetch stream catalog: {Message}", ex.Message);
+                lastResult = Result<GetResolveUrlResponseDto>.Failure(new Error("502", ex.InnerException?.Message ?? ex.Message));
+                continue;
+            }
+
+            if (payloadResult.IsFailure)
+            {
+                lastResult = Result<GetResolveUrlResponseDto>.Failure(payloadResult.Error);
+                continue;
+            }
+
+            var resolveResult = await ResolveFromPayloadAsync(payloadResult.Data!, fallbackStreamFormat, candidate.ProviderName, cancellationToken);
+            if (resolveResult.IsSuccess)
+                return resolveResult;
+
+            lastResult = resolveResult;
         }
 
-        if (payloadResult.IsFailure)
-            return Result<GetResolveUrlResponseDto>.Failure(payloadResult.Error);
+        return lastResult;
+    }
 
-        return await ResolveFromPayloadAsync(payloadResult.Data!, fallbackStreamFormat, cancellationToken);
+    // Monta as URLs candidatas: cada provedor (na ordem) com o sufixo /stream/...json
+    // da URL cadastrada, + a URL original por último. Assim o fallback busca o mesmo
+    // título em cada provedor até achar.
+    private async Task<IReadOnlyList<(string Url, string? ProviderName)>> BuildProviderCandidateUrlsAsync(string url)
+    {
+        var candidates = new List<(string Url, string? ProviderName)>();
+        var trimmed = (url ?? string.Empty).Trim();
+        bool Exists(string u) => candidates.Any(c => string.Equals(c.Url, u, StringComparison.OrdinalIgnoreCase));
+
+        var suffixIndex = trimmed.IndexOf("/stream/", StringComparison.OrdinalIgnoreCase);
+        if (suffixIndex >= 0)
+        {
+            var suffix = trimmed[suffixIndex..];
+            var providersResult = await _catalogProviderService.GetAllAsync(isIncludeDisabled: false);
+
+            if (providersResult.IsSuccess && providersResult.Data is not null)
+            {
+                foreach (var provider in providersResult.Data)
+                {
+                    if (string.IsNullOrWhiteSpace(provider.BaseUrl)) continue;
+
+                    var candidate = $"{provider.BaseUrl.TrimEnd('/')}{suffix}";
+                    if (!Exists(candidate))
+                        candidates.Add((candidate, provider.Name));
+                }
+            }
+        }
+
+        if (!Exists(trimmed))
+            candidates.Add((trimmed, null));
+
+        return candidates;
     }
 
     // Resolve a partir de um catálogo JÁ baixado (o navegador do admin busca o .json
@@ -74,6 +134,7 @@ public sealed class StreamCatalogResolver(
     public async Task<Result<GetResolveUrlResponseDto>> ResolveFromPayloadAsync(
         string payload,
         string fallbackStreamFormat,
+        string? providerName = null,
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(payload))
@@ -87,7 +148,7 @@ public sealed class StreamCatalogResolver(
                 return Result<GetResolveUrlResponseDto>.Failure(new Error("404", "O catálogo não possui streams"));
 
             var candidates = catalog.Streams
-                .Select((stream, index) => CreateCandidate(stream, index, fallbackStreamFormat))
+                .Select((stream, index) => CreateCandidate(stream, index, fallbackStreamFormat, providerName))
                 .Where(candidate => candidate is not null)
                 .Cast<StreamCandidate>()
                 .ToArray();
@@ -97,11 +158,12 @@ public sealed class StreamCatalogResolver(
 
             var client = _httpClientFactory.CreateClient(HttpClientName);
             var probes = await Task.WhenAll(candidates.Select(candidate => ProbeAsync(client, candidate, cancellationToken)));
+            // Lista TODAS as fontes funcionais (não deduplica por qualidade) pra o
+            // usuário escolher qual assistir. Ordena por qualidade desc, mantendo a
+            // ordem do catálogo como desempate.
             var functionalSources = probes
                 .Where(probe => probe.IsFunctional)
                 .Select(probe => probe.Candidate)
-                .GroupBy(candidate => candidate.Quality, StringComparer.OrdinalIgnoreCase)
-                .Select(group => group.OrderBy(candidate => candidate.Index).First())
                 .OrderByDescending(candidate => candidate.QualityRank)
                 .ThenBy(candidate => candidate.Index)
                 .ToArray();
@@ -109,11 +171,27 @@ public sealed class StreamCatalogResolver(
             if (functionalSources.Length == 0)
                 return Result<GetResolveUrlResponseDto>.Failure(new Error("502", "Nenhum stream do catálogo está funcional"));
 
+            // Garante rótulos únicos (fontes com o mesmo nome viram "Nome (2)", "Nome (3)"...).
+            var usedLabels = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
             var sources = functionalSources
-                .Select(candidate => new GetResolveUrlSourceResponseDto(
-                    candidate.Url,
-                    candidate.StreamFormat,
-                    candidate.Quality))
+                .Select(candidate =>
+                {
+                    var label = candidate.SourceName;
+                    if (usedLabels.TryGetValue(label, out var count))
+                    {
+                        usedLabels[label] = count + 1;
+                        label = $"{label} ({count + 1})";
+                    }
+                    else
+                    {
+                        usedLabels[label] = 1;
+                    }
+
+                    return new GetResolveUrlSourceResponseDto(
+                        candidate.Url,
+                        candidate.StreamFormat,
+                        label);
+                })
                 .ToArray();
 
             var primary = sources[0];
@@ -228,7 +306,7 @@ public sealed class StreamCatalogResolver(
         return Result<Uri>.Success(new Uri(normalizedBaseUri, url.Trim().TrimStart('/')));
     }
 
-    private static StreamCandidate? CreateCandidate(StreamCatalogItem stream, int index, string fallbackStreamFormat)
+    private static StreamCandidate? CreateCandidate(StreamCatalogItem stream, int index, string fallbackStreamFormat, string? providerName)
     {
         var streamUrl = ExtractUrl(stream.Url);
         if (!Uri.TryCreate(streamUrl, UriKind.Absolute, out var uri))
@@ -243,13 +321,29 @@ public sealed class StreamCatalogResolver(
 
         var quality = FindQuality(stream.Name, stream.Title, streamUrl);
         var streamFormat = GetStreamFormat(uri, fallbackStreamFormat);
+        var sourceName = BuildSourceName(providerName, stream.Name, quality.Label);
 
         return new StreamCandidate(
             streamUrl,
             streamFormat,
             quality.Label,
             quality.Rank,
-            index);
+            index,
+            sourceName);
+    }
+
+    // Rótulo da fonte mostrado pro usuário. Prioriza o NOME DO PROVEDOR do CMS + qualidade
+    // (ex: "FenixFlix 1080p"); sem provedor, cai no "name" do catálogo; por fim, na qualidade.
+    private static string BuildSourceName(string? providerName, string? catalogName, string qualityLabel)
+    {
+        if (!string.IsNullOrWhiteSpace(providerName))
+        {
+            var suffix = string.IsNullOrWhiteSpace(qualityLabel) ? string.Empty : $" {qualityLabel}";
+            return $"{providerName.Trim()}{suffix}".Trim();
+        }
+
+        var baseName = (catalogName ?? string.Empty).Trim();
+        return string.IsNullOrWhiteSpace(baseName) ? qualityLabel : baseName;
     }
 
     private async Task<StreamProbe> ProbeAsync(
@@ -361,7 +455,8 @@ public sealed class StreamCatalogResolver(
         string StreamFormat,
         string Quality,
         int QualityRank,
-        int Index);
+        int Index,
+        string SourceName);
 
     private sealed record StreamProbe(StreamCandidate Candidate, bool IsFunctional);
 

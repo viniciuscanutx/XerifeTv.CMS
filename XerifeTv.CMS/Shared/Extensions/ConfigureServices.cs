@@ -26,6 +26,8 @@ using XerifeTv.CMS.Modules.Integrations.Webhook;
 using XerifeTv.CMS.Modules.Integrations.Webhook.Interfaces;
 using XerifeTv.CMS.Modules.LinkTemplate;
 using XerifeTv.CMS.Modules.LinkTemplate.Interfaces;
+using XerifeTv.CMS.Modules.CatalogProvider;
+using XerifeTv.CMS.Modules.CatalogProvider.Interfaces;
 using XerifeTv.CMS.Modules.Media.Delivery;
 using XerifeTv.CMS.Modules.Media.Delivery.Intefaces;
 using XerifeTv.CMS.Modules.Media.Delivery.Services;
@@ -92,6 +94,7 @@ public static class ConfigureServices
 		services.AddScoped<IWebhookRepository, WebhookRepository>();
 		services.AddScoped<IMediaDeliveryProfileRepository, MediaDeliveryProfileRepository>();
 		services.AddScoped<ILinkTemplateRepository, LinkTemplateRepository>();
+		services.AddScoped<ICatalogProviderRepository, CatalogProviderRepository>();
 		services.AddScoped<ISystemSettingsRepository, SystemSettingsRepository>();
 		services.AddScoped<IActivityLogRepository, ActivityLogRepository>();
 		services.AddScoped<ISiteUserRepository, SiteUserRepository>();
@@ -135,6 +138,7 @@ public static class ConfigureServices
 
 		services.AddScoped<IMediaDeliveryProfileService, MediaDeliveryProfileService>();
 		services.AddScoped<ILinkTemplateService, LinkTemplateService>();
+		services.AddScoped<ICatalogProviderService, CatalogProviderService>();
 		services.AddScoped<IMediaDeliveryUrlResolver, MediaDeliveryUrlResolver>();
 		services.AddScoped<IRedirectUrlResolver, RedirectUrlResolver>();
 		services.AddScoped<IStreamCatalogResolver, StreamCatalogResolver>();

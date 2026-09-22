@@ -11,6 +11,8 @@ using XerifeTv.CMS.Modules.Integrations.Imdb.Dtos;
 using XerifeTv.CMS.Modules.Integrations.Imdb.Services;
 using XerifeTv.CMS.Modules.LinkTemplate.Dtos.Response;
 using XerifeTv.CMS.Modules.LinkTemplate.Interfaces;
+using XerifeTv.CMS.Modules.CatalogProvider.Dtos.Response;
+using XerifeTv.CMS.Modules.CatalogProvider.Interfaces;
 using XerifeTv.CMS.Modules.Media.Delivery.Dtos.Response;
 using XerifeTv.CMS.Modules.Media.Delivery.Intefaces;
 using XerifeTv.CMS.Modules.Series.Dtos.Request;
@@ -32,6 +34,7 @@ public class SeriesController(
   ISpreadsheetBatchImporter<ISeriesService> _spreadsheetBatchImporter,
   IMediaDeliveryProfileService _mediaDeliveryProfileService,
   ILinkTemplateService _linkTemplateService,
+  ICatalogProviderService _catalogProviderService,
   IBackgroundJobQueueService _backgroundJobQueueService,
   IFranchiseService _franchiseService) : Controller
 {
@@ -162,6 +165,7 @@ public class SeriesController(
 		if (response.IsSuccess)
 		{
 			ViewBag.NumberSeasons = response.Data?.NumberSeasons;
+			ViewBag.SerieImdbId = response.Data?.SerieImdbId;
 			ViewBag.MaxEpisodeNumber = response.Data?.Episodes?.Any() == true
 				? response.Data.Episodes.Max(e => e.Number)
 				: 1;
@@ -175,6 +179,9 @@ public class SeriesController(
             var linkTemplatesResponse = await _linkTemplateService.GetAllAsync(isIncludeDisabled: false);
             if (linkTemplatesResponse.IsSuccess) linkTemplates = linkTemplatesResponse.Data ?? [];
             ViewBag.LinkTemplates = linkTemplates;
+
+            var catalogProvidersResponse = await _catalogProviderService.GetAllAsync(isIncludeDisabled: false);
+            ViewBag.CatalogProviders = catalogProvidersResponse.IsSuccess ? (catalogProvidersResponse.Data ?? []) : [];
 
             return View(new EpisodesModelView(response.Data, mediaDeliveryProfiles));
 		}
