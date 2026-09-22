@@ -47,18 +47,12 @@ public sealed class StreamCatalogResolver(
         try
         {
             var client = _httpClientFactory.CreateClient(HttpClientName);
-            using var response = await client.GetAsync(
-                catalogUriResult.Data!,
-                HttpCompletionOption.ResponseHeadersRead,
-                cancellationToken);
 
-            if (!response.IsSuccessStatusCode)
-                return Result<GetResolveUrlResponseDto>.Failure(new Error(
-                    "502",
-                    $"O catálogo de streams respondeu {(int)response.StatusCode}"));
+            var payloadResult = await FetchCatalogPayloadAsync(client, catalogUriResult.Data!, cancellationToken);
+            if (payloadResult.IsFailure)
+                return Result<GetResolveUrlResponseDto>.Failure(payloadResult.Error);
 
-            var payload = await response.Content.ReadAsStringAsync(cancellationToken);
-            var catalog = JsonSerializer.Deserialize<StreamCatalogResponse>(payload, _jsonOptions);
+            var catalog = JsonSerializer.Deserialize<StreamCatalogResponse>(payloadResult.Data!, _jsonOptions);
 
             if (catalog?.Streams is null || catalog.Streams.Count == 0)
                 return Result<GetResolveUrlResponseDto>.Failure(new Error("404", "O catálogo não possui streams"));
@@ -113,6 +107,56 @@ public sealed class StreamCatalogResolver(
             _logger.LogWarning("Failed to resolve stream catalog: {Message}", ex.Message);
             return Result<GetResolveUrlResponseDto>.Failure(new Error("502", ex.InnerException?.Message ?? ex.Message));
         }
+    }
+
+    // O catálogo fica atrás do Cloudflare com cache de edge. Num cache HIT ele
+    // devolve 200 na hora; num MISS a origem aplica a regra anti-bot e às vezes
+    // responde 403 para o IP de datacenter do Render. Como é intermitente, uma
+    // nova tentativa quase sempre pega um HIT ou passa - por isso o retry.
+    private static readonly HttpStatusCode[] _retryableStatusCodes =
+    {
+        HttpStatusCode.Forbidden,
+        HttpStatusCode.TooManyRequests,
+        HttpStatusCode.InternalServerError,
+        HttpStatusCode.BadGateway,
+        HttpStatusCode.ServiceUnavailable,
+        HttpStatusCode.GatewayTimeout
+    };
+
+    private const int MaxCatalogAttempts = 3;
+
+    private async Task<Result<string>> FetchCatalogPayloadAsync(
+        HttpClient client,
+        Uri catalogUri,
+        CancellationToken cancellationToken)
+    {
+        HttpStatusCode lastStatusCode = default;
+
+        for (var attempt = 1; attempt <= MaxCatalogAttempts; attempt++)
+        {
+            using var response = await client.GetAsync(
+                catalogUri,
+                HttpCompletionOption.ResponseHeadersRead,
+                cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+                return Result<string>.Success(await response.Content.ReadAsStringAsync(cancellationToken));
+
+            lastStatusCode = response.StatusCode;
+
+            if (attempt == MaxCatalogAttempts || !_retryableStatusCodes.Contains(response.StatusCode))
+                break;
+
+            _logger.LogDebug(
+                "Stream catalog returned {StatusCode} (attempt {Attempt}/{Max}), retrying",
+                (int)response.StatusCode, attempt, MaxCatalogAttempts);
+
+            await Task.Delay(TimeSpan.FromMilliseconds(250 * attempt), cancellationToken);
+        }
+
+        return Result<string>.Failure(new Error(
+            "502",
+            $"O catálogo de streams respondeu {(int)lastStatusCode}"));
     }
 
     private Result<Uri> CreateCatalogUri(string url)

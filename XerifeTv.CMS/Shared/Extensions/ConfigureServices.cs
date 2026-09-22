@@ -55,12 +55,20 @@ namespace XerifeTv.CMS.Shared.Extensions;
 public static class ConfigureServices
 {
 	// Alguns hosts de origem (ex: froststream/Cloudflare) devolvem 403 para requests
-	// sem User-Agent de browser. Localmente passa pelo IP residencial, mas do datacenter
-	// do Render o request "pelado" e bloqueado. Os clients que batem no host externo
-	// precisam se identificar como browser.
+	// sem cara de browser. Localmente passa pelo IP residencial, mas do datacenter
+	// do Render o request "pelado" e bloqueado/desafiado. Os clients que batem no
+	// host externo precisam mandar um fingerprint de browser.
 	private const string ExternalOriginUserAgent =
 		"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
 		"(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+
+	private static void ApplyBrowserOriginHeaders(HttpClient client)
+	{
+		var headers = client.DefaultRequestHeaders;
+		headers.UserAgent.ParseAdd(ExternalOriginUserAgent);
+		headers.Accept.ParseAdd("*/*");
+		headers.AcceptLanguage.ParseAdd("pt-BR,pt;q=0.9,en;q=0.8");
+	}
 
 	public static IServiceCollection AddConfiguration(
 	  this IServiceCollection services, IConfiguration _configuration)
@@ -135,7 +143,7 @@ public static class ConfigureServices
 			.AddHttpClient(RedirectUrlResolver.HttpClientName, client =>
 			{
 				client.Timeout = TimeSpan.FromSeconds(10);
-				client.DefaultRequestHeaders.UserAgent.ParseAdd(ExternalOriginUserAgent);
+				ApplyBrowserOriginHeaders(client);
 			})
 			.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
 			{
@@ -147,7 +155,7 @@ public static class ConfigureServices
 			.AddHttpClient(StreamCatalogResolver.HttpClientName, client =>
 			{
 				client.Timeout = TimeSpan.FromSeconds(10);
-				client.DefaultRequestHeaders.UserAgent.ParseAdd(ExternalOriginUserAgent);
+				ApplyBrowserOriginHeaders(client);
 			})
 			.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
 			{
@@ -164,7 +172,7 @@ public static class ConfigureServices
 			.AddHttpClient(MediaDeliveryProfilesController.StreamHttpClientName, client =>
 			{
 				client.Timeout = Timeout.InfiniteTimeSpan;
-				client.DefaultRequestHeaders.UserAgent.ParseAdd(ExternalOriginUserAgent);
+				ApplyBrowserOriginHeaders(client);
 			})
 			.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
 			{
