@@ -7,4 +7,5 @@ public interface IStreamCatalogResolver
 {
     bool CanHandle(string url);
     Task<Result<GetResolveUrlResponseDto>> ResolveAsync(string url, string fallbackStreamFormat, CancellationToken cancellationToken = default);
+    Task<Result<GetResolveUrlResponseDto>> ResolveFromPayloadAsync(string payload, string fallbackStreamFormat, CancellationToken cancellationToken = default);
 }

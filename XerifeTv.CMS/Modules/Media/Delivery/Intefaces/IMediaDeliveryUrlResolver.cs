@@ -7,4 +7,5 @@ public interface IMediaDeliveryUrlResolver
 {
     Task<Result<GetResolveUrlResponseDto>> ResolveUrlAsync(string mediaPath, string mediaDeliveryProfileId);
     Task<Result<GetResolveUrlResponseDto>> ResolveUrlFixedAsync(string urlFixed, string streamFormat, bool followRedirect = false);
+    Task<Result<GetResolveUrlResponseDto>> ResolveStreamCatalogFromPayloadAsync(string payload, string streamFormat);
 }

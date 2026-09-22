@@ -44,16 +44,44 @@ public sealed class StreamCatalogResolver(
         if (catalogUriResult.IsFailure)
             return Result<GetResolveUrlResponseDto>.Failure(catalogUriResult.Error);
 
+        Result<string> payloadResult;
         try
         {
             var client = _httpClientFactory.CreateClient(HttpClientName);
-
             var fetchUri = BuildFetchUri(catalogUriResult.Data!);
-            var payloadResult = await FetchCatalogPayloadAsync(client, fetchUri, cancellationToken);
-            if (payloadResult.IsFailure)
-                return Result<GetResolveUrlResponseDto>.Failure(payloadResult.Error);
+            payloadResult = await FetchCatalogPayloadAsync(client, fetchUri, cancellationToken);
+        }
+        catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            return Result<GetResolveUrlResponseDto>.Failure(new Error("504", "Tempo esgotado ao consultar o catálogo de streams"));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning("Failed to fetch stream catalog: {Message}", ex.Message);
+            return Result<GetResolveUrlResponseDto>.Failure(new Error("502", ex.InnerException?.Message ?? ex.Message));
+        }
 
-            var catalog = JsonSerializer.Deserialize<StreamCatalogResponse>(payloadResult.Data!, _jsonOptions);
+        if (payloadResult.IsFailure)
+            return Result<GetResolveUrlResponseDto>.Failure(payloadResult.Error);
+
+        return await ResolveFromPayloadAsync(payloadResult.Data!, fallbackStreamFormat, cancellationToken);
+    }
+
+    // Resolve a partir de um catálogo JÁ baixado (o navegador do admin busca o .json
+    // direto do froststream - IP residencial nunca toma 403 - e manda o payload pro
+    // servidor, que só faz o probe das fontes e monta as URLs. Assim o cadastro não
+    // depende do IP de datacenter do Render pra falar com o froststream).
+    public async Task<Result<GetResolveUrlResponseDto>> ResolveFromPayloadAsync(
+        string payload,
+        string fallbackStreamFormat,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(payload))
+            return Result<GetResolveUrlResponseDto>.Failure(new Error("400", "Catálogo vazio"));
+
+        try
+        {
+            var catalog = JsonSerializer.Deserialize<StreamCatalogResponse>(payload, _jsonOptions);
 
             if (catalog?.Streams is null || catalog.Streams.Count == 0)
                 return Result<GetResolveUrlResponseDto>.Failure(new Error("404", "O catálogo não possui streams"));
@@ -67,6 +95,7 @@ public sealed class StreamCatalogResolver(
             if (candidates.Length == 0)
                 return Result<GetResolveUrlResponseDto>.Failure(new Error("404", "O catálogo não possui URLs de vídeo válidas"));
 
+            var client = _httpClientFactory.CreateClient(HttpClientName);
             var probes = await Task.WhenAll(candidates.Select(candidate => ProbeAsync(client, candidate, cancellationToken)));
             var functionalSources = probes
                 .Where(probe => probe.IsFunctional)
@@ -96,7 +125,7 @@ public sealed class StreamCatalogResolver(
         }
         catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
-            return Result<GetResolveUrlResponseDto>.Failure(new Error("504", "Tempo esgotado ao consultar o catálogo de streams"));
+            return Result<GetResolveUrlResponseDto>.Failure(new Error("504", "Tempo esgotado ao validar as fontes do catálogo"));
         }
         catch (JsonException ex)
         {

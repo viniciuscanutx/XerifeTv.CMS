@@ -93,10 +93,49 @@ public class MediaDeliveryProfilesController(
     [HttpGet]
     public async Task<IActionResult> ResolveUrlFixed(string urlFixed, string streamFormat, bool followRedirect = false)
     {
+        // Cache curto do catálogo resolvido: o 1o play bate no froststream (via Worker proxy),
+        // os próximos vêm da memória - menos exposição ao 403 e menos latência. TTL fica bem
+        // abaixo do max-age=3600 que o froststream marca no catálogo, então os tokens das
+        // URLs ainda são válidos quando servidos do cache.
+        var cacheKey = $"resolve-url-fixed:{urlFixed.Trim().ToLowerInvariant()}:{streamFormat}:{followRedirect}";
+        var responseCache = _cacheService.GetValue<GetResolveUrlResponseDto?>(cacheKey);
+
+        if (responseCache != null)
+            return Ok(responseCache);
+
         var response = await _urlResolver.ResolveUrlFixedAsync(urlFixed, streamFormat, followRedirect);
 
         if (response.IsFailure)
             return StatusCode(int.Parse(response.Error.Code), response.Error.Description);
+
+        _cacheService.SetValue<GetResolveUrlResponseDto?>(cacheKey, response.Data);
+
+        return Ok(response.Data);
+    }
+
+    // O navegador do admin busca o catálogo (.json) direto do froststream - IP residencial
+    // nunca toma 403 - e manda o JSON aqui. O servidor só faz o probe das fontes e monta
+    // as URLs, sem precisar falar com o froststream (que bloqueia o IP do Render/Worker).
+    // Compartilha a mesma chave de cache do ResolveUrlFixed.
+    [Authorize(Roles = "admin, common")]
+    [HttpPost]
+    public async Task<IActionResult> ResolveCatalogFromPayload([FromBody] ResolveCatalogFromPayloadRequestDto dto)
+    {
+        if (dto is null || string.IsNullOrWhiteSpace(dto.Payload) || string.IsNullOrWhiteSpace(dto.UrlFixed))
+            return BadRequest();
+
+        var cacheKey = $"resolve-url-fixed:{dto.UrlFixed.Trim().ToLowerInvariant()}:{dto.StreamFormat}:{dto.FollowRedirect}";
+        var responseCache = _cacheService.GetValue<GetResolveUrlResponseDto?>(cacheKey);
+
+        if (responseCache != null)
+            return Ok(responseCache);
+
+        var response = await _urlResolver.ResolveStreamCatalogFromPayloadAsync(dto.Payload, dto.StreamFormat);
+
+        if (response.IsFailure)
+            return StatusCode(int.Parse(response.Error.Code), response.Error.Description);
+
+        _cacheService.SetValue<GetResolveUrlResponseDto?>(cacheKey, response.Data);
 
         return Ok(response.Data);
     }
