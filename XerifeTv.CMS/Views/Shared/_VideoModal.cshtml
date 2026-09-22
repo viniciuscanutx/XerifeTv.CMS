@@ -14,12 +14,28 @@
                 <h1 class="modal-title fs-5" id="videoModalLabel"></h1>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body" style="height: 65vh;">
+            <div class="modal-body" style="height: 65vh; position: relative;">
                 <video id="player"
                        class="video-js vjs-default-skin w-100"
                        style="min-height: 100%; max-height: 100%;"
                        controls>
                 </video>
+                <div id="videoLoadingOverlay"
+                     style="display: none; position: absolute; inset: 0; z-index: 5;
+                            align-items: center; justify-content: center; flex-direction: column;
+                            gap: .75rem; background: rgba(0,0,0,.65); color: #fff; text-align: center;">
+                    <div class="spinner-border text-light" role="status" style="width: 3rem; height: 3rem;">
+                        <span class="visually-hidden">Carregando...</span>
+                    </div>
+                    <div id="videoLoadingText" class="small">Carregando vídeo...</div>
+                </div>
+                <div id="videoErrorOverlay"
+                     style="display: none; position: absolute; inset: 0; z-index: 5;
+                            align-items: center; justify-content: center; flex-direction: column;
+                            gap: .5rem; background: rgba(0,0,0,.75); color: #fff; text-align: center; padding: 1rem;">
+                    <i class="fa-solid fa-triangle-exclamation fa-2x"></i>
+                    <div id="videoErrorText" class="small">Não foi possível carregar o vídeo.</div>
+                </div>
             </div>
             <div class="modal-footer justify-content-center" id="videoLangSwitcher" style="display: none;">
                 <div class="btn-group" role="group" aria-label="Seleção de idioma do vídeo">
@@ -49,6 +65,29 @@
     let currentSourceUrl = null
     // URL do Worker (cache KV compartilhado). Vazio = pula o Worker e vai direto no froststream.
     const streamCatalogProxyBaseUrl = '@((Configuration["StreamCatalog:ProxyBaseUrl"] ?? string.Empty).TrimEnd('/'))'
+
+    function setLoading(visible, text) {
+        const overlay = document.getElementById('videoLoadingOverlay')
+        if (!overlay) return
+        if (visible) hideError()
+        const label = document.getElementById('videoLoadingText')
+        if (text && label) label.textContent = text
+        overlay.style.display = visible ? 'flex' : 'none'
+    }
+
+    function hideError() {
+        const overlay = document.getElementById('videoErrorOverlay')
+        if (overlay) overlay.style.display = 'none'
+    }
+
+    function showError(text) {
+        setLoading(false)
+        const overlay = document.getElementById('videoErrorOverlay')
+        if (!overlay) return
+        const label = document.getElementById('videoErrorText')
+        if (text && label) label.textContent = text
+        overlay.style.display = 'flex'
+    }
 
     function getSources(data) {
         const sources = data.sources || data.Sources || data.streams || []
@@ -273,6 +312,7 @@
     }
 
     async function resolveAndPlay(resolverUrl) {
+        setLoading(true, 'Carregando vídeo...')
         try {
             let data = null
 
@@ -296,14 +336,17 @@
             if (sources.length > 0) {
                 updateQualitySelector(sources)
                 await playSource(sources[0])
+                setLoading(false)
                 return
             }
 
             updateQualitySelector([])
             await playSource({ url: extractSourceUrl(url), streamFormat })
+            setLoading(false)
         }
         catch (err) {
             console.error('Erro ao carregar vídeo:', err)
+            showError('Não foi possível carregar o vídeo. Tente novamente.')
         }
     }
 
@@ -386,6 +429,8 @@
         })
 
         modal.addEventListener('hide.bs.modal', () => {
+            setLoading(false)
+            hideError()
             if (player) {
                 player.pause()
                 player.reset()
