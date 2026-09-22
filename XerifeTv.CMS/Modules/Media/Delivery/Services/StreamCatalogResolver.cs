@@ -157,7 +157,7 @@ public sealed class StreamCatalogResolver(
 
         return Result<string>.Failure(new Error(
             "502",
-            $"O catálogo de streams respondeu {(int)lastStatusCode} [fetch host: {catalogUri.Host}]"));
+            $"O catálogo de streams respondeu {(int)lastStatusCode}"));
     }
 
     // O IP de datacenter do Render toma 403 do Cloudflare do froststream de forma
