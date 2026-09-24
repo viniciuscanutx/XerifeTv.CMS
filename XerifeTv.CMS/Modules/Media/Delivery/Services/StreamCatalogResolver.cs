@@ -62,22 +62,30 @@ public sealed class StreamCatalogResolver(
                 continue;
             }
 
-            Result<string> payloadResult;
-            try
+            var client = _httpClientFactory.CreateClient(HttpClientName);
+            var fetchUris = BuildFetchUris(catalogUriResult.Data!);
+            var payloadResult = Result<string>.Failure(new Error("502", "O catálogo de streams não respondeu"));
+
+            foreach (var fetchUri in fetchUris)
             {
-                var client = _httpClientFactory.CreateClient(HttpClientName);
-                var fetchUri = BuildFetchUri(catalogUriResult.Data!);
-                payloadResult = await FetchCatalogPayloadAsync(client, fetchUri, cancellationToken);
-            }
-            catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested)
-            {
-                return Result<GetResolveUrlResponseDto>.Failure(new Error("504", "Tempo esgotado ao consultar o catálogo de streams"));
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning("Failed to fetch stream catalog: {Message}", ex.Message);
-                lastResult = Result<GetResolveUrlResponseDto>.Failure(new Error("502", ex.InnerException?.Message ?? ex.Message));
-                continue;
+                try
+                {
+                    payloadResult = await FetchCatalogPayloadAsync(client, fetchUri, cancellationToken);
+                    if (payloadResult.IsSuccess)
+                    {
+                        payloadResult = NormalizeFetchedPayload(payloadResult.Data!, fetchUri);
+                        break;
+                    }
+                }
+                catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested)
+                {
+                    payloadResult = Result<string>.Failure(new Error("504", "Tempo esgotado ao consultar o catálogo de streams"));
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning("Failed to fetch stream catalog from {Url}: {Message}", fetchUri, ex.Message);
+                    payloadResult = Result<string>.Failure(new Error("502", ex.InnerException?.Message ?? ex.Message));
+                }
             }
 
             if (payloadResult.IsFailure)
@@ -282,6 +290,33 @@ public sealed class StreamCatalogResolver(
         var separator = string.IsNullOrEmpty(proxyBase.Query) ? "?" : "&";
         var proxied = $"{proxyBase.AbsoluteUri}{separator}url={Uri.EscapeDataString(catalogUri.AbsoluteUri)}";
         return new Uri(proxied);
+    }
+
+    private IReadOnlyList<Uri> BuildFetchUris(Uri catalogUri)
+    {
+        var primaryUri = BuildFetchUri(catalogUri);
+        if (!IsGaiaflixCatalog(catalogUri))
+            return [primaryUri];
+
+        var bridgeUrl = $"https://r.jina.ai/http://{catalogUri.Authority}{catalogUri.PathAndQuery}";
+        return [primaryUri, new Uri(bridgeUrl)];
+    }
+
+    private static bool IsGaiaflixCatalog(Uri uri)
+        => uri.Host.Equals("gaiaflix.live", StringComparison.OrdinalIgnoreCase)
+            && uri.AbsolutePath.Equals("/api/gaiaflix-movie-source", StringComparison.OrdinalIgnoreCase);
+
+    private static Result<string> NormalizeFetchedPayload(string payload, Uri fetchUri)
+    {
+        if (!fetchUri.Host.Equals("r.jina.ai", StringComparison.OrdinalIgnoreCase))
+            return Result<string>.Success(payload);
+
+        var jsonStart = payload.IndexOf('{');
+        var jsonEnd = payload.LastIndexOf('}');
+        if (jsonStart < 0 || jsonEnd <= jsonStart)
+            return Result<string>.Failure(new Error("502", "A ponte da Gaiaflix não retornou JSON válido"));
+
+        return Result<string>.Success(payload[jsonStart..(jsonEnd + 1)]);
     }
 
     private Result<Uri> CreateCatalogUri(string url)

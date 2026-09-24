@@ -473,6 +473,7 @@
 
         const urlFixed = parsed.searchParams.get('urlFixed')
         if (!isCatalogUrl(urlFixed)) return null
+        if (isGaiaflixCatalogUrl(urlFixed)) return null
 
         const streamFormat = parsed.searchParams.get('streamFormat') || 'mp4'
         const followRedirect = (parsed.searchParams.get('followRedirect') || 'false').toLowerCase() === 'true'

@@ -21,12 +21,7 @@ public class MediaDeliveryUrlResolver(
     private GetResolveUrlResponseDto AvoidMixedContent(string url, string streamFormat)
     {
         if (IsGaiaflixHls(url))
-        {
-            string gaiaflixBaseUrl = GetPublicBaseUrl();
-            string gaiaflixEncryptedUrl = CryptographyHelper.Encrypt(url, _configuration["SecuritySettings:ContentEncryptionKey"]!);
-            string gaiaflixProxyUrl = $"{gaiaflixBaseUrl}/MediaDeliveryProfiles/StreamGaiaflixHls/playlist.m3u8?u={Uri.EscapeDataString(gaiaflixEncryptedUrl)}";
-            return new(gaiaflixProxyUrl, "hls");
-        }
+            return new(url, "hls");
 
         if (string.IsNullOrWhiteSpace(url) || _playlistFormats.Contains(streamFormat ?? string.Empty))
             return new(url, streamFormat);
