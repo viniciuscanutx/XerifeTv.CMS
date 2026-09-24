@@ -93,7 +93,7 @@ public class MediaDeliveryProfilesController(
 
     [Authorize(Roles = "admin, common")]
     [HttpGet]
-    public async Task<IActionResult> ResolveUrlFixed(string urlFixed, string streamFormat, bool followRedirect = false)
+    public async Task<IActionResult> ResolveUrlFixed(string urlFixed, string streamFormat, bool followRedirect = false, bool isCached = true)
     {
         // Cache curto do catálogo resolvido: o 1o play bate no froststream (via Worker proxy),
         // os próximos vêm da memória - menos exposição ao 403 e menos latência. TTL fica bem
@@ -102,7 +102,7 @@ public class MediaDeliveryProfilesController(
         var cacheKey = $"resolve-url-fixed:{urlFixed.Trim().ToLowerInvariant()}:{streamFormat}:{followRedirect}";
         var responseCache = _cacheService.GetValue<GetResolveUrlResponseDto?>(cacheKey);
 
-        if (responseCache != null)
+        if (responseCache != null && isCached)
             return Ok(responseCache);
 
         var response = await _urlResolver.ResolveUrlFixedAsync(urlFixed, streamFormat, followRedirect);

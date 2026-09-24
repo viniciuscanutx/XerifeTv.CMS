@@ -138,25 +138,25 @@ public class MediaDeliveryUrlResolver(
     public async Task<Result<GetResolveUrlResponseDto>> ResolveStreamCatalogFromPayloadAsync(string payload, string streamFormat, string? providerName = null, string? catalogUrl = null)
     {
         var catalogResult = await _streamCatalogResolver.ResolveFromPayloadAsync(payload, streamFormat, providerName, catalogUrl);
-        return BuildCatalogResponse(catalogResult);
+        return BuildCatalogResponse(catalogResult, catalogUrl);
     }
 
     private async Task<Result<GetResolveUrlResponseDto>> ResolveStreamCatalogAsync(string url, string streamFormat)
     {
         var catalogResult = await _streamCatalogResolver.ResolveAsync(url, streamFormat);
-        return BuildCatalogResponse(catalogResult);
+        return BuildCatalogResponse(catalogResult, url);
     }
 
-    private Result<GetResolveUrlResponseDto> BuildCatalogResponse(Result<GetResolveUrlResponseDto> catalogResult)
+    private Result<GetResolveUrlResponseDto> BuildCatalogResponse(Result<GetResolveUrlResponseDto> catalogResult, string? catalogUrl)
     {
         if (catalogResult.IsFailure || catalogResult.Data is null)
             return catalogResult;
 
-        var primary = AvoidMixedContent(catalogResult.Data.Url, catalogResult.Data.StreamFormat);
+        var primary = AvoidMixedContent(ResolveCatalogSourceUrl(catalogResult.Data.Url, catalogUrl), catalogResult.Data.StreamFormat);
         var sources = catalogResult.Data.Sources
             .Select(source =>
             {
-                var resolvedSource = AvoidMixedContent(source.Url, source.StreamFormat);
+                var resolvedSource = AvoidMixedContent(ResolveCatalogSourceUrl(source.Url, catalogUrl), source.StreamFormat);
                 return new GetResolveUrlSourceResponseDto(
                     resolvedSource.Url,
                     resolvedSource.StreamFormat,
@@ -165,5 +165,14 @@ public class MediaDeliveryUrlResolver(
             .ToArray();
 
         return Result<GetResolveUrlResponseDto>.Success(primary with { Sources = sources });
+    }
+
+    private static string ResolveCatalogSourceUrl(string url, string? catalogUrl)
+    {
+        if (Uri.TryCreate(url, UriKind.Absolute, out _)
+            || !Uri.TryCreate(catalogUrl, UriKind.Absolute, out var catalogUri))
+            return url;
+
+        return new Uri(catalogUri, url).AbsoluteUri;
     }
 }
