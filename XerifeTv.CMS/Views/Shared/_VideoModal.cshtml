@@ -93,6 +93,7 @@
 
     // Sincronização de legenda: desloca o tempo das cues por um offset (+/-).
     let subtitleTrackEl = null
+    let currentSubtitleUrl = null
     let subtitleOffset = 0
     let subtitleOriginals = []
 
@@ -145,6 +146,27 @@
         subtitleOriginals = []
         const controls = document.getElementById('subtitleSyncControls')
         if (controls) controls.style.display = 'none'
+    }
+
+    function removeSubtitleTrack() {
+        if (subtitleTrackEl && player) {
+            try { player.removeRemoteTextTrack(subtitleTrackEl) } catch { }
+        }
+        resetSubtitleSync()
+    }
+
+    function restoreSubtitleTrack(showing = currentLang === 'leg') {
+        if (!player || !currentSubtitleUrl) return
+
+        removeSubtitleTrack()
+        const trackEl = player.addRemoteTextTrack({
+            kind: 'captions',
+            src: currentSubtitleUrl,
+            srclang: 'pt',
+            label: 'Português'
+        }, false)
+        setupSubtitleSync(trackEl)
+        if (showing && trackEl?.track) trackEl.track.mode = 'showing'
     }
 
     // Botão de menu "Fonte" na barra do player: lista todas as fontes do array e troca a fonte ao clicar.
@@ -381,6 +403,7 @@
 
         const type = mimeTypes[streamFormat]
         player.src(type ? { src: url, type } : { src: url })
+        if (currentSubtitleUrl) player.one('loadedmetadata', () => restoreSubtitleTrack())
 
         if (fonteButton) fonteButton.setCurrent(sourceUrl)
     }
@@ -582,7 +605,9 @@
 
             currentDubResolver = button.getAttribute('data-bs-video-resolver')
             currentLegResolver = button.getAttribute('data-bs-video-alternative-resolver')
+            currentSubtitleUrl = button.getAttribute('data-bs-video-subtitle') || null
             currentSourceUrl = null
+            removeSubtitleTrack()
             updateSourceMenu([])
 
             const hasDub = currentDubResolver && currentDubResolver.trim() !== ''
@@ -618,25 +643,14 @@
             if (initialResolver && initialResolver.trim() !== '') {
                 await resolveAndPlay(initialResolver, currentLang)
             }
-
-            const subtitle = button.getAttribute('data-bs-video-subtitle')
-
-            resetSubtitleSync()
-            if (subtitle) {
-                const trackEl = player.addRemoteTextTrack({
-                    kind: 'captions',
-                    src: subtitle,
-                    srclang: 'pt',
-                    label: 'Português'
-                }, false)
-                setupSubtitleSync(trackEl)
-            }
+            restoreSubtitleTrack(currentLang === 'leg')
         })
 
         modal.addEventListener('hide.bs.modal', () => {
             setLoading(false)
             hideError()
             resetSubtitleSync()
+            removeSubtitleTrack()
             if (player) {
                 player.pause()
                 player.reset()
@@ -666,11 +680,13 @@
                 btnLegEl?.classList.remove('active')
                 currentLang = 'dub'
                 await resolveAndPlay(currentDubResolver, lang)
+                restoreSubtitleTrack(false)
             } else if (lang === 'leg' && hasLeg) {
                 btnLegEl?.classList.add('active')
                 btnDubEl?.classList.remove('active')
                 currentLang = 'leg'
                 await resolveAndPlay(currentLegResolver, lang)
+                restoreSubtitleTrack(true)
             }
         }
 

@@ -20,6 +20,14 @@ public class MediaDeliveryUrlResolver(
 
     private GetResolveUrlResponseDto AvoidMixedContent(string url, string streamFormat)
     {
+        if (IsGaiaflixHls(url))
+        {
+            string gaiaflixBaseUrl = GetPublicBaseUrl();
+            string gaiaflixEncryptedUrl = CryptographyHelper.Encrypt(url, _configuration["SecuritySettings:ContentEncryptionKey"]!);
+            string gaiaflixProxyUrl = $"{gaiaflixBaseUrl}/MediaDeliveryProfiles/StreamGaiaflixHls/playlist.m3u8?u={Uri.EscapeDataString(gaiaflixEncryptedUrl)}";
+            return new(gaiaflixProxyUrl, "hls");
+        }
+
         if (string.IsNullOrWhiteSpace(url) || _playlistFormats.Contains(streamFormat ?? string.Empty))
             return new(url, streamFormat);
 
@@ -57,6 +65,11 @@ public class MediaDeliveryUrlResolver(
 
         return new(proxyPath, streamFormat);
     }
+
+    private static bool IsGaiaflixHls(string url)
+        => Uri.TryCreate(url, UriKind.Absolute, out var uri)
+            && uri.Host.Equals("gaiaflix.live", StringComparison.OrdinalIgnoreCase)
+            && uri.AbsolutePath.Equals("/api/gaiaflix-hls", StringComparison.OrdinalIgnoreCase);
 
     private string GetPublicBaseUrl()
     {

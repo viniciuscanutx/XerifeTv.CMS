@@ -273,4 +273,135 @@ public class MediaDeliveryProfilesController(
 
         return new EmptyResult();
     }
+
+    [AllowAnonymous]
+    [HttpGet("MediaDeliveryProfiles/StreamGaiaflixHls/{fileName}")]
+    public async Task<IActionResult> StreamGaiaflixHls(string fileName, string u)
+    {
+        string url;
+        try
+        {
+            url = CryptographyHelper.Decrypt(u, _configuration["SecuritySettings:ContentEncryptionKey"]!);
+        }
+        catch
+        {
+            return BadRequest();
+        }
+
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var targetUri)
+            || !targetUri.Host.Equals("gaiaflix.live", StringComparison.OrdinalIgnoreCase)
+            || !targetUri.AbsolutePath.Equals("/api/gaiaflix-hls", StringComparison.OrdinalIgnoreCase))
+            return BadRequest();
+
+        var client = _httpClientFactory.CreateClient(StreamHttpClientName);
+        using var upstreamRequest = new HttpRequestMessage(HttpMethod.Get, targetUri);
+
+        if (Request.Headers.TryGetValue("Range", out var rangeValues) && rangeValues.Count > 0)
+            upstreamRequest.Headers.TryAddWithoutValidation("Range", rangeValues.ToArray());
+
+        HttpResponseMessage upstreamResponse;
+        try
+        {
+            upstreamResponse = await client.SendAsync(upstreamRequest, HttpCompletionOption.ResponseHeadersRead, HttpContext.RequestAborted);
+        }
+        catch (OperationCanceledException)
+        {
+            return new EmptyResult();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning($"Failed to fetch Gaiaflix HLS from {targetUri}: {ex.Message}");
+            return StatusCode(502);
+        }
+
+        using (upstreamResponse)
+        {
+            if (!upstreamResponse.IsSuccessStatusCode)
+                return StatusCode((int)upstreamResponse.StatusCode);
+
+            var contentType = upstreamResponse.Content.Headers.ContentType?.MediaType ?? string.Empty;
+            if (contentType.Contains("mpegurl", StringComparison.OrdinalIgnoreCase))
+            {
+                var manifest = await upstreamResponse.Content.ReadAsStringAsync(HttpContext.RequestAborted);
+                var rewrittenManifest = RewriteGaiaflixManifest(manifest, targetUri);
+                Response.Headers.CacheControl = "no-cache, no-store";
+                return Content(rewrittenManifest, "application/vnd.apple.mpegurl", System.Text.Encoding.UTF8);
+            }
+
+            Response.StatusCode = (int)upstreamResponse.StatusCode;
+            Response.ContentType = string.IsNullOrWhiteSpace(contentType) ? "application/octet-stream" : contentType;
+
+            if (upstreamResponse.Content.Headers.ContentLength is long contentLength)
+                Response.ContentLength = contentLength;
+
+            foreach (var acceptRangesValue in upstreamResponse.Headers.AcceptRanges)
+                Response.Headers.Append("Accept-Ranges", acceptRangesValue);
+
+            if (upstreamResponse.Content.Headers.ContentRange is not null)
+                Response.Headers["Content-Range"] = upstreamResponse.Content.Headers.ContentRange.ToString();
+
+            try
+            {
+                await using var upstreamStream = await upstreamResponse.Content.ReadAsStreamAsync(HttpContext.RequestAborted);
+                await upstreamStream.CopyToAsync(Response.Body, HttpContext.RequestAborted);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+        }
+
+        return new EmptyResult();
+    }
+
+    private string RewriteGaiaflixManifest(string manifest, Uri baseUri)
+    {
+        var lines = manifest.Replace("\r\n", "\n").Split('\n');
+
+        for (var index = 0; index < lines.Length; index++)
+        {
+            var line = lines[index];
+            if (string.IsNullOrWhiteSpace(line))
+                continue;
+
+            if (line.StartsWith('#'))
+            {
+                var isMediaTrack = line.Contains("TYPE=SUBTITLES", StringComparison.OrdinalIgnoreCase)
+                    || line.Contains("TYPE=AUDIO", StringComparison.OrdinalIgnoreCase);
+                lines[index] = System.Text.RegularExpressions.Regex.Replace(
+                    line,
+                    "URI=\"(?<uri>[^\"]+)\"",
+                    match =>
+                    {
+                        var absoluteUrl = new Uri(baseUri, match.Groups["uri"].Value).AbsoluteUri;
+                        var resolvedUrl = isMediaTrack ? absoluteUrl : BuildGaiaflixProxyUrl(absoluteUrl);
+                        return $"URI=\"{resolvedUrl}\"";
+                    },
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                continue;
+            }
+
+            lines[index] = BuildGaiaflixProxyUrl(new Uri(baseUri, line.Trim()).AbsoluteUri);
+        }
+
+        return string.Join("\n", lines);
+    }
+
+    private string BuildGaiaflixProxyUrl(string url)
+    {
+        var encryptedUrl = CryptographyHelper.Encrypt(url, _configuration["SecuritySettings:ContentEncryptionKey"]!);
+        return $"{GetPublicBaseUrl()}/MediaDeliveryProfiles/StreamGaiaflixHls/playlist.m3u8?u={Uri.EscapeDataString(encryptedUrl)}";
+    }
+
+    private string GetPublicBaseUrl()
+    {
+        string scheme = Request.Headers.TryGetValue("X-Forwarded-Proto", out var proto) && proto.Count > 0
+            ? proto[0]!
+            : Request.Scheme;
+
+        string host = Request.Headers.TryGetValue("X-Forwarded-Host", out var forwardedHost) && forwardedHost.Count > 0
+            ? forwardedHost[0]!
+            : Request.Host.Value;
+
+        return $"{scheme}://{host}";
+    }
 }
