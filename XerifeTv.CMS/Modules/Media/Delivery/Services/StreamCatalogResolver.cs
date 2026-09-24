@@ -73,7 +73,21 @@ public sealed class StreamCatalogResolver(
                     payloadResult = await FetchCatalogPayloadAsync(client, fetchUri, cancellationToken);
                     if (payloadResult.IsSuccess)
                     {
-                        payloadResult = NormalizeFetchedPayload(payloadResult.Data!, fetchUri);
+                        var normalizedPayload = NormalizeFetchedPayload(payloadResult.Data!, fetchUri);
+                        if (normalizedPayload.IsFailure)
+                        {
+                            payloadResult = normalizedPayload;
+                            continue;
+                        }
+
+                        if (IsGaiaflixCatalog(catalogUriResult.Data!)
+                            && !HasGaiaflixSources(normalizedPayload.Data!))
+                        {
+                            payloadResult = Result<string>.Failure(new Error("502", "A resposta da ponte não contém o catálogo Gaiaflix"));
+                            continue;
+                        }
+
+                        payloadResult = normalizedPayload;
                         break;
                     }
                 }
@@ -268,38 +282,42 @@ public sealed class StreamCatalogResolver(
             $"O catálogo de streams respondeu {(int)lastStatusCode}"));
     }
 
-    // O IP de datacenter do Render toma 403 do Cloudflare do froststream de forma
-    // intermitente e pegajosa. Se StreamCatalog:ProxyBaseUrl estiver configurado,
-    // o GET do catálogo sai por um proxy (Cloudflare Worker) que tem IP confiável,
-    // contornando o bloqueio. Sem a config, busca direto (comportamento local).
-    private Uri BuildFetchUri(Uri catalogUri)
+    private Uri? BuildProxyUri(Uri catalogUri)
     {
-        // Só os catálogos path-based (stremio: /stream/...) passam pelo Worker - eles ficam
-        // atrás do Cloudflare que bloqueia o IP do Render. Catálogos query-based (gaiaflix)
-        // vão DIRETO: roteados pelo worker, o gaiaflix devolve um stream "live" que trava
-        // (o dev, que busca direto, roda VOD perfeito). O cache do ResolveUrlFixed (memória)
-        // já evita martelar a API em replays.
-        if (!catalogUri.AbsolutePath.Contains("/stream/", StringComparison.OrdinalIgnoreCase))
-            return catalogUri;
-
         var proxyBaseUrl = _configuration["StreamCatalog:ProxyBaseUrl"];
         if (string.IsNullOrWhiteSpace(proxyBaseUrl)
             || !Uri.TryCreate(proxyBaseUrl.Trim(), UriKind.Absolute, out var proxyBase))
-            return catalogUri;
+            return null;
 
         var separator = string.IsNullOrEmpty(proxyBase.Query) ? "?" : "&";
         var proxied = $"{proxyBase.AbsoluteUri}{separator}url={Uri.EscapeDataString(catalogUri.AbsoluteUri)}";
         return new Uri(proxied);
     }
 
+    private Uri BuildFetchUri(Uri catalogUri)
+    {
+        if (!catalogUri.AbsolutePath.Contains("/stream/", StringComparison.OrdinalIgnoreCase))
+            return catalogUri;
+
+        return BuildProxyUri(catalogUri) ?? catalogUri;
+    }
+
     private IReadOnlyList<Uri> BuildFetchUris(Uri catalogUri)
     {
-        var primaryUri = BuildFetchUri(catalogUri);
         if (!IsGaiaflixCatalog(catalogUri))
-            return [primaryUri];
+            return [BuildFetchUri(catalogUri)];
 
-        var bridgeUrl = $"https://r.jina.ai/http://{catalogUri.Authority}{catalogUri.PathAndQuery}";
-        return [primaryUri, new Uri(bridgeUrl)];
+        var fetchUris = new List<Uri>();
+        var proxyUri = BuildProxyUri(catalogUri);
+        if (proxyUri is not null)
+            fetchUris.Add(proxyUri);
+
+        fetchUris.Add(catalogUri);
+        fetchUris.Add(new Uri($"https://r.jina.ai/http://{catalogUri.Authority}{catalogUri.PathAndQuery}"));
+
+        return fetchUris
+            .DistinctBy(uri => uri.AbsoluteUri, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
 
     private static bool IsGaiaflixCatalog(Uri uri)
@@ -317,6 +335,19 @@ public sealed class StreamCatalogResolver(
             return Result<string>.Failure(new Error("502", "A ponte da Gaiaflix não retornou JSON válido"));
 
         return Result<string>.Success(payload[jsonStart..(jsonEnd + 1)]);
+    }
+
+    private static bool HasGaiaflixSources(string payload)
+    {
+        try
+        {
+            var envelope = JsonSerializer.Deserialize<CatalogEnvelope>(payload, _jsonOptions);
+            return envelope?.Sources is { Count: > 0 };
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
     }
 
     private Result<Uri> CreateCatalogUri(string url)

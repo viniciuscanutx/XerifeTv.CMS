@@ -347,10 +347,30 @@
 
     const resolvedSourceCache = new Map()
 
+    function isGaiaflixHlsUrl(value) {
+        try {
+            const parsedUrl = new URL(value, window.location.origin)
+            return parsedUrl.hostname.toLowerCase() === 'gaiaflix.live'
+                && parsedUrl.pathname.toLowerCase() === '/api/gaiaflix-hls'
+        } catch {
+            return false
+        }
+    }
+
     async function getPlayableSource(source) {
         const sourceUrl = extractSourceUrl(source.url || source.Url)
         if (!sourceUrl) return null
         if (resolvedSourceCache.has(sourceUrl)) return resolvedSourceCache.get(sourceUrl)
+
+        if (isGaiaflixHlsUrl(sourceUrl)) {
+            const promise = Promise.resolve({
+                ...source,
+                url: sourceUrl,
+                streamFormat: 'hls'
+            })
+            resolvedSourceCache.set(sourceUrl, promise)
+            return promise
+        }
 
         const streamFormat = (source.streamFormat || source.StreamFormat || getStreamFormat(sourceUrl)).toLowerCase()
         const params = new URLSearchParams({
