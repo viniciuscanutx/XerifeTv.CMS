@@ -266,9 +266,14 @@ public sealed class StreamCatalogResolver(
     // contornando o bloqueio. Sem a config, busca direto (comportamento local).
     private Uri BuildFetchUri(Uri catalogUri)
     {
-        // Todos os catálogos passam pelo Worker quando ProxyBaseUrl está setado: além de
-        // contornar o bloqueio de IP do froststream, o Worker cacheia no KV pra não martelar
-        // a API dos CDNs (inclusive gaiaflix). Cada host precisa estar na allowlist do Worker.
+        // Só os catálogos path-based (stremio: /stream/...) passam pelo Worker - eles ficam
+        // atrás do Cloudflare que bloqueia o IP do Render. Catálogos query-based (gaiaflix)
+        // vão DIRETO: roteados pelo worker, o gaiaflix devolve um stream "live" que trava
+        // (o dev, que busca direto, roda VOD perfeito). O cache do ResolveUrlFixed (memória)
+        // já evita martelar a API em replays.
+        if (!catalogUri.AbsolutePath.Contains("/stream/", StringComparison.OrdinalIgnoreCase))
+            return catalogUri;
+
         var proxyBaseUrl = _configuration["StreamCatalog:ProxyBaseUrl"];
         if (string.IsNullOrWhiteSpace(proxyBaseUrl)
             || !Uri.TryCreate(proxyBaseUrl.Trim(), UriKind.Absolute, out var proxyBase))
