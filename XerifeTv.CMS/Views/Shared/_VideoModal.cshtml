@@ -54,6 +54,15 @@
                     </button>
                 </div>
             </div>
+            <div class="modal-footer justify-content-center gap-2" id="subtitleSyncControls" style="display: none;">
+                <span class="text-muted small"><i class="fa-solid fa-closed-captioning me-1"></i> Sincronizar legenda:</span>
+                <div class="btn-group btn-group-sm" role="group" aria-label="Sincronizar legenda">
+                    <button type="button" class="btn btn-outline-secondary" id="subOffsetMinus" title="Atrasar 0,5s">−0,5s</button>
+                    <button type="button" class="btn btn-outline-secondary" id="subOffsetReset" title="Zerar">0s</button>
+                    <button type="button" class="btn btn-outline-secondary" id="subOffsetPlus" title="Adiantar 0,5s">+0,5s</button>
+                </div>
+                <span class="small" id="subOffsetValue" style="min-width: 3.5rem; text-align: left;">0,0s</span>
+            </div>
         </div>
     </div>
 </div>
@@ -81,6 +90,62 @@
     let currentSources = []
     let currentSourceUrl = null
     let fonteButton = null
+
+    // Sincronização de legenda: desloca o tempo das cues por um offset (+/-).
+    let subtitleTrackEl = null
+    let subtitleOffset = 0
+    let subtitleOriginals = []
+
+    function updateSubtitleOffsetDisplay() {
+        const el = document.getElementById('subOffsetValue')
+        if (el) el.textContent = `${subtitleOffset > 0 ? '+' : ''}${subtitleOffset.toFixed(1).replace('.', ',')}s`
+    }
+
+    function captureSubtitleOriginals() {
+        subtitleOriginals = []
+        const track = subtitleTrackEl && subtitleTrackEl.track
+        if (!track || !track.cues) return
+        for (let i = 0; i < track.cues.length; i++) {
+            const cue = track.cues[i]
+            subtitleOriginals.push({ cue, start: cue.startTime, end: cue.endTime })
+        }
+    }
+
+    function applySubtitleOffset() {
+        // captura os tempos originais na primeira vez que as cues existirem
+        if (subtitleOriginals.length === 0) captureSubtitleOriginals()
+        subtitleOriginals.forEach(o => {
+            o.cue.startTime = Math.max(0, o.start + subtitleOffset)
+            o.cue.endTime = Math.max(0, o.end + subtitleOffset)
+        })
+        updateSubtitleOffsetDisplay()
+    }
+
+    function changeSubtitleOffset(delta) {
+        subtitleOffset = delta === 0 ? 0 : Math.round((subtitleOffset + delta) * 10) / 10
+        applySubtitleOffset()
+    }
+
+    function setupSubtitleSync(trackEl) {
+        subtitleTrackEl = trackEl
+        subtitleOffset = 0
+        subtitleOriginals = []
+        const controls = document.getElementById('subtitleSyncControls')
+        if (controls) controls.style.display = 'flex'
+        updateSubtitleOffsetDisplay()
+        // as cues só carregam quando a legenda é ativada; reaplica o offset quando carregarem
+        if (trackEl && trackEl.track) {
+            trackEl.addEventListener('load', () => { subtitleOriginals = []; applySubtitleOffset() })
+        }
+    }
+
+    function resetSubtitleSync() {
+        subtitleTrackEl = null
+        subtitleOffset = 0
+        subtitleOriginals = []
+        const controls = document.getElementById('subtitleSyncControls')
+        if (controls) controls.style.display = 'none'
+    }
 
     // Botão de menu "Fonte" na barra do player: lista todas as fontes do array e troca a fonte ao clicar.
     function ensureFonteComponent() {
@@ -323,7 +388,8 @@
     function isCatalogUrl(value) {
         if (!value) return false
         const normalized = String(value).toLowerCase()
-        return normalized.includes('/stream/') || normalized.endsWith('.json')
+        // só o endpoint de catálogo do gaiaflix (movie-source), não o de HLS
+        return normalized.includes('/stream/') || normalized.endsWith('.json') || normalized.includes('gaiaflix-movie-source')
     }
 
     // O froststream bloqueia o IP de datacenter do Render/Worker de forma intermitente,
@@ -334,7 +400,9 @@
     function catalogHasStreams(text) {
         try {
             const parsed = JSON.parse(text)
-            return Array.isArray(parsed.streams) && parsed.streams.length > 0
+            // stremio usa "streams", gaiaflix usa "sources"
+            return (Array.isArray(parsed.streams) && parsed.streams.length > 0)
+                || (Array.isArray(parsed.sources) && parsed.sources.length > 0)
         } catch {
             return false
         }
@@ -553,19 +621,22 @@
 
             const subtitle = button.getAttribute('data-bs-video-subtitle')
 
+            resetSubtitleSync()
             if (subtitle) {
-                player.addRemoteTextTrack({
+                const trackEl = player.addRemoteTextTrack({
                     kind: 'captions',
                     src: subtitle,
                     srclang: 'pt',
                     label: 'Português'
                 }, false)
+                setupSubtitleSync(trackEl)
             }
         })
 
         modal.addEventListener('hide.bs.modal', () => {
             setLoading(false)
             hideError()
+            resetSubtitleSync()
             if (player) {
                 player.pause()
                 player.reset()
@@ -576,6 +647,10 @@
     document.addEventListener('DOMContentLoaded', () => {
         const btnDub = document.getElementById('btnDub')
         const btnLeg = document.getElementById('btnLeg')
+
+        document.getElementById('subOffsetMinus')?.addEventListener('click', () => changeSubtitleOffset(-0.5))
+        document.getElementById('subOffsetPlus')?.addEventListener('click', () => changeSubtitleOffset(0.5))
+        document.getElementById('subOffsetReset')?.addEventListener('click', () => changeSubtitleOffset(0))
 
         async function switchLang(lang) {
             if (lang === currentLang) return

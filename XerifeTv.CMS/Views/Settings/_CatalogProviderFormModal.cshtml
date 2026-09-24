@@ -66,6 +66,28 @@
 
                 <div class="row mb-3">
                     <div class="col-6">
+                        <label for="cp-idType-@Model?.Id" class="form-label">Tipo de ID</label>
+                        @{ var isTmdb = string.Equals(Model?.IdType, "tmdb", StringComparison.OrdinalIgnoreCase); }
+                        <select class="form-select shadow-sm" id="cp-idType-@Model?.Id" name="idType">
+                            @if (isTmdb)
+                            {
+                                <option value="imdb">IMDb</option>
+                                <option value="tmdb" selected>TMDB</option>
+                            }
+                            else
+                            {
+                                <option value="imdb" selected>IMDb</option>
+                                <option value="tmdb">TMDB</option>
+                            }
+                        </select>
+                        <small class="text-muted d-block mt-1">
+                            IMDb (ex: froststream, fenixflix) usa <code>tt...</code>; TMDB (ex: gaiaflix) usa o id numérico.
+                        </small>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-6">
                         <label for="cp-order-@Model?.Id" class="form-label">Ordem de fallback</label>
                         <input type="number"
                                class="form-control shadow-sm"

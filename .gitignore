@@ -1,4 +1,9 @@
 ###################
+# secrets (local dev) #
+###################
+appsettings.Development.json
+
+###################
 # compiled source #
 ###################
 /.vs

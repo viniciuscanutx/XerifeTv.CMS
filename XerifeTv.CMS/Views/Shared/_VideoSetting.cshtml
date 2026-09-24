@@ -32,16 +32,14 @@
                    id="@($"{prefix}_videoUrl")"
                    name="videoUrl"
                    placeholder="https://video.com/video.m3u8"
-                   value="@Model?.VideoUrl"
-                   @(isDeliverySelected ? "" : "required")>
+                   value="@Model?.VideoUrl">
         </div>
 
         <div class="col-6">
             <label for="@($"{prefix}_videoStreamFormat")" class="form-label">Stream Format</label>
             <select class="form-select"
                     id="@($"{prefix}_videoStreamFormat")"
-                    name="videoStreamFormat"
-                    @(isDeliverySelected || isStreamCatalog ? "" : "required")>
+                    name="videoStreamFormat">
 
                 <option selected value="">Selecione uma opção</option>
 
@@ -87,17 +85,17 @@
                 <select class="form-select form-select-sm" id="@($"{prefix}_catalogProvider")">
                     @if (!catalogProviders.Any() && !string.IsNullOrWhiteSpace(streamCatalogBaseUrl))
                     {
-                        <option value="@streamCatalogBaseUrl" selected>Padrão</option>
+                        <option value="@streamCatalogBaseUrl" data-id-type="imdb" selected>Padrão</option>
                     }
                     @foreach (var p in catalogProviders)
                     {
                         if (p.IsDefault)
                         {
-                            <option value="@p.BaseUrl" selected>@p.Name</option>
+                            <option value="@p.BaseUrl" data-id-type="@p.IdType" selected>@p.Name</option>
                         }
                         else
                         {
-                            <option value="@p.BaseUrl">@p.Name</option>
+                            <option value="@p.BaseUrl" data-id-type="@p.IdType">@p.Name</option>
                         }
                     }
                 </select>
@@ -200,7 +198,7 @@
 
                     <input id="@($"{prefix}_subtitle_file")"
                            type="file"
-                           accept=".vtt"
+                           accept=".vtt,.srt"
                            style="display: none" />
 
                     <button id="@($"{prefix}_btn_subtitle_file")"

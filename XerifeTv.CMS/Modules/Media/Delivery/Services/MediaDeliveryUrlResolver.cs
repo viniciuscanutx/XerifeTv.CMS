@@ -135,9 +135,9 @@ public class MediaDeliveryUrlResolver(
         return Result<GetResolveUrlResponseDto>.Success(AvoidMixedContent(finalUrlResult.Data!, streamFormat));
     }
 
-    public async Task<Result<GetResolveUrlResponseDto>> ResolveStreamCatalogFromPayloadAsync(string payload, string streamFormat, string? providerName = null)
+    public async Task<Result<GetResolveUrlResponseDto>> ResolveStreamCatalogFromPayloadAsync(string payload, string streamFormat, string? providerName = null, string? catalogUrl = null)
     {
-        var catalogResult = await _streamCatalogResolver.ResolveFromPayloadAsync(payload, streamFormat, providerName);
+        var catalogResult = await _streamCatalogResolver.ResolveFromPayloadAsync(payload, streamFormat, providerName, catalogUrl);
         return BuildCatalogResponse(catalogResult);
     }
 

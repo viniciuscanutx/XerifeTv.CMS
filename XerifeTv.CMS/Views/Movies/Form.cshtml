@@ -88,6 +88,8 @@
                                    value="@Model?.MovieDto?.ImdbId"
                             @(isNameSearchDefault ? "" : "required")>
 
+                            <input type="hidden" name="tmdbId" id="tmdbId" value="@Model?.MovieDto?.TmdbId" />
+
                             <button id="btn-get-imdb"
                                     class="btn btn-success shadow-none"
                                     type="button">
@@ -374,6 +376,7 @@
             if (!response) return;
 
             $('#title').val(response.title);
+            $('#tmdbId').val(response.id || '');
             $('#categories').val(response.genres.map(g => g.name.toLowerCase()).join(', '));
             $('#categories').blur();
 
@@ -532,6 +535,7 @@
               if (!response) return;
 
               $('#imdbId').val(response.imdbId);
+              $('#tmdbId').val(result.id || response.id || '');
               $('#title').val(response.title);
               $('#categories').val(response.genres.map(g => g.name.toLowerCase()).join(', '));
               $('#categories').blur();

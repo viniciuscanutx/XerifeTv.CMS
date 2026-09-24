@@ -4,6 +4,9 @@ namespace XerifeTv.CMS.Modules.Integrations.Imdb.Dtos;
 
 public class GetMovieByImdbResponseDto
 {
+    [JsonProperty("id")]
+    public int Id { get; set; }
+
     [JsonProperty("imdb_id")]
     public string? ImdbId { get; set; }
 

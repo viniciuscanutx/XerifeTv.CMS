@@ -15,6 +15,9 @@ public class CatalogProviderEntity : BaseEntity
     /// </summary>
     public string BaseUrl { get; set; } = string.Empty;
 
+    /// <summary>Tipo de ID usado pra montar o link: "imdb" ou "tmdb".</summary>
+    public string IdType { get; set; } = "imdb";
+
     /// <summary>Provedor padrão (pré-selecionado nas telas de cadastro).</summary>
     public bool IsDefault { get; set; } = false;
 

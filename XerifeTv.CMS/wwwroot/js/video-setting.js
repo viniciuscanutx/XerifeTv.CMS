@@ -58,26 +58,39 @@
                 ? String($catalogProvider.val())
                 : String($catalogByImdb.data('catalog-base-url') || '');
             const baseUrl = providerBase.replace(/\/$/, '');
-            let imdbId = $catalogByImdb.data('catalog-imdb-id');
+
+            // tipo de ID do provedor selecionado (imdb | tmdb)
+            const selectedOption = $catalogProvider.length > 0 ? $catalogProvider.find('option:selected') : null;
+            const idType = selectedOption && selectedOption.data('id-type')
+                ? String(selectedOption.data('id-type')).toLowerCase()
+                : 'imdb';
 
             if (contentType === 'movie') {
-                imdbId = $('#imdbId').val();
-            }
+                // Provedor TMDB (ex: gaiaflix): usa o id do TMDB e o endpoint por query string.
+                if (idType === 'tmdb') {
+                    const tmdbId = String($('#tmdbId').val() || '').trim();
+                    if (!tmdbId) return null;
+                    return `${baseUrl}/api/gaiaflix-movie-source?id=${tmdbId}`;
+                }
 
-            imdbId = normalizeImdbId(imdbId);
-            if (!imdbId) return null;
-
-            if (contentType === 'movie') {
-                return `${baseUrl}/stream/movie/${imdbId}.json`.replace(/^\/stream/, 'stream');
+                const imdbId = normalizeImdbId($('#imdbId').val());
+                if (!imdbId) return null;
+                return `${baseUrl}/stream/movie/${imdbId}.json`;
             }
 
             if (contentType === 'series') {
+                // Provedores TMDB (gaiaflix) são só filme - sem link de série.
+                if (idType === 'tmdb') return null;
+
+                const imdbId = normalizeImdbId($catalogByImdb.data('catalog-imdb-id'));
+                if (!imdbId) return null;
+
                 const episodeId = String($catalogByImdb.data('catalog-episode-id') || '');
                 const season = $(`#season-${episodeId}`).val() || $catalogByImdb.data('catalog-season');
                 const episode = $(`#number-${episodeId}`).val() || $catalogByImdb.data('catalog-episode');
                 if (!season || !episode) return null;
 
-                return `${baseUrl}/stream/series/${imdbId}:${season}:${episode}.json`.replace(/^\/stream/, 'stream');
+                return `${baseUrl}/stream/series/${imdbId}:${season}:${episode}.json`;
             }
 
             return null;
@@ -141,8 +154,9 @@
                 $(`#${prefix}_mediaDeliveryProfileId`).val('');
                 $(`#${prefix}_mediaRoute`).val('');
 
-                $(`#${prefix}_videoUrl`).prop('required', true);
-                $(`#${prefix}_videoStreamFormat`).prop('required', !$catalogByImdb.prop('checked'));
+                // Link dublado não é obrigatório (pode ter só legendado, ou catálogo)
+                $(`#${prefix}_videoUrl`).prop('required', false);
+                $(`#${prefix}_videoStreamFormat`).prop('required', false);
                 $(`#${prefix}_mediaDeliveryProfileId`).prop('required', false);
                 $(`#${prefix}_mediaRoute`).prop('required', false);
                 $catalogByImdb.prop('disabled', false);

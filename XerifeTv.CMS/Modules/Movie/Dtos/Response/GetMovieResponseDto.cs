@@ -7,6 +7,7 @@ public sealed class GetMovieResponseDto
 {
     public string Id { get; private set; } = string.Empty;
     public string ImdbId { get; private set; } = string.Empty;
+    public string TmdbId { get; private set; } = string.Empty;
     public string? FranchiseId { get; private set; }
     public string Title { get; private set; } = string.Empty;
     public string Synopsis { get; private set; } = string.Empty;
@@ -30,7 +31,9 @@ public sealed class GetMovieResponseDto
     public string? UrlResolverPath
         => !string.IsNullOrWhiteSpace(MediaDeliveryProfileId)
             ? $"/MediaDeliveryProfiles/ResolveUrl?mediaDeliveryProfileId={MediaDeliveryProfileId}&mediaPath={Uri.EscapeDataString(MediaRoute ?? "")}&isCached=false"
-            : $"/MediaDeliveryProfiles/ResolveUrlFixed?urlFixed={Uri.EscapeDataString(Video?.Url ?? "")}&streamFormat={Video?.StreamFormat}&followRedirect={Video?.FollowRedirect ?? false}&isCached=false";
+            : !string.IsNullOrWhiteSpace(Video?.Url)
+                ? $"/MediaDeliveryProfiles/ResolveUrlFixed?urlFixed={Uri.EscapeDataString(Video.Url)}&streamFormat={Video?.StreamFormat}&followRedirect={Video?.FollowRedirect ?? false}&isCached=false"
+                : null;
 
     public string? AlternativeUrlResolverPath
         => !string.IsNullOrWhiteSpace(AlternativeVideoUrl)
@@ -43,6 +46,7 @@ public sealed class GetMovieResponseDto
         {
             Id = entity.Id,
             ImdbId = entity.ImdbId,
+            TmdbId = entity.TmdbId,
             FranchiseId = entity.FranchiseId,
             Title = entity.Title,
             Synopsis = entity.Synopsis,

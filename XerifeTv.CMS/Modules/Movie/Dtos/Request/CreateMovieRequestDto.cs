@@ -5,6 +5,7 @@ namespace XerifeTv.CMS.Modules.Movie.Dtos.Request;
 public class CreateMovieRequestDto
 {
     public string ImdbId { get; init; } = string.Empty;
+    public string TmdbId { get; init; } = string.Empty;
     public string Title { get; init; } = string.Empty;
     public string Synopsis { get; init; } = string.Empty;
     public string Categories { get; init; } = string.Empty;
@@ -37,6 +38,7 @@ public class CreateMovieRequestDto
         {
             Title = Title,
             ImdbId = ImdbId,
+            TmdbId = TmdbId,
             FranchiseId = string.IsNullOrWhiteSpace(FranchiseId) ? null : FranchiseId,
             Synopsis = Synopsis,
             Categories = categorieList,

@@ -34,7 +34,10 @@ public sealed class StreamCatalogResolver(
         var normalizedUrl = url.Trim();
         return normalizedUrl.Contains("/stream/", StringComparison.OrdinalIgnoreCase)
             || normalizedUrl.StartsWith("stream/", StringComparison.OrdinalIgnoreCase)
-            || normalizedUrl.EndsWith(".json", StringComparison.OrdinalIgnoreCase);
+            || normalizedUrl.EndsWith(".json", StringComparison.OrdinalIgnoreCase)
+            // só o endpoint de catálogo do gaiaflix - o de HLS (gaiaflix-hls) NÃO é catálogo,
+            // senão o player tentaria parsear o m3u8 como JSON e quebraria.
+            || normalizedUrl.Contains("gaiaflix-movie-source", StringComparison.OrdinalIgnoreCase);
     }
 
     public async Task<Result<GetResolveUrlResponseDto>> ResolveAsync(
@@ -83,7 +86,7 @@ public sealed class StreamCatalogResolver(
                 continue;
             }
 
-            var resolveResult = await ResolveFromPayloadAsync(payloadResult.Data!, fallbackStreamFormat, candidate.ProviderName, cancellationToken);
+            var resolveResult = await ResolveFromPayloadAsync(payloadResult.Data!, fallbackStreamFormat, candidate.ProviderName, candidate.Url, cancellationToken);
             if (resolveResult.IsSuccess)
                 return resolveResult;
 
@@ -102,30 +105,41 @@ public sealed class StreamCatalogResolver(
         var trimmed = (url ?? string.Empty).Trim();
         bool Exists(string u) => candidates.Any(c => string.Equals(c.Url, u, StringComparison.OrdinalIgnoreCase));
 
+        var providersResult = await _catalogProviderService.GetAllAsync(isIncludeDisabled: false);
+        var providers = providersResult.IsSuccess && providersResult.Data is not null
+            ? providersResult.Data.ToArray()
+            : [];
+
+        // Fallback só faz sentido pros catálogos path-based (stremio): troca a base mantendo
+        // o sufixo /stream/...json. gaiaflix (query-based) não entra nesse loop.
         var suffixIndex = trimmed.IndexOf("/stream/", StringComparison.OrdinalIgnoreCase);
         if (suffixIndex >= 0)
         {
             var suffix = trimmed[suffixIndex..];
-            var providersResult = await _catalogProviderService.GetAllAsync(isIncludeDisabled: false);
-
-            if (providersResult.IsSuccess && providersResult.Data is not null)
+            foreach (var provider in providers)
             {
-                foreach (var provider in providersResult.Data)
-                {
-                    if (string.IsNullOrWhiteSpace(provider.BaseUrl)) continue;
+                if (string.IsNullOrWhiteSpace(provider.BaseUrl)) continue;
 
-                    var candidate = $"{provider.BaseUrl.TrimEnd('/')}{suffix}";
-                    if (!Exists(candidate))
-                        candidates.Add((candidate, provider.Name));
-                }
+                var candidate = $"{provider.BaseUrl.TrimEnd('/')}{suffix}";
+                if (!Exists(candidate))
+                    candidates.Add((candidate, provider.Name));
             }
         }
 
         if (!Exists(trimmed))
-            candidates.Add((trimmed, null));
+            candidates.Add((trimmed, ProviderNameForUrl(providers, trimmed)));
 
         return candidates;
     }
+
+    private static string? ProviderNameForUrl(
+        IEnumerable<XerifeTv.CMS.Modules.CatalogProvider.Dtos.Response.GetCatalogProviderResponseDto> providers, string url)
+        => providers
+            .Where(p => !string.IsNullOrWhiteSpace(p.BaseUrl)
+                        && url.StartsWith(p.BaseUrl.TrimEnd('/'), StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(p => p.BaseUrl.Length)
+            .Select(p => p.Name)
+            .FirstOrDefault();
 
     // Resolve a partir de um catálogo JÁ baixado (o navegador do admin busca o .json
     // direto do froststream - IP residencial nunca toma 403 - e manda o payload pro
@@ -135,6 +149,7 @@ public sealed class StreamCatalogResolver(
         string payload,
         string fallbackStreamFormat,
         string? providerName = null,
+        string? catalogUrl = null,
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(payload))
@@ -142,12 +157,18 @@ public sealed class StreamCatalogResolver(
 
         try
         {
-            var catalog = JsonSerializer.Deserialize<StreamCatalogResponse>(payload, _jsonOptions);
+            var envelope = JsonSerializer.Deserialize<CatalogEnvelope>(payload, _jsonOptions);
 
-            if (catalog?.Streams is null || catalog.Streams.Count == 0)
+            // Formato gaiaflix: tem "sources" (url relativo + quality + type). Já vêm resolvidas,
+            // então não precisa probe - só monta as fontes prefixando a base nas URLs relativas.
+            if (envelope?.Sources is { Count: > 0 })
+                return BuildGaiaflixResult(envelope.Sources, providerName, catalogUrl, fallbackStreamFormat);
+
+            // Formato stremio (froststream/fenixflix): "streams" com arquivos diretos - probe cada um.
+            if (envelope?.Streams is null || envelope.Streams.Count == 0)
                 return Result<GetResolveUrlResponseDto>.Failure(new Error("404", "O catálogo não possui streams"));
 
-            var candidates = catalog.Streams
+            var candidates = envelope.Streams
                 .Select((stream, index) => CreateCandidate(stream, index, fallbackStreamFormat, providerName))
                 .Where(candidate => candidate is not null)
                 .Cast<StreamCandidate>()
@@ -171,35 +192,7 @@ public sealed class StreamCatalogResolver(
             if (functionalSources.Length == 0)
                 return Result<GetResolveUrlResponseDto>.Failure(new Error("502", "Nenhum stream do catálogo está funcional"));
 
-            // Garante rótulos únicos (fontes com o mesmo nome viram "Nome (2)", "Nome (3)"...).
-            var usedLabels = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-            var sources = functionalSources
-                .Select(candidate =>
-                {
-                    var label = candidate.SourceName;
-                    if (usedLabels.TryGetValue(label, out var count))
-                    {
-                        usedLabels[label] = count + 1;
-                        label = $"{label} ({count + 1})";
-                    }
-                    else
-                    {
-                        usedLabels[label] = 1;
-                    }
-
-                    return new GetResolveUrlSourceResponseDto(
-                        candidate.Url,
-                        candidate.StreamFormat,
-                        label);
-                })
-                .ToArray();
-
-            var primary = sources[0];
-            return Result<GetResolveUrlResponseDto>.Success(
-                new GetResolveUrlResponseDto(primary.Url, primary.StreamFormat)
-                {
-                    Sources = sources
-                });
+            return BuildResult(functionalSources.Select(c => (c.Url, c.StreamFormat, c.SourceName)));
         }
         catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
@@ -273,6 +266,9 @@ public sealed class StreamCatalogResolver(
     // contornando o bloqueio. Sem a config, busca direto (comportamento local).
     private Uri BuildFetchUri(Uri catalogUri)
     {
+        // Todos os catálogos passam pelo Worker quando ProxyBaseUrl está setado: além de
+        // contornar o bloqueio de IP do froststream, o Worker cacheia no KV pra não martelar
+        // a API dos CDNs (inclusive gaiaflix). Cada host precisa estar na allowlist do Worker.
         var proxyBaseUrl = _configuration["StreamCatalog:ProxyBaseUrl"];
         if (string.IsNullOrWhiteSpace(proxyBaseUrl)
             || !Uri.TryCreate(proxyBaseUrl.Trim(), UriKind.Absolute, out var proxyBase))
@@ -330,6 +326,82 @@ public sealed class StreamCatalogResolver(
             quality.Rank,
             index,
             sourceName);
+    }
+
+    // Monta o resultado final a partir de (url, formato, rótulo), garantindo rótulos únicos.
+    private static Result<GetResolveUrlResponseDto> BuildResult(IEnumerable<(string Url, string Format, string Label)> items)
+    {
+        var used = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        var sources = items
+            .Select(item =>
+            {
+                var label = item.Label;
+                if (used.TryGetValue(label, out var count))
+                {
+                    used[label] = count + 1;
+                    label = $"{label} ({count + 1})";
+                }
+                else
+                {
+                    used[label] = 1;
+                }
+
+                return new GetResolveUrlSourceResponseDto(item.Url, item.Format, label);
+            })
+            .ToArray();
+
+        if (sources.Length == 0)
+            return Result<GetResolveUrlResponseDto>.Failure(new Error("502", "Nenhuma fonte funcional"));
+
+        var primary = sources[0];
+        return Result<GetResolveUrlResponseDto>.Success(
+            new GetResolveUrlResponseDto(primary.Url, primary.StreamFormat) { Sources = sources });
+    }
+
+    // gaiaflix: sources[] com url relativo, quality e type. Prefixa a base (origin do catálogo)
+    // nas URLs relativas; não faz probe (as URLs já são endpoints de stream do provedor).
+    private Result<GetResolveUrlResponseDto> BuildGaiaflixResult(
+        IEnumerable<GaiaflixSource> sources, string? providerName, string? catalogUrl, string fallbackStreamFormat)
+    {
+        var origin = GetOrigin(catalogUrl);
+
+        var items = sources
+            .Select(s => (Raw: (s.Url ?? string.Empty).Trim(), s.Quality, s.Type))
+            .Where(s => !string.IsNullOrWhiteSpace(s.Raw))
+            .Select(s =>
+            {
+                var abs = MakeAbsolute(s.Raw, origin);
+                var format = MapGaiaflixType(s.Type, fallbackStreamFormat);
+                var quality = string.IsNullOrWhiteSpace(s.Quality) ? "Auto" : s.Quality!.Trim();
+                var label = BuildSourceName(providerName, null, quality);
+                return (Url: abs, Format: format, Label: label);
+            })
+            .Where(s => !string.IsNullOrWhiteSpace(s.Url))
+            .Select(s => (s.Url!, s.Format, s.Label))
+            .ToArray();
+
+        if (items.Length == 0)
+            return Result<GetResolveUrlResponseDto>.Failure(new Error("404", "O catálogo não possui URLs de vídeo válidas"));
+
+        return BuildResult(items);
+    }
+
+    private static string? GetOrigin(string? url)
+        => Uri.TryCreate(url, UriKind.Absolute, out var uri) ? $"{uri.Scheme}://{uri.Authority}" : null;
+
+    private static string? MakeAbsolute(string url, string? origin)
+    {
+        if (Uri.TryCreate(url, UriKind.Absolute, out _)) return url;
+        if (string.IsNullOrWhiteSpace(origin)) return null;
+        return $"{origin!.TrimEnd('/')}/{url.TrimStart('/')}";
+    }
+
+    private static string MapGaiaflixType(string? type, string fallbackStreamFormat)
+    {
+        var t = (type ?? string.Empty).Trim().ToLowerInvariant();
+        if (t is "m3u8" or "hls") return "hls";
+        if (!string.IsNullOrWhiteSpace(t)) return t;
+        return string.IsNullOrWhiteSpace(fallbackStreamFormat) ? "mp4" : fallbackStreamFormat;
     }
 
     // Rótulo da fonte mostrado pro usuário. Prioriza o NOME DO PROVEDOR do CMS + qualidade
@@ -441,6 +513,16 @@ public sealed class StreamCatalogResolver(
 
         return string.IsNullOrWhiteSpace(fallbackStreamFormat) ? "mp4" : fallbackStreamFormat;
     }
+
+    // Envelope que cobre os dois formatos: stremio ("streams") e gaiaflix ("sources").
+    private sealed record CatalogEnvelope(
+        [property: JsonPropertyName("streams")] IReadOnlyCollection<StreamCatalogItem>? Streams,
+        [property: JsonPropertyName("sources")] IReadOnlyCollection<GaiaflixSource>? Sources);
+
+    private sealed record GaiaflixSource(
+        [property: JsonPropertyName("url")] string? Url,
+        [property: JsonPropertyName("quality")] string? Quality,
+        [property: JsonPropertyName("type")] string? Type);
 
     private sealed record StreamCatalogResponse(
         [property: JsonPropertyName("streams")] IReadOnlyCollection<StreamCatalogItem> Streams);

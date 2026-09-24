@@ -133,7 +133,7 @@ public class MediaDeliveryProfilesController(
             return Ok(responseCache);
 
         var providerName = await GetProviderNameForUrlAsync(dto.UrlFixed);
-        var response = await _urlResolver.ResolveStreamCatalogFromPayloadAsync(dto.Payload, dto.StreamFormat, providerName);
+        var response = await _urlResolver.ResolveStreamCatalogFromPayloadAsync(dto.Payload, dto.StreamFormat, providerName, dto.UrlFixed);
 
         if (response.IsFailure)
             return StatusCode(int.Parse(response.Error.Code), response.Error.Description);

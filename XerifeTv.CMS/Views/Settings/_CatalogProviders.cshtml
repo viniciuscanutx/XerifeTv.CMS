@@ -30,6 +30,7 @@
         <tr>
             <th class="text-center">Ordem</th>
             <th>Nome</th>
+            <th class="text-center">Tipo ID</th>
             <th>Base URL</th>
             <th class="text-center">Padrão</th>
             <th class="text-center">Status</th>
@@ -40,7 +41,7 @@
         @if (!Model.Any())
         {
             <tr>
-                <td colspan="6" class="text-center text-muted py-4">
+                <td colspan="7" class="text-center text-muted py-4">
                     Nenhum provedor cadastrado.
                 </td>
             </tr>
@@ -52,6 +53,9 @@
                 <tr>
                     <td class="text-center">@item.Order</td>
                     <td>@item.Name</td>
+                    <td class="text-center">
+                        <span class="badge bg-info text-dark">@item.IdType.ToUpperInvariant()</span>
+                    </td>
                     <td class="text-truncate" style="max-width: 320px;">
                         <code>@item.BaseUrl</code>
                     </td>
