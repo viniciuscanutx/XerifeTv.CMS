@@ -397,7 +397,10 @@
             headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
             body: JSON.stringify({ urlFixed: catalogUrl, streamFormat, followRedirect: false, payload })
         })
-        if (!response.ok) return []
+        if (!response.ok) {
+            console.warn('Servidor não validou as fontes:', response.status, await response.text())
+            return []
+        }
 
         const data = await response.json()
         return normalizeSources(data).map(s => ({ ...s, ready: true }))
