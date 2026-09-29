@@ -360,11 +360,62 @@
         }
     }
 
+    const DIRECT_PROBE_TIMEOUT_MS = 4000
+    const directReachCache = new Map()
+
+    // Testa se o navegador alcança a URL https (no-cors: só importa se a conexão abre).
+    // Aborta assim que chegam os headers pra não baixar o arquivo. Falha em host só-http
+    // (timeout/SSL na 443) e em redirect pra http (mixed content, ex: bestcine /r/).
+    async function canReachInBrowser(url) {
+        const controller = new AbortController()
+        const timer = setTimeout(() => controller.abort(), DIRECT_PROBE_TIMEOUT_MS)
+        try {
+            await fetch(url, { mode: 'no-cors', credentials: 'omit', cache: 'no-store', signal: controller.signal })
+            return true
+        } catch {
+            return false
+        } finally {
+            clearTimeout(timer)
+            controller.abort()
+        }
+    }
+
+    // Fonte montada no navegador: toca direto do host se ele responder em https;
+    // senão passa só essa fonte pelo proxy do servidor (StreamMedia).
+    async function resolveDirectSource(source, sourceUrl) {
+        if (!directReachCache.has(sourceUrl)) directReachCache.set(sourceUrl, canReachInBrowser(sourceUrl))
+        if (await directReachCache.get(sourceUrl)) return { ...source, url: sourceUrl }
+
+        const originalUrl = source.originalUrl || sourceUrl
+        const streamFormat = (source.streamFormat || 'mp4').toLowerCase()
+        // Sem extensão (ex: bestcine /r/<hash>) o servidor precisa seguir o redirect até o arquivo.
+        // Sem cache: o token do redirect muda a cada requisição.
+        const hasExtension = /\.[a-z0-9]{2,5}$/i.test(new URL(originalUrl).pathname)
+        const params = new URLSearchParams({
+            urlFixed: originalUrl,
+            streamFormat,
+            followRedirect: hasExtension ? 'false' : 'true',
+            isCached: 'false'
+        })
+
+        const response = await fetch('/MediaDeliveryProfiles/ResolveUrlFixed?' + params.toString(), {
+            credentials: 'same-origin',
+            headers: { Accept: 'application/json' }
+        })
+        if (!response.ok) throw new Error('Erro ao gerar o proxy da fonte')
+        const data = await response.json()
+
+        return {
+            ...source,
+            url: data.url || data.Url || sourceUrl,
+            streamFormat: data.streamFormat || data.StreamFormat || streamFormat
+        }
+    }
+
     async function getPlayableSource(source) {
         const sourceUrl = extractSourceUrl(source.url || source.Url)
         if (!sourceUrl) return null
-        // Fonte montada no navegador a partir do catálogo: já está pronta, vai direto pro player
-        if (source.direct) return { ...source, url: sourceUrl }
+        if (source.direct) return resolveDirectSource(source, sourceUrl)
         if (resolvedSourceCache.has(sourceUrl)) return resolvedSourceCache.get(sourceUrl)
 
         if (isGaiaflixHlsUrl(sourceUrl)) {
@@ -583,6 +634,7 @@
 
                 return {
                     url: toHttps(rawUrl),
+                    originalUrl: rawUrl,
                     streamFormat: getCatalogStreamFormat(rawUrl, fallbackStreamFormat),
                     rank: qualityRank(quality.key),
                     index,
@@ -596,6 +648,7 @@
                 usedLabels.set(item.baseLabel, count + 1)
                 return {
                     url: item.url,
+                    originalUrl: item.originalUrl,
                     streamFormat: item.streamFormat,
                     quality: count === 0 ? item.baseLabel : `${item.baseLabel} (${count + 1})`,
                     direct: true
