@@ -5,6 +5,7 @@
     var _catalogProviders = (await CatalogProviderService.GetAllAsync()).Data
         ?? Enumerable.Empty<XerifeTv.CMS.Modules.CatalogProvider.Dtos.Response.GetCatalogProviderResponseDto>();
     var _catalogProviderBasesJson = System.Text.Json.JsonSerializer.Serialize(_catalogProviders.Select(p => p.BaseUrl));
+    var _catalogProvidersJson = System.Text.Json.JsonSerializer.Serialize(_catalogProviders.Select(p => new { baseUrl = p.BaseUrl, name = p.Name }));
 }
 
 <div class="modal fade"
@@ -237,6 +238,8 @@
     const streamCatalogProxyBaseUrl = '@((Configuration["StreamCatalog:ProxyBaseUrl"] ?? string.Empty).TrimEnd('/'))'
     // Bases dos provedores na ordem de fallback (1, 2, 3...). Vazio = usa só a URL cadastrada.
     const CATALOG_PROVIDER_BASES = @Html.Raw(_catalogProviderBasesJson)
+    // Provedores (base + nome) pra rotular as fontes montadas no navegador
+    const CATALOG_PROVIDERS = @Html.Raw(_catalogProvidersJson)
 
     function setLoading(visible, text) {
         const overlay = document.getElementById('videoLoadingOverlay')
@@ -360,6 +363,8 @@
     async function getPlayableSource(source) {
         const sourceUrl = extractSourceUrl(source.url || source.Url)
         if (!sourceUrl) return null
+        // Fonte montada no navegador a partir do catálogo: já está pronta, vai direto pro player
+        if (source.direct) return { ...source, url: sourceUrl }
         if (resolvedSourceCache.has(sourceUrl)) return resolvedSourceCache.get(sourceUrl)
 
         if (isGaiaflixHlsUrl(sourceUrl)) {
@@ -493,10 +498,8 @@
 
         const urlFixed = parsed.searchParams.get('urlFixed')
         if (!isCatalogUrl(urlFixed)) return null
-        if (isGaiaflixCatalogUrl(urlFixed)) return null
 
         const streamFormat = parsed.searchParams.get('streamFormat') || 'mp4'
-        const followRedirect = (parsed.searchParams.get('followRedirect') || 'false').toLowerCase() === 'true'
 
         // Monta a lista de URLs candidatas: a URL cadastrada primeiro, depois cada provedor
         // (na ordem de fallback) + o sufixo /stream/...json extraído dela. Assim, se a
@@ -526,15 +529,78 @@
         // Nenhum provedor tinha o título: deixa cair no fallback do servidor
         if (!payload) return null
 
-        // Servidor monta as fontes (probe + proxy) a partir do catálogo escolhido
-        const response = await fetch('/MediaDeliveryProfiles/ResolveCatalogFromPayload', {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-            body: JSON.stringify({ urlFixed: chosenUrl, streamFormat, followRedirect, payload })
-        })
-        if (!response.ok) throw new Error('Falha ao resolver catálogo por payload')
-        return await response.json()
+        // Monta as fontes aqui mesmo e toca direto do host de vídeo - sem probe nem proxy
+        // (StreamMedia) no servidor, que em produção fazem o vídeo trafegar pelo Render.
+        const sources = buildSourcesFromCatalog(payload, chosenUrl, streamFormat)
+        if (sources.length === 0) return null
+
+        return { url: sources[0].url, streamFormat: sources[0].streamFormat, sources }
+    }
+
+    function getProviderName(catalogUrl) {
+        const match = (Array.isArray(CATALOG_PROVIDERS) ? CATALOG_PROVIDERS : [])
+            .filter(p => p.baseUrl && catalogUrl.toLowerCase().startsWith(String(p.baseUrl).replace(/\/$/, '').toLowerCase()))
+            .sort((a, b) => b.baseUrl.length - a.baseUrl.length)[0]
+        return match ? match.name : null
+    }
+
+    // Formato pela extensão do path; sem extensão (ex: /r/<hash>) usa o fallback cadastrado.
+    function getCatalogStreamFormat(url, fallback) {
+        try {
+            const lastSegment = new URL(url).pathname.split('/').pop() || ''
+            const dotIndex = lastSegment.lastIndexOf('.')
+            if (dotIndex > 0) return lastSegment.slice(dotIndex + 1).toLowerCase()
+        } catch { }
+        return fallback || 'mp4'
+    }
+
+    // Página do CMS é https: <video src="http://..."> seria bloqueado (mixed content).
+    function toHttps(url) {
+        return url.replace(/^http:\/\//i, 'https://')
+    }
+
+    function buildSourcesFromCatalog(payload, catalogUrl, fallbackStreamFormat) {
+        let streams
+        try {
+            streams = JSON.parse(payload).streams
+        } catch {
+            return []
+        }
+        if (!Array.isArray(streams)) return []
+
+        const providerName = getProviderName(catalogUrl)
+        const usedLabels = new Map()
+
+        return streams
+            .map((stream, index) => {
+                const rawUrl = extractSourceUrl(stream.url)
+                if (!/^https?:\/\//i.test(rawUrl)) return null
+
+                const quality = getQuality(stream.name, stream.title, rawUrl)
+                const baseLabel = providerName
+                    ? `${providerName} ${quality.label}`
+                    : ((stream.name || '').trim() || quality.label)
+
+                return {
+                    url: toHttps(rawUrl),
+                    streamFormat: getCatalogStreamFormat(rawUrl, fallbackStreamFormat),
+                    rank: qualityRank(quality.key),
+                    index,
+                    baseLabel
+                }
+            })
+            .filter(Boolean)
+            .sort((a, b) => (b.rank - a.rank) || (a.index - b.index))
+            .map(item => {
+                const count = usedLabels.get(item.baseLabel) || 0
+                usedLabels.set(item.baseLabel, count + 1)
+                return {
+                    url: item.url,
+                    streamFormat: item.streamFormat,
+                    quality: count === 0 ? item.baseLabel : `${item.baseLabel} (${count + 1})`,
+                    direct: true
+                }
+            })
     }
 
     async function resolveAndPlay(resolverUrl) {
