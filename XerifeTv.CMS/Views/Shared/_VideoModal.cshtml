@@ -342,7 +342,11 @@
             || (currentSources[0] && (currentSources[0].url || currentSources[0].Url))
             || null
 
-        fonteButton.setData(currentSources, initialUrl, async (source) => { await playSource(source) })
+        // Escolha manual no menu: se a fonte falhar ao preparar, segue pras próximas
+        fonteButton.setData(currentSources, initialUrl, source => {
+            playbackGeneration++
+            playFromIndex(currentSources.indexOf(source))
+        })
 
         if (currentSources.length > 1) fonteButton.show()
         else fonteButton.hide()
@@ -380,35 +384,8 @@
         }
     }
 
-    // Proxy local (tools/local-stream-proxy): roda na máquina do admin, como o streaming
-    // server do Stremio. Sai pelo IP residencial e http://127.0.0.1 não é mixed content.
-    const LOCAL_PROXY_BASE = 'http://127.0.0.1:11480'
-    const LOCAL_PROXY_TIMEOUT_MS = 800
-    let localProxyAvailable = null
-
-    function isLocalProxyAvailable() {
-        if (localProxyAvailable) return localProxyAvailable
-
-        const controller = new AbortController()
-        const timer = setTimeout(() => controller.abort(), LOCAL_PROXY_TIMEOUT_MS)
-        localProxyAvailable = fetch(`${LOCAL_PROXY_BASE}/health`, { signal: controller.signal, cache: 'no-store' })
-            .then(response => response.ok)
-            .catch(() => false)
-            .finally(() => clearTimeout(timer))
-            .then(isAvailable => {
-                // Não fixa o "não": se o admin abrir o proxy depois, o próximo play já usa
-                if (!isAvailable) localProxyAvailable = null
-                return isAvailable
-            })
-        return localProxyAvailable
-    }
-
-    function buildLocalProxyUrl(url, streamFormat) {
-        return `${LOCAL_PROXY_BASE}/stream/media.${streamFormat}?url=${encodeURIComponent(url)}`
-    }
-
     // Fonte montada no navegador: toca direto do host se ele responder em https;
-    // senão passa pelo proxy local (se estiver rodando) ou pelo do servidor (StreamMedia).
+    // senão passa pelo proxy do servidor (StreamMedia).
     async function resolveDirectSource(source, sourceUrl) {
         const originalUrl = source.originalUrl || sourceUrl
         // Sem extensão (ex: bestcine /r/<hash> -> cdn.../20144.mp4) é link de redirect: o servidor
@@ -424,13 +401,6 @@
         if (hasExtension && !directReachCache.has(sourceUrl)) directReachCache.set(sourceUrl, canReachInBrowser(sourceUrl))
         const reachable = hasExtension ? await directReachCache.get(sourceUrl) : await canReachInBrowser(sourceUrl)
         if (reachable) return { ...source, url: sourceUrl, streamFormat: hasExtension ? source.streamFormat : 'mp4' }
-
-        // Proxy local só pra arquivo progressivo: HLS referencia segmentos por URL relativa,
-        // que não passariam pelo proxy. Redirect sem extensão vai como mp4 (caso comum).
-        const localFormat = ((hasExtension && source.streamFormat) || 'mp4').toLowerCase()
-        if (!['hls', 'm3u8'].includes(localFormat) && await isLocalProxyAvailable()) {
-            return { ...source, url: buildLocalProxyUrl(originalUrl, localFormat), streamFormat: localFormat }
-        }
 
         // Sem extensão o formato real vem do servidor (extensão do arquivo final)
         const streamFormat = ((hasExtension && source.streamFormat) || 'mp4').toLowerCase()
@@ -494,6 +464,54 @@
 
         resolvedSourceCache.set(sourceUrl, promise)
         return promise
+    }
+
+    // Incrementa a cada novo play/fechamento: interrompe tentativas de um play anterior
+    let playbackGeneration = 0
+
+    function getSourceUrl(source) {
+        return source.url || source.Url
+    }
+
+    // Tenta as fontes a partir de startIndex até uma aceitar. A que falha ao preparar
+    // (ex: proxy do servidor recusou) sai do menu e a próxima assume a mesma posição.
+    async function playFromIndex(startIndex) {
+        const generation = playbackGeneration
+        let index = Math.max(0, startIndex)
+
+        while (index < currentSources.length) {
+            const source = currentSources[index]
+            try {
+                await playSource(source)
+                return
+            } catch (err) {
+                if (generation !== playbackGeneration) return
+                console.warn('Fonte descartada:', getSourceUrl(source), err)
+                const remaining = currentSources.filter(s => s !== source)
+                // Se não saiu da lista (não deveria), avança pra não repetir a mesma
+                if (remaining.length === currentSources.length) index++
+                updateSourceMenu(remaining)
+                setLoading(true, 'Tentando outra fonte...')
+            }
+        }
+
+        if (generation === playbackGeneration) showError('Não foi possível carregar o vídeo em nenhuma fonte.')
+    }
+
+    // Player não conseguiu tocar a fonte atual: tira do menu e segue pras próximas
+    function discardCurrentAndPlayNext() {
+        const failedIndex = currentSources.findIndex(s => getSourceUrl(s) === currentSourceUrl)
+        if (failedIndex < 0) {
+            showError('Não foi possível carregar o vídeo em nenhuma fonte.')
+            return
+        }
+
+        console.warn('Fonte falhou, tentando a próxima:', currentSourceUrl)
+        setLoading(true, 'Tentando outra fonte...')
+        const failedSource = currentSources[failedIndex]
+        currentSourceUrl = null
+        updateSourceMenu(currentSources.filter(s => s !== failedSource))
+        playFromIndex(failedIndex)
     }
 
     async function playSource(source) {
@@ -667,6 +685,8 @@
 
         return streams
             .map((stream, index) => {
+                // Magnet/P2P (infoHash, sem url) e notWebReady não tocam no navegador
+                if (stream.behaviorHints && stream.behaviorHints.notWebReady) return null
                 const rawUrl = extractSourceUrl(stream.url)
                 if (!/^https?:\/\//i.test(rawUrl)) return null
 
@@ -700,6 +720,7 @@
     }
 
     async function resolveAndPlay(resolverUrl) {
+        playbackGeneration++
         setLoading(true, 'Carregando vídeo...')
         try {
             let data = null
@@ -723,8 +744,8 @@
 
             if (sources.length > 0) {
                 updateSourceMenu(sources)
-                await playSource(sources[0])
-                setLoading(false)
+                // O loading some pelos eventos playing/loadeddata do player
+                await playFromIndex(0)
                 return
             }
 
@@ -767,19 +788,9 @@
                 fonteButton = player.controlBar.addChild('FonteMenuButton', {}, insertIndex)
                 fonteButton.hide()
 
-                // Auto-fallback: se a fonte atual falhar, tenta a próxima da lista.
-                // Só mostra erro quando todas as fontes falharem.
-                player.on('error', () => {
-                    const idx = currentSources.findIndex(s => (s.url || s.Url) === currentSourceUrl)
-                    const next = idx >= 0 ? currentSources[idx + 1] : null
-                    if (next) {
-                        console.warn('Fonte falhou, tentando a próxima:', currentSourceUrl)
-                        setLoading(true, 'Tentando outra fonte...')
-                        playSource(next)
-                    } else {
-                        showError('Não foi possível carregar o vídeo em nenhuma fonte.')
-                    }
-                })
+                // Auto-fallback: se a fonte atual falhar, tenta TODAS as seguintes.
+                // Só mostra erro quando nenhuma fonte tocar.
+                player.on('error', () => discardCurrentAndPlayNext())
 
                 player.on('playing', () => setLoading(false))
                 player.on('loadeddata', () => setLoading(false))
@@ -829,6 +840,7 @@
         })
 
         modal.addEventListener('hide.bs.modal', () => {
+            playbackGeneration++
             setLoading(false)
             hideError()
             resetSubtitleSync()
