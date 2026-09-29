@@ -158,7 +158,9 @@ public static class ConfigureServices
 		services
 			.AddHttpClient(StreamCatalogResolver.HttpClientName, client =>
 			{
-				client.Timeout = TimeSpan.FromSeconds(10);
+				// bestcine gera o catálogo na hora no primeiro acesso ao episódio (~7-10s+);
+				// com 10s o CMS cortava antes do Worker responder e gravar no KV.
+				client.Timeout = TimeSpan.FromSeconds(30);
 				ApplyBrowserOriginHeaders(client);
 			})
 			.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler

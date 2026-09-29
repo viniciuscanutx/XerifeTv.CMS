@@ -45,9 +45,8 @@ public sealed class StreamCatalogResolver(
         string fallbackStreamFormat,
         CancellationToken cancellationToken = default)
     {
-        // Tenta os provedores na ordem de fallback (1, 2, 3...). Se um não tiver o título
-        // (catálogo vazio) ou não tiver fonte funcional, passa pro próximo. A URL cadastrada
-        // entra por último como garantia.
+        // Tenta primeiro a URL cadastrada; se ela não tiver o título (catálogo vazio) ou não
+        // tiver fonte funcional, passa pros provedores na ordem de fallback (1, 2, 3...).
         var candidateUrls = await BuildProviderCandidateUrlsAsync(url);
 
         Result<GetResolveUrlResponseDto> lastResult =
@@ -118,9 +117,9 @@ public sealed class StreamCatalogResolver(
         return lastResult;
     }
 
-    // Monta as URLs candidatas: cada provedor (na ordem) com o sufixo /stream/...json
-    // da URL cadastrada, + a URL original por último. Assim o fallback busca o mesmo
-    // título em cada provedor até achar.
+    // Monta as URLs candidatas: a URL cadastrada primeiro, depois cada provedor (na ordem)
+    // com o sufixo /stream/...json dela. Assim o fallback busca o mesmo título em cada
+    // provedor até achar.
     private async Task<IReadOnlyList<(string Url, string? ProviderName)>> BuildProviderCandidateUrlsAsync(string url)
     {
         var candidates = new List<(string Url, string? ProviderName)>();
@@ -131,6 +130,8 @@ public sealed class StreamCatalogResolver(
         var providers = providersResult.IsSuccess && providersResult.Data is not null
             ? providersResult.Data.ToArray()
             : [];
+
+        candidates.Add((trimmed, ProviderNameForUrl(providers, trimmed)));
 
         // Fallback só faz sentido pros catálogos path-based (stremio): troca a base mantendo
         // o sufixo /stream/...json. gaiaflix (query-based) não entra nesse loop.
@@ -147,9 +148,6 @@ public sealed class StreamCatalogResolver(
                     candidates.Add((candidate, provider.Name));
             }
         }
-
-        if (!Exists(trimmed))
-            candidates.Add((trimmed, ProviderNameForUrl(providers, trimmed)));
 
         return candidates;
     }
@@ -496,28 +494,34 @@ public sealed class StreamCatalogResolver(
     {
         try
         {
-            using var headRequest = new HttpRequestMessage(HttpMethod.Head, candidate.Url);
-            using var headResponse = await client.SendAsync(
-                headRequest,
-                HttpCompletionOption.ResponseHeadersRead,
-                cancellationToken);
+            // Alguns servidores de vídeo (ex: IPs do froststream) derrubam a conexão em HEAD
+            // mas respondem 206 pra GET com Range - nesse caso cai direto no GET.
+            try
+            {
+                var (headResponse, headCandidate) = await SendProbeAsync(client, HttpMethod.Head, candidate, cancellationToken);
+                using (headResponse)
+                {
+                    if (IsFunctional(headResponse))
+                        return await ConfirmPlayableAsync(client, WithDetectedFormat(headCandidate, headResponse), cancellationToken);
 
-            if (IsFunctional(headResponse))
-                return new StreamProbe(candidate, true);
+                    if (headResponse.StatusCode is not (HttpStatusCode.MethodNotAllowed
+                        or HttpStatusCode.NotImplemented
+                        or HttpStatusCode.Forbidden))
+                        return new StreamProbe(candidate, false);
+                }
+            }
+            catch (HttpRequestException ex)
+            {
+                _logger.LogDebug("HEAD probe failed for {Url}, falling back to ranged GET: {Message}", candidate.Url, ex.Message);
+            }
 
-            if (headResponse.StatusCode is not (HttpStatusCode.MethodNotAllowed
-                or HttpStatusCode.NotImplemented
-                or HttpStatusCode.Forbidden))
-                return new StreamProbe(candidate, false);
-
-            using var getRequest = new HttpRequestMessage(HttpMethod.Get, candidate.Url);
-            getRequest.Headers.Range = new System.Net.Http.Headers.RangeHeaderValue(0, 0);
-            using var getResponse = await client.SendAsync(
-                getRequest,
-                HttpCompletionOption.ResponseHeadersRead,
-                cancellationToken);
-
-            return new StreamProbe(candidate, IsFunctional(getResponse));
+            var (getResponse, getCandidate) = await SendProbeAsync(client, HttpMethod.Get, candidate, cancellationToken);
+            using (getResponse)
+            {
+                return IsFunctional(getResponse)
+                    ? await ConfirmPlayableAsync(client, WithDetectedFormat(getCandidate, getResponse), cancellationToken)
+                    : new StreamProbe(candidate, false);
+            }
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {
@@ -525,6 +529,101 @@ public sealed class StreamCatalogResolver(
             return new StreamProbe(candidate, false);
         }
     }
+
+    private const string CorsProbeOrigin = "https://localhost";
+
+    // HLS toca direto do host de origem via XHR (video.js no admin, hls.js no site público) -
+    // não passa pelo StreamMedia. Sem Access-Control-Allow-Origin o navegador bloqueia (CORS
+    // error) mesmo com o HEAD respondendo 200 no servidor (ex: embedplayer2.xyz do fenixflix).
+    // Uma fonte assim não é funcional: descarta pra o fallback seguir pro próximo provedor.
+    // mp4/mkv não precisam: são tocados via <video src> (sem CORS) ou pelo StreamMedia.
+    private async Task<StreamProbe> ConfirmPlayableAsync(
+        HttpClient client,
+        StreamCandidate candidate,
+        CancellationToken cancellationToken)
+    {
+        if (!candidate.StreamFormat.Equals("hls", StringComparison.OrdinalIgnoreCase)
+            && !candidate.StreamFormat.Equals("m3u8", StringComparison.OrdinalIgnoreCase))
+            return new StreamProbe(candidate, true);
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, candidate.Url);
+        request.Headers.TryAddWithoutValidation("Origin", CorsProbeOrigin);
+        using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+
+        var allowsCors = response.IsSuccessStatusCode
+            && response.Headers.TryGetValues("Access-Control-Allow-Origin", out var allowedOrigins)
+            && allowedOrigins.Any(origin => !string.IsNullOrWhiteSpace(origin));
+
+        if (!allowsCors)
+            _logger.LogDebug("HLS source without CORS discarded: {Url}", candidate.Url);
+
+        return new StreamProbe(candidate, allowsCors);
+    }
+
+    private const int MaxDowngradeRedirects = 5;
+
+    // O HttpClient segue redirects sozinho, EXCETO https -> http (downgrade) - nesse caso devolve
+    // o 3xx. O bestcine ("https://.../r/<hash>" -> 307 "http://...mp4") cai exatamente nisso, e
+    // sem seguir manualmente todas as fontes mp4 eram descartadas no probe. A URL final (http)
+    // vira a URL da fonte: assim o AvoidMixedContent manda pelo StreamMedia (proxy https) e o
+    // player não depende do redirect (que o navegador bloquearia como mixed content).
+    private static async Task<(HttpResponseMessage Response, StreamCandidate Candidate)> SendProbeAsync(
+        HttpClient client,
+        HttpMethod method,
+        StreamCandidate candidate,
+        CancellationToken cancellationToken)
+    {
+        var current = candidate;
+
+        for (var hop = 0; ; hop++)
+        {
+            using var request = new HttpRequestMessage(method, current.Url);
+            if (method == HttpMethod.Get)
+                request.Headers.Range = new System.Net.Http.Headers.RangeHeaderValue(0, 0);
+
+            var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+
+            var location = response.Headers.Location;
+            if (hop >= MaxDowngradeRedirects
+                || (int)response.StatusCode is < 300 or > 399
+                || location is null)
+                return (response, current);
+
+            var nextUri = location.IsAbsoluteUri ? location : new Uri(new Uri(current.Url), location);
+            response.Dispose();
+
+            var nextExtension = Path.GetExtension(nextUri.AbsolutePath).TrimStart('.');
+            current = current with
+            {
+                Url = nextUri.AbsoluteUri,
+                StreamFormat = string.IsNullOrWhiteSpace(nextExtension) ? current.StreamFormat : nextExtension.ToLowerInvariant()
+            };
+        }
+    }
+
+    // URLs sem extensão (ex: bestcine "/r/<hash>", que redireciona pra .mp4 OU .m3u8) caem no
+    // formato padrão (mp4) em GetStreamFormat. Aqui corrige pelo Content-Type real da resposta
+    // do probe - sem isso uma fonte HLS iria pro player como mp4. URLs com extensão não mudam.
+    private static StreamCandidate WithDetectedFormat(StreamCandidate candidate, HttpResponseMessage response)
+    {
+        if (!Uri.TryCreate(candidate.Url, UriKind.Absolute, out var uri)
+            || !string.IsNullOrWhiteSpace(Path.GetExtension(uri.AbsolutePath)))
+            return candidate;
+
+        var detectedFormat = MapContentTypeToFormat(response.Content.Headers.ContentType?.MediaType);
+        return detectedFormat is null ? candidate : candidate with { StreamFormat = detectedFormat };
+    }
+
+    private static string? MapContentTypeToFormat(string? contentType)
+        => (contentType ?? string.Empty).ToLowerInvariant() switch
+        {
+            "application/vnd.apple.mpegurl" or "application/x-mpegurl" or "audio/mpegurl" or "audio/x-mpegurl" => "hls",
+            "video/mp4" => "mp4",
+            "video/webm" => "webm",
+            "video/x-matroska" => "mkv",
+            "video/quicktime" => "mov",
+            _ => null
+        };
 
     private static bool IsFunctional(HttpResponseMessage response)
     {

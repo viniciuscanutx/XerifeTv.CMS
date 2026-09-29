@@ -7,7 +7,7 @@ public interface ISiteUserRepository : IBaseRepository<SiteUserEntity>
     Task<bool> AssignBadgesAsync(string userId, List<string> badgeIds);
     Task<bool> SelectBadgeAsync(string userId, string? badgeId);
     Task<bool> ChangePasswordAsync(string id, string passwordHash);
-    Task<SiteUserEntity?> UpdateProfileAsync(string userId, string name, string? avatarUrl, string? avatarGiphyId = null);
+    Task<SiteUserEntity?> UpdateProfileAsync(string userId, string name, string? avatarUrl, string? avatarGiphyId = null, string? bannerUrl = null);
     Task<IEnumerable<SiteUserEntity>> GetAllAsync();
     Task<SiteUserEntity?> GetByEmailAsync(string email);
     Task<SiteUserEntity?> GetByEmailAsync(string email, string ignoreId);

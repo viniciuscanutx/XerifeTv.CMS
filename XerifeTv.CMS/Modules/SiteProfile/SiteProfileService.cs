@@ -33,12 +33,8 @@ public sealed class SiteProfileService(
         if (name.Length is < 1 or > 100)
             throw new ArgumentException("Informe um nome com até 100 caracteres.");
 
-        var avatarUrl = string.IsNullOrWhiteSpace(request.AvatarUrl) ? null : request.AvatarUrl.Trim();
-        if (avatarUrl is not null && (avatarUrl.Length > 2048
-            || !Uri.TryCreate(avatarUrl, UriKind.Absolute, out var uri)
-            || (uri.Scheme != Uri.UriSchemeHttps && uri.Scheme != Uri.UriSchemeHttp)
-            || string.IsNullOrWhiteSpace(uri.Host) || !string.IsNullOrEmpty(uri.UserInfo)))
-            throw new ArgumentException("Informe um link HTTP ou HTTPS válido para a foto.");
+        var avatarUrl = NormalizeHttpUrl(request.AvatarUrl, "Informe um link HTTP ou HTTPS válido para a foto.");
+        var bannerUrl = NormalizeHttpUrl(request.BannerUrl, "Informe um link HTTP ou HTTPS válido para a imagem de fundo.");
 
         var avatarGiphyId = string.IsNullOrWhiteSpace(request.AvatarGiphyId) ? null : request.AvatarGiphyId.Trim();
         if (avatarGiphyId is not null && (avatarGiphyId.Length > 100
@@ -47,9 +43,20 @@ public sealed class SiteProfileService(
         if (avatarGiphyId is not null && avatarUrl is not null)
             throw new ArgumentException("Escolha um GIF ou um link para a foto de perfil.");
 
-        var user = await users.UpdateProfileAsync(userId, name, avatarUrl, avatarGiphyId)
+        var user = await users.UpdateProfileAsync(userId, name, avatarUrl, avatarGiphyId, bannerUrl)
             ?? throw new KeyNotFoundException("Perfil não encontrado.");
         return await GetAsync(user.Id);
+    }
+
+    private static string? NormalizeHttpUrl(string? value, string errorMessage)
+    {
+        var url = string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+        if (url is not null && (url.Length > 2048
+            || !Uri.TryCreate(url, UriKind.Absolute, out var uri)
+            || (uri.Scheme != Uri.UriSchemeHttps && uri.Scheme != Uri.UriSchemeHttp)
+            || string.IsNullOrWhiteSpace(uri.Host) || !string.IsNullOrEmpty(uri.UserInfo)))
+            throw new ArgumentException(errorMessage);
+        return url;
     }
 
     public async Task<ProfilePage<FavoriteResponse>> GetFavoritesAsync(string userId, int page, int pageSize, string contentType = "movie")

@@ -8,7 +8,8 @@
     string action = ViewBag.Action ?? "Index";
     string controller = ViewBag.Controller ?? ViewContext.RouteData.Values["controller"]?.ToString() ?? string.Empty;
 
-    var routeValues = new Dictionary<string, string>
+    // Case-insensitive como o RouteValueDictionary: "username" da tela sobrescreve "userName" em vez de duplicar.
+    var routeValues = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
     {
         { "filter", ViewBag.Filter },
         { "search", ViewBag.Search },

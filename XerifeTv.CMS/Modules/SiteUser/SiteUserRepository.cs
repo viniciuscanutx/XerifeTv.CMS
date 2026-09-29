@@ -24,10 +24,11 @@ public sealed class SiteUserRepository(IOptions<DBSettings> options)
         return result.MatchedCount > 0;
     }
 
-    public async Task<SiteUserEntity?> UpdateProfileAsync(string userId, string name, string? avatarUrl, string? avatarGiphyId = null)
+    public async Task<SiteUserEntity?> UpdateProfileAsync(string userId, string name, string? avatarUrl, string? avatarGiphyId = null, string? bannerUrl = null)
         => await _collection.FindOneAndUpdateAsync(Builders<SiteUserEntity>.Filter.Eq(x => x.Id, userId),
             Builders<SiteUserEntity>.Update.Set(x => x.Name, name).Set(x => x.AvatarUrl, avatarUrl)
-                .Set(x => x.AvatarGiphyId, avatarGiphyId).Set(x => x.UpdateAt, DateTime.UtcNow),
+                .Set(x => x.AvatarGiphyId, avatarGiphyId).Set(x => x.BannerUrl, bannerUrl)
+                .Set(x => x.UpdateAt, DateTime.UtcNow),
             new FindOneAndUpdateOptions<SiteUserEntity> { ReturnDocument = ReturnDocument.After });
 
     public async Task<IEnumerable<SiteUserEntity>> GetAllAsync()

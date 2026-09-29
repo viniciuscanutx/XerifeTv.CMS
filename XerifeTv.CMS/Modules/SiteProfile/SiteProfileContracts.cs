@@ -8,13 +8,14 @@ namespace XerifeTv.CMS.Modules.SiteProfile;
 public record UpdateSiteProfileRequest(
     [Required, StringLength(100)] string Name,
     [StringLength(2048)] string? AvatarUrl,
-    [StringLength(100), RegularExpression("^[a-zA-Z0-9]+$")] string? AvatarGiphyId = null);
+    [StringLength(100), RegularExpression("^[a-zA-Z0-9]+$")] string? AvatarGiphyId = null,
+    [StringLength(2048)] string? BannerUrl = null);
 
 public record SiteProfileResponse(string Id, string Name, string? AvatarUrl, DateTime JoinedAt, string? AvatarGiphyId = null,
-    IReadOnlyList<SiteBadgeResponse>? Badges = null, SiteBadgeResponse? SelectedBadge = null)
+    IReadOnlyList<SiteBadgeResponse>? Badges = null, SiteBadgeResponse? SelectedBadge = null, string? BannerUrl = null)
 {
     public static SiteProfileResponse FromEntity(SiteUserEntity user)
-        => new(user.Id, user.Name, user.AvatarUrl, user.CreateAt, user.AvatarGiphyId);
+        => new(user.Id, user.Name, user.AvatarUrl, user.CreateAt, user.AvatarGiphyId, BannerUrl: user.BannerUrl);
 }
 
 public record ProfilePage<T>(IReadOnlyList<T> Items, int Page, int PageSize, bool HasMore);
