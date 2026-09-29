@@ -50,11 +50,41 @@ public class RedirectUrlResolver(
         }
     }
 
+    private const int MaxDowngradeRedirects = 5;
+
+    /// <summary>
+    /// O handler segue redirects sozinho, EXCETO https -> http (downgrade) - nesse caso
+    /// devolve o 3xx cru. Links de redirect como o bestcine ("https://.../r/&lt;hash&gt;" ->
+    /// 307 "http://...mp4") caem nisso, entao os saltos de downgrade sao seguidos aqui.
+    /// </summary>
+    private static async Task<HttpResponseMessage> SendFollowingRedirectsAsync(
+        HttpClient client,
+        Uri requestUri,
+        CancellationToken cancellationToken)
+    {
+        var currentUri = requestUri;
+
+        for (var hop = 0; ; hop++)
+        {
+            var response = await SendHeadOrGetAsync(client, currentUri, cancellationToken);
+
+            var location = response.Headers.Location;
+            if (hop >= MaxDowngradeRedirects
+                || (int)response.StatusCode is < 300 or > 399
+                || location is null)
+                return response;
+
+            var lastUri = response.RequestMessage?.RequestUri ?? currentUri;
+            currentUri = location.IsAbsoluteUri ? location : new Uri(lastUri, location);
+            response.Dispose();
+        }
+    }
+
     /// <summary>
     /// Tenta HEAD primeiro para nao baixar o arquivo. CDNs que nao aceitam HEAD
     /// respondem 405/501 - nesses casos refaz com GET lendo apenas os headers.
     /// </summary>
-    private static async Task<HttpResponseMessage> SendFollowingRedirectsAsync(
+    private static async Task<HttpResponseMessage> SendHeadOrGetAsync(
         HttpClient client,
         Uri requestUri,
         CancellationToken cancellationToken)

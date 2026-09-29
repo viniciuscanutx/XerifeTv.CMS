@@ -210,7 +210,7 @@ public sealed class StreamCatalogResolver(
                 .ToArray();
 
             if (functionalSources.Length == 0)
-                return Result<GetResolveUrlResponseDto>.Failure(new Error("502", BuildNoFunctionalStreamMessage(probes)));
+                return Result<GetResolveUrlResponseDto>.Failure(new Error("502", "Nenhum stream do catálogo está funcional"));
 
             return BuildResult(functionalSources.Select(c => (c.Url, c.StreamFormat, c.SourceName)));
         }
@@ -228,24 +228,6 @@ public sealed class StreamCatalogResolver(
             _logger.LogWarning("Failed to resolve stream catalog: {Message}", ex.Message);
             return Result<GetResolveUrlResponseDto>.Failure(new Error("502", ex.InnerException?.Message ?? ex.Message));
         }
-    }
-
-    // Agrupa os motivos das falhas (ex: "403 em bestcine.dpdns.org") pra saber em qual
-    // salto da cadeia de redirect o servidor está sendo bloqueado.
-    private string BuildNoFunctionalStreamMessage(IEnumerable<StreamProbe> probes)
-    {
-        var reasons = probes
-            .Where(probe => !probe.IsFunctional && !string.IsNullOrWhiteSpace(probe.FailureReason))
-            .GroupBy(probe => probe.FailureReason!)
-            .Select(group => $"{group.Key} (x{group.Count()})")
-            .ToArray();
-
-        var message = reasons.Length == 0
-            ? "Nenhum stream do catálogo está funcional"
-            : $"Nenhum stream do catálogo está funcional: {string.Join("; ", reasons)}";
-
-        _logger.LogWarning("{Message}", message);
-        return message;
     }
 
     // O catálogo fica atrás do Cloudflare com cache de edge. Num cache HIT ele
@@ -525,7 +507,7 @@ public sealed class StreamCatalogResolver(
                     if (headResponse.StatusCode is not (HttpStatusCode.MethodNotAllowed
                         or HttpStatusCode.NotImplemented
                         or HttpStatusCode.Forbidden))
-                        return new StreamProbe(candidate, false, DescribeResponse("HEAD", headResponse));
+                        return new StreamProbe(candidate, false);
                 }
             }
             catch (HttpRequestException ex)
@@ -538,23 +520,14 @@ public sealed class StreamCatalogResolver(
             {
                 return IsFunctional(getResponse)
                     ? await ConfirmPlayableAsync(client, WithDetectedFormat(getCandidate, getResponse), cancellationToken)
-                    : new StreamProbe(candidate, false, DescribeResponse("GET", getResponse));
+                    : new StreamProbe(candidate, false);
             }
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {
             _logger.LogDebug("Stream probe failed for {Url}: {Message}", candidate.Url, ex.Message);
-            var reason = ex is TaskCanceledException ? "timeout" : ex.InnerException?.Message ?? ex.Message;
-            return new StreamProbe(candidate, false, reason);
+            return new StreamProbe(candidate, false);
         }
-    }
-
-    // "GET 403 text/html em 195.181.163.138" - status, tipo e host de quem respondeu por último.
-    private static string DescribeResponse(string method, HttpResponseMessage response)
-    {
-        var host = response.RequestMessage?.RequestUri?.Host ?? "?";
-        var contentType = response.Content.Headers.ContentType?.MediaType ?? "sem content-type";
-        return $"{method} {(int)response.StatusCode} {contentType} em {host}";
     }
 
     private const string CorsProbeOrigin = "https://localhost";
@@ -584,7 +557,7 @@ public sealed class StreamCatalogResolver(
         if (!allowsCors)
             _logger.LogDebug("HLS source without CORS discarded: {Url}", candidate.Url);
 
-        return new StreamProbe(candidate, allowsCors, allowsCors ? null : "HLS sem CORS");
+        return new StreamProbe(candidate, allowsCors);
     }
 
     private const int MaxDowngradeRedirects = 5;
@@ -737,7 +710,7 @@ public sealed class StreamCatalogResolver(
         int Index,
         string SourceName);
 
-    private sealed record StreamProbe(StreamCandidate Candidate, bool IsFunctional, string? FailureReason = null);
+    private sealed record StreamProbe(StreamCandidate Candidate, bool IsFunctional);
 
     private sealed record StreamQuality(string Label, int Rank);
 }

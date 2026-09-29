@@ -140,7 +140,22 @@ public class MediaDeliveryUrlResolver(
         if (finalUrlResult.IsFailure)
             return Result<GetResolveUrlResponseDto>.Failure(finalUrlResult.Error);
 
-        return Result<GetResolveUrlResponseDto>.Success(AvoidMixedContent(finalUrlResult.Data!, streamFormat));
+        var finalUrl = finalUrlResult.Data!;
+        return Result<GetResolveUrlResponseDto>.Success(AvoidMixedContent(finalUrl, GetFormatFromUrl(finalUrl) ?? streamFormat));
+    }
+
+    // Link de redirect sem extensão (ex: bestcine /r/<hash>) só revela o formato no arquivo
+    // final (.mp4 ou .m3u8). m3u8 vira "hls" pra o player usar o tipo certo.
+    private static string? GetFormatFromUrl(string url)
+    {
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+            return null;
+
+        var extension = Path.GetExtension(uri.AbsolutePath).TrimStart('.').ToLowerInvariant();
+        if (string.IsNullOrWhiteSpace(extension))
+            return null;
+
+        return extension == "m3u8" ? "hls" : extension;
     }
 
     public async Task<Result<GetResolveUrlResponseDto>> ResolveStreamCatalogFromPayloadAsync(string payload, string streamFormat, string? providerName = null, string? catalogUrl = null)
