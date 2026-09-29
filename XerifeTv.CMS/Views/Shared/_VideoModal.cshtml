@@ -430,7 +430,23 @@
     // Tenta as fontes seguintes à atual até uma aceitar; se acabarem e ainda houver
     // fontes sendo validadas no servidor, espera por elas antes de mostrar erro.
     async function playNextSource() {
-        const startIdx = currentSources.findIndex(s => (s.url || s.Url) === currentSourceUrl) + 1
+        const currentIdx = currentSources.findIndex(s => (s.url || s.Url) === currentSourceUrl)
+        const current = currentSources[currentIdx]
+
+        // Formato era chute (URL sem extensão) e mp4 falhou: tenta a mesma fonte como hls uma vez
+        if (current && current.formatGuessed && current.streamFormat !== 'hls') {
+            const asHls = { ...current, streamFormat: 'hls', formatGuessed: false }
+            currentSources = currentSources.map((s, i) => i === currentIdx ? asHls : s)
+            setLoading(true, 'Tentando outro formato...')
+            try {
+                await playSource(asHls)
+                return
+            } catch (err) {
+                console.warn('Erro ao preparar a fonte como hls:', err)
+            }
+        }
+
+        const startIdx = currentIdx + 1
 
         for (let i = startIdx; i < currentSources.length; i++) {
             console.warn('Fonte falhou, tentando a próxima:', currentSourceUrl)
@@ -623,15 +639,15 @@
         if (!payload) return null
 
         const generation = resolveGeneration
-        const candidates = buildSourcesFromCatalog(payload, chosenUrl, streamFormat)
-        if (candidates.length === 0) return null
+        const streamCandidates = buildSourcesFromCatalog(payload, chosenUrl)
+        if (streamCandidates.length === 0) return null
 
         // Testa TODAS em paralelo no navegador. As que abrem em https tocam direto do host
         // (sem passar pelo Render); o resto vai pro servidor validar e proxiar.
         setLoading(true, 'Testando fontes...')
-        const reachable = await Promise.all(candidates.map(c => canReachInBrowser(c.url)))
-        const directSources = candidates.filter((_, i) => reachable[i]).map(c => ({ ...c, ready: true }))
-        const serverCandidates = candidates.filter((_, i) => !reachable[i])
+        const reachable = await Promise.all(streamCandidates.map(c => canReachInBrowser(c.url)))
+        const directSources = streamCandidates.filter((_, i) => reachable[i]).map(c => ({ ...c, ready: true }))
+        const serverCandidates = streamCandidates.filter((_, i) => !reachable[i])
 
         if (serverCandidates.length === 0) return { sources: directSources }
 
@@ -665,14 +681,14 @@
         return match ? match.name : null
     }
 
-    // Formato pela extensão do path; sem extensão (ex: /r/<hash>) usa o fallback cadastrado.
-    function getCatalogStreamFormat(url, fallback) {
+    // Formato pela extensão do path; sem extensão (ex: bestcine /r/<hash>) retorna null.
+    function getCatalogStreamFormat(url) {
         try {
             const lastSegment = new URL(url).pathname.split('/').pop() || ''
             const dotIndex = lastSegment.lastIndexOf('.')
             if (dotIndex > 0) return lastSegment.slice(dotIndex + 1).toLowerCase()
         } catch { }
-        return fallback || 'mp4'
+        return null
     }
 
     // Página do CMS é https: <video src="http://..."> seria bloqueado (mixed content).
@@ -680,7 +696,7 @@
         return url.replace(/^http:\/\//i, 'https://')
     }
 
-    function buildSourcesFromCatalog(payload, catalogUrl, fallbackStreamFormat) {
+    function buildSourcesFromCatalog(payload, catalogUrl) {
         let streams
         try {
             streams = JSON.parse(payload).streams
@@ -700,6 +716,9 @@
                 if (!/^https?:\/\//i.test(rawUrl)) return null
 
                 const quality = getQuality(stream.name, stream.title, rawUrl)
+                // Sem extensão: tenta como mp4 (<video> nativo, sem CORS). Como hls o video.js
+                // baixa via XHR e toma CORS error em arquivo mp4; o hls fica de retry no erro.
+                const detectedFormat = getCatalogStreamFormat(rawUrl)
                 const baseLabel = providerName
                     ? `${providerName} ${quality.label}`
                     : ((stream.name || '').trim() || quality.label)
@@ -709,7 +728,8 @@
                     originalUrl: rawUrl,
                     catalogName: stream.name,
                     catalogTitle: stream.title,
-                    streamFormat: getCatalogStreamFormat(rawUrl, fallbackStreamFormat),
+                    streamFormat: detectedFormat || 'mp4',
+                    formatGuessed: !detectedFormat,
                     rank: qualityRank(quality.key),
                     index,
                     baseLabel
@@ -726,6 +746,7 @@
                     catalogName: item.catalogName,
                     catalogTitle: item.catalogTitle,
                     streamFormat: item.streamFormat,
+                    formatGuessed: item.formatGuessed,
                     quality: count === 0 ? item.baseLabel : `${item.baseLabel} (${count + 1})`
                 }
             })
