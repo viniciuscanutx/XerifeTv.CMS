@@ -380,8 +380,35 @@
         }
     }
 
+    // Proxy local (tools/local-stream-proxy): roda na máquina do admin, como o streaming
+    // server do Stremio. Sai pelo IP residencial e http://127.0.0.1 não é mixed content.
+    const LOCAL_PROXY_BASE = 'http://127.0.0.1:11480'
+    const LOCAL_PROXY_TIMEOUT_MS = 800
+    let localProxyAvailable = null
+
+    function isLocalProxyAvailable() {
+        if (localProxyAvailable) return localProxyAvailable
+
+        const controller = new AbortController()
+        const timer = setTimeout(() => controller.abort(), LOCAL_PROXY_TIMEOUT_MS)
+        localProxyAvailable = fetch(`${LOCAL_PROXY_BASE}/health`, { signal: controller.signal, cache: 'no-store' })
+            .then(response => response.ok)
+            .catch(() => false)
+            .finally(() => clearTimeout(timer))
+            .then(isAvailable => {
+                // Não fixa o "não": se o admin abrir o proxy depois, o próximo play já usa
+                if (!isAvailable) localProxyAvailable = null
+                return isAvailable
+            })
+        return localProxyAvailable
+    }
+
+    function buildLocalProxyUrl(url, streamFormat) {
+        return `${LOCAL_PROXY_BASE}/stream/media.${streamFormat}?url=${encodeURIComponent(url)}`
+    }
+
     // Fonte montada no navegador: toca direto do host se ele responder em https;
-    // senão passa só essa fonte pelo proxy do servidor (StreamMedia).
+    // senão passa pelo proxy local (se estiver rodando) ou pelo do servidor (StreamMedia).
     async function resolveDirectSource(source, sourceUrl) {
         const originalUrl = source.originalUrl || sourceUrl
         // Sem extensão (ex: bestcine /r/<hash> -> cdn.../20144.mp4) é link de redirect: o servidor
@@ -389,9 +416,20 @@
         // Sem cache: o token do redirect muda a cada requisição.
         const hasExtension = /\.[a-z0-9]{2,5}$/i.test(new URL(originalUrl).pathname)
 
-        if (hasExtension) {
-            if (!directReachCache.has(sourceUrl)) directReachCache.set(sourceUrl, canReachInBrowser(sourceUrl))
-            if (await directReachCache.get(sourceUrl)) return { ...source, url: sourceUrl }
+        // O navegador de quem acessa resolve primeiro. Pra link de redirect (/r/<hash>) o teste
+        // segue a cadeia: destino https passa e o <video> toca o /r/ direto (ele mesmo segue o
+        // redirect a cada play, com token novo); destino http é bloqueado (mixed content) e cai
+        // no proxy. Sem extensão vai como mp4: como hls o video.js baixaria via XHR (CORS error).
+        // Sem cache no redirect: o destino pode mudar a cada acesso.
+        if (hasExtension && !directReachCache.has(sourceUrl)) directReachCache.set(sourceUrl, canReachInBrowser(sourceUrl))
+        const reachable = hasExtension ? await directReachCache.get(sourceUrl) : await canReachInBrowser(sourceUrl)
+        if (reachable) return { ...source, url: sourceUrl, streamFormat: hasExtension ? source.streamFormat : 'mp4' }
+
+        // Proxy local só pra arquivo progressivo: HLS referencia segmentos por URL relativa,
+        // que não passariam pelo proxy. Redirect sem extensão vai como mp4 (caso comum).
+        const localFormat = ((hasExtension && source.streamFormat) || 'mp4').toLowerCase()
+        if (!['hls', 'm3u8'].includes(localFormat) && await isLocalProxyAvailable()) {
+            return { ...source, url: buildLocalProxyUrl(originalUrl, localFormat), streamFormat: localFormat }
         }
 
         // Sem extensão o formato real vem do servidor (extensão do arquivo final)
