@@ -224,7 +224,10 @@ public class MediaDeliveryProfilesController(
             url = ToAbsoluteCatalogUrl(urlFixed),
             streamFormat,
             followRedirect = fr,
-            catalogProviders = providers
+            catalogProviders = providers,
+            // Worker com cache KV dos catálogos: o app consulta antes de ir no provedor
+            // (catálogo "frio" do bestcine leva ~10s) e grava depois, igual ao _VideoModal.
+            catalogCacheUrl = (_configuration["StreamCatalog:ProxyBaseUrl"] ?? string.Empty).TrimEnd('/')
         });
     }
 
