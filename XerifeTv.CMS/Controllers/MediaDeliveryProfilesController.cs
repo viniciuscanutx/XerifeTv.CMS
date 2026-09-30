@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using XerifeTv.CMS.Modules.Abstractions.Interfaces;
 using XerifeTv.CMS.Modules.Activity.Interfaces;
+using XerifeTv.CMS.Modules.CatalogProvider.Dtos.Response;
 using XerifeTv.CMS.Modules.CatalogProvider.Interfaces;
 using XerifeTv.CMS.Modules.Media.Delivery.Dtos.Request;
 using XerifeTv.CMS.Modules.Media.Delivery.Dtos.Response;
@@ -196,6 +197,48 @@ public class MediaDeliveryProfilesController(
             return StatusCode(int.Parse(response.Error.Code), response.Error.Description);
 
         return Ok(response.Data);
+    }
+
+    /// <summary>
+    /// Versao "crua" do ResolveUrlFx para o app desktop (Tauri): devolve a URL cadastrada
+    /// decifrada + provedores de catalogo, sem buscar catalogo, sem probe e sem proxy.
+    /// O app resolve tudo no aparelho de quem assiste (IP residencial, sem mixed content),
+    /// entao o Render nao fica no caminho do video.
+    /// </summary>
+    [AllowAnonymous]
+    [HttpGet]
+    public async Task<IActionResult> ResolveUrlFxRaw(string uf, string sf, bool fr = false)
+    {
+        string urlFixed = CryptographyHelper.Decrypt(uf, _configuration["SecuritySettings:ContentEncryptionKey"]!);
+        string streamFormat = CryptographyHelper.Decrypt(sf, _configuration["SecuritySettings:ContentEncryptionKey"]!);
+
+        var providersResult = await _catalogProviderService.GetAllAsync();
+        var providers = ((providersResult.IsFailure ? null : providersResult.Data)
+                ?? Enumerable.Empty<GetCatalogProviderResponseDto>())
+            .Where(p => !string.IsNullOrWhiteSpace(p.BaseUrl))
+            .Select(p => new { baseUrl = p.BaseUrl.TrimEnd('/'), name = p.Name })
+            .ToArray();
+
+        return Ok(new
+        {
+            url = ToAbsoluteCatalogUrl(urlFixed),
+            streamFormat,
+            followRedirect = fr,
+            catalogProviders = providers
+        });
+    }
+
+    // Catalogo cadastrado como caminho relativo ("stream/movie/tt...json") usa a base
+    // StreamCatalog:BaseUrl, igual ao StreamCatalogResolver.
+    private string ToAbsoluteCatalogUrl(string url)
+    {
+        if (string.IsNullOrWhiteSpace(url) || Uri.TryCreate(url.Trim(), UriKind.Absolute, out _))
+            return url?.Trim() ?? string.Empty;
+
+        var baseUrl = _configuration["StreamCatalog:BaseUrl"];
+        return string.IsNullOrWhiteSpace(baseUrl)
+            ? url.Trim()
+            : $"{baseUrl.TrimEnd('/')}/{url.Trim().TrimStart('/')}";
     }
 
     /// <summary>

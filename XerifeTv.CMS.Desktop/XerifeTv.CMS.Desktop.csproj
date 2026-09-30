@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    App desktop do CMS: janela WebView2 que sobe o próprio CMS em localhost.
+    Fica FORA do XerifeTv.CMS.sln de propósito: o Dockerfile do Render faz
+    "dotnet restore XerifeTv.CMS.sln" em Linux, e um projeto net8.0-windows quebraria esse build.
+    Para gerar o app: ver publish-desktop.ps1.
+  -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>XerifeTV CMS</AssemblyName>
+    <RootNamespace>XerifeTv.CMS.Desktop</RootNamespace>
+    <ApplicationIcon>..\XerifeTv.CMS\wwwroot\favicon.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4258.31" />
+  </ItemGroup>
+
+</Project>

@@ -719,6 +719,20 @@
             })
     }
 
+    // 4K/HDR dos provedores vem em HEVC (hvc1). Sem suporte a HEVC (WebView2/Edge sem a
+    // extensão "HEVC Video Extensions") o vídeo não decodifica: tela preta ou erro. Nesse
+    // caso as fontes 4K vão pro fim da lista - continuam no menu, mas o play começa na 1080p.
+    const HEVC_TYPES = ['video/mp4; codecs="hvc1.2.4.L153.B0"', 'video/mp4; codecs="hev1.2.4.L153.B0"']
+    const supportsHevc = HEVC_TYPES.some(type =>
+        document.createElement('video').canPlayType(type) !== ''
+        || (window.MediaSource && MediaSource.isTypeSupported(type)))
+
+    function deprioritizeUnsupported4k(sources) {
+        if (supportsHevc) return sources
+        const is4k = source => /4k|2160p/i.test(source.quality || source.Quality || '')
+        return [...sources.filter(s => !is4k(s)), ...sources.filter(is4k)]
+    }
+
     async function resolveAndPlay(resolverUrl) {
         playbackGeneration++
         setLoading(true, 'Carregando vídeo...')
@@ -740,7 +754,7 @@
 
             const url = data.url || data.Url
             const streamFormat = data.streamFormat || data.StreamFormat
-            const sources = normalizeSources(data)
+            const sources = deprioritizeUnsupported4k(normalizeSources(data))
 
             if (sources.length > 0) {
                 updateSourceMenu(sources)
