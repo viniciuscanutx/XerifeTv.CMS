@@ -92,7 +92,7 @@ public class SeriesService(
 
             var response = await _repository.CreateAsync(entity);
             // Cadastro aparece no app/site sem esperar o cache da API de conteúdo expirar
-            _cacheService.ClearContent();
+            await _cacheService.InvalidateContentAsync();
 
             _ = Task.Run(() => _webhookService.DispacthWebhooksByTriggerEventAsync(EWebhookTriggerEvent.SERIES_PUBLISHED, response));
 
@@ -123,7 +123,7 @@ public class SeriesService(
 
 
             await _repository.UpdateAsync(entity);
-            _cacheService.ClearContent();
+            await _cacheService.InvalidateContentAsync();
             return Result<string>.Success(entity.Id);
         }
         catch (Exception ex)
@@ -143,7 +143,7 @@ public class SeriesService(
                 return Result<bool>.Failure(new Error("404", "Conteudo nao encontrado"));
 
             await _repository.DeleteAsync(id);
-            _cacheService.ClearContent();
+            await _cacheService.InvalidateContentAsync();
             return Result<bool>.Success(true);
         }
         catch (Exception ex)
@@ -229,7 +229,7 @@ public class SeriesService(
             var episode = dto.ToEntity();
 
             await _repository.CreateEpisodeAsync(seriesResponse.Id, episode);
-            _cacheService.ClearContent();
+            await _cacheService.InvalidateContentAsync();
 
             return Result<string>.Success(episode.Id);
         }
@@ -263,7 +263,7 @@ public class SeriesService(
             var episode = dto.ToEntity();
 
             await _repository.UpdateEpisodeAsync(seriesResponse.Id, episode);
-            _cacheService.ClearContent();
+            await _cacheService.InvalidateContentAsync();
 
             return Result<string>.Success(seriesResponse.Id);
         }
@@ -284,7 +284,7 @@ public class SeriesService(
                 return Result<bool>.Failure(new Error("404", "Serie nao encontrada"));
 
             await _repository.DeleteEpisodeAsync(serieId, id);
-            _cacheService.ClearContent();
+            await _cacheService.InvalidateContentAsync();
 
             return Result<bool>.Success(true);
         }

@@ -92,7 +92,7 @@ public sealed class MovieService(
 
             var response = await _repository.CreateAsync(entity);
             // Cadastro aparece no app/site sem esperar o cache da API de conteúdo expirar
-            _cacheService.ClearContent();
+            await _cacheService.InvalidateContentAsync();
 
             _ = Task.Run(() => _webhookService.DispacthWebhooksByTriggerEventAsync(EWebhookTriggerEvent.MOVIE_PUBLISHED, response));
 
@@ -123,7 +123,7 @@ public sealed class MovieService(
 
             entity.CreateAt = response.CreateAt;
             await _repository.UpdateAsync(entity);
-            _cacheService.ClearContent();
+            await _cacheService.InvalidateContentAsync();
             return Result<string>.Success(entity.Id);
         }
         catch (Exception ex)
@@ -143,7 +143,7 @@ public sealed class MovieService(
                 return Result<bool>.Failure(new Error("404", "Conteudo nao encontrado"));
 
             await _repository.DeleteAsync(id);
-            _cacheService.ClearContent();
+            await _cacheService.InvalidateContentAsync();
             return Result<bool>.Success(true);
         }
         catch (Exception ex)

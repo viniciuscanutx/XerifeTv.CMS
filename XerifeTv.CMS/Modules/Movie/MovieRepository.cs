@@ -93,10 +93,11 @@ public sealed class MovieRepository(IOptions<DBSettings> options)
         return result;
     }
 
-    public async Task<ICollection<CategoryCountDto>> GetCategoriesWithCountAsync()
+    public async Task<ICollection<CategoryCountDto>> GetCategoriesWithCountAsync(bool includeDisabled = true)
     {
         var result = await _collection
             .Aggregate()
+            .Match(r => includeDisabled || !r.Disabled)
             .Unwind<MovieEntity, BsonDocument>(x => x.Categories)
             .Group(new BsonDocument
             {
@@ -111,6 +112,13 @@ public sealed class MovieRepository(IOptions<DBSettings> options)
                 Category = x["_id"].AsString,
                 Count = x["count"].AsInt32
             })];
+    }
+
+    // Mais recentes que estão ativos (listagens da API de conteúdo); limit <= 0 traz todos
+    public async Task<IReadOnlyList<MovieEntity>> GetLatestEnabledAsync(int limit)
+    {
+        var query = _collection.Find(r => !r.Disabled).SortByDescending(r => r.CreateAt);
+        return await (limit > 0 ? query.Limit(limit) : query).ToListAsync();
     }
 
     public async Task<ICollection<MovieEntity>> GetMoviesRecommendedByMovieIdAsync(string movieId, int limit)

@@ -1,10 +1,11 @@
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Primitives;
 using XerifeTv.CMS.Modules.Abstractions.Interfaces;
+using XerifeTv.CMS.Modules.Content.Cache;
 
 namespace XerifeTv.CMS.Modules.Abstractions.Services;
 
-public sealed class CacheService(IMemoryCache _cache) : ICacheService
+public sealed class CacheService(IMemoryCache _cache, IContentCacheVersionRepository _contentVersionRepository) : ICacheService
 {
     private readonly MemoryCacheEntryOptions _cacheOptions = new MemoryCacheEntryOptions()
       .SetSlidingExpiration(TimeSpan.FromMinutes(10))
@@ -37,6 +38,20 @@ public sealed class CacheService(IMemoryCache _cache) : ICacheService
     // Não mexe no progresso de importação nem nos links resolvidos
     public void ClearContent()
       => Interlocked.Exchange(ref _contentToken, new CancellationTokenSource()).Cancel();
+
+    // Limpa aqui e avisa as outras instâncias pelo Mongo (ContentCacheSyncWorker)
+    public async Task InvalidateContentAsync()
+    {
+        ClearContent();
+        try
+        {
+            await _contentVersionRepository.IncrementAsync();
+        }
+        catch
+        {
+            // Sem o aviso, as outras instâncias só atualizam quando o cache expirar
+        }
+    }
 
     public void Remove(string key)
       => _cache.Remove(key);

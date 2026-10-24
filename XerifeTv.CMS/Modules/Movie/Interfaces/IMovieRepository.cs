@@ -10,7 +10,8 @@ public interface IMovieRepository : IBaseRepository<MovieEntity>
     Task<PagedList<MovieEntity>> GetByFilterAsync(GetMoviesByFilterRequestDto dto);
     Task<IEnumerable<ItemsByCategory<MovieEntity>>> GetGroupByCategoryAsync(GetGroupByCategoryRequestDto dto);
     Task<MovieEntity?> GetByImdbIdAsync(string imdbId);
-    Task<ICollection<CategoryCountDto>> GetCategoriesWithCountAsync();
+    Task<ICollection<CategoryCountDto>> GetCategoriesWithCountAsync(bool includeDisabled = true);
+    Task<IReadOnlyList<MovieEntity>> GetLatestEnabledAsync(int limit);
     Task<ICollection<MovieEntity>> GetMoviesRecommendedByMovieIdAsync(string movieId, int limit);
     Task<IEnumerable<MovieEntity>> GetMoviesByFranchiseIdAsync(string franchiseId, int limit, string? movieIdIgnore = null);
     Task<long> CountByFranchiseIdAsync(string franchiseId);

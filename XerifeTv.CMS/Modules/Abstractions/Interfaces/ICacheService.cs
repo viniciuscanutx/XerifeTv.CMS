@@ -6,6 +6,7 @@ public interface ICacheService
     void SetValue<T>(string key, T value);
     void SetContentValue<T>(string key, T value);
     void ClearContent();
+    Task InvalidateContentAsync();
     void Remove(string key);
     void Clear();
 }

@@ -128,6 +128,7 @@ public sealed class SeriesRepository(IOptions<DBSettings> options)
               Title = r.Title,
               ImdbId = r.ImdbId,
               NumberSeasons = r.NumberSeasons,
+              Disabled = r.Disabled,
               Episodes = r.Episodes
               .Where(e => e.Season == season && (!e.Disabled || includeDisabled) && (e.Number == specificEpisode || specificEpisode == null))
               .OrderBy(e => e.Number)
@@ -197,10 +198,11 @@ public sealed class SeriesRepository(IOptions<DBSettings> options)
         return response.ModifiedCount > 0;
     }
 
-    public async Task<ICollection<CategoryCountDto>> GetCategoriesWithCountAsync()
+    public async Task<ICollection<CategoryCountDto>> GetCategoriesWithCountAsync(bool includeDisabled = true)
     {
         var result = await _collection
             .Aggregate()
+            .Match(r => includeDisabled || !r.Disabled)
             .Unwind<SeriesEntity, BsonDocument>(x => x.Categories)
             .Group(new BsonDocument
             {
@@ -215,6 +217,15 @@ public sealed class SeriesRepository(IOptions<DBSettings> options)
                 Category = x["_id"].AsString,
                 Count = x["count"].AsInt32
             })];
+    }
+
+    // Mais recentes que estão ativas, sem episódios (listagens da API de conteúdo); limit <= 0 traz todas
+    public async Task<IReadOnlyList<SeriesEntity>> GetLatestEnabledAsync(int limit)
+    {
+        var query = _collection.Find(r => !r.Disabled)
+          .Project<SeriesEntity>(Builders<SeriesEntity>.Projection.Exclude(r => r.Episodes))
+          .SortByDescending(r => r.CreateAt);
+        return await (limit > 0 ? query.Limit(limit) : query).ToListAsync();
     }
 
     public async Task<ICollection<SeriesEntity>> GetSeriesRecommendedBySeriesIdAsync(string seriesId, int limit)

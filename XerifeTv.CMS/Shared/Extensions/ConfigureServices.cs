@@ -1,3 +1,4 @@
+using XerifeTv.CMS.Modules.Content.Cache;
 using XerifeTv.CMS.Modules.SiteBadge;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.OpenApi;
@@ -120,6 +121,7 @@ public static class ConfigureServices
         services.AddScoped<IUserService, UserService>();
 		services.AddScoped<ITokenService, TokenService>();
 		services.AddScoped<IAuthService, AuthService>();
+		services.AddSingleton<IContentCacheVersionRepository, ContentCacheVersionRepository>();
 		services.AddSingleton<ICacheService, CacheService>();
 		services.AddSingleton<ISystemSettingsService, SystemSettingsService>();
 		services.AddScoped<IStorageFilesService, StorageFilesService>();
@@ -204,6 +206,7 @@ public static class ConfigureServices
         services.AddScoped<ISiteReviewService, SiteReviewService>();
 
         services.AddHostedService<BackgroundJobQueueWorker>();
+        services.AddHostedService<ContentCacheSyncWorker>();
 
 		return services;
 	}

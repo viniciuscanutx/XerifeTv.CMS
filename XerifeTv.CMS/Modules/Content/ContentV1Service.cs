@@ -89,8 +89,11 @@ public sealed class ContentV1Service(
         var response = await _seriesRepository.GetEpisodesBySeasonAsync(serieId, season, includeDisabled: false);
 
         List<Episode> episodes = [];
+        // Série desativada não lista episódios
+        if (response is null || response.Disabled)
+            return Result<IEnumerable<Episode>>.Success(episodes);
 
-        foreach (var episode in response?.Episodes ?? [])
+        foreach (var episode in response.Episodes)
         {
             episode.SetUrlResolverPath(_configuration["SecuritySettings:ContentEncryptionKey"]!);
             episodes.Add(episode);

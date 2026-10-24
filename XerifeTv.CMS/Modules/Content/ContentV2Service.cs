@@ -47,10 +47,10 @@ public class ContentV2Service(
     {
         try
         {
-            var movies = await _movieRepository.GetAsync(currentPage: 1, limit);
+            var movies = await _movieRepository.GetLatestEnabledAsync(limit);
 
             return Result<IEnumerable<MovieContentV2ResponseDto>>.Success(
-                movies.Items.Select(
+                movies.Select(
                     i => MovieContentV2ResponseDto.FromEntity(i, _configuration["SecuritySettings:ContentEncryptionKey"]!)));
         }
         catch (Exception ex)
@@ -63,9 +63,9 @@ public class ContentV2Service(
     {
         try
         {
-            var series = await _seriesRepository.GetAsync(currentPage: 1, limit);
+            var series = await _seriesRepository.GetLatestEnabledAsync(limit);
 
-            return Result<IEnumerable<SeriesSummaryContentV2ResponseDto>>.Success(series.Items.Select(SeriesSummaryContentV2ResponseDto.FromEntity));
+            return Result<IEnumerable<SeriesSummaryContentV2ResponseDto>>.Success(series.Select(SeriesSummaryContentV2ResponseDto.FromEntity));
         }
         catch (Exception ex)
         {
@@ -165,10 +165,12 @@ public class ContentV2Service(
         try
         {
             var seriesResult = await _seriesRepository.GetEpisodesBySeasonAsync(seriesId, seasonNumber, false);
+            if (seriesResult is null || seriesResult.Disabled)
+                return Result<IEnumerable<EpisodeContentV2ResponseDto>>.Success([]);
 
             return Result<IEnumerable<EpisodeContentV2ResponseDto>>.Success(
-                seriesResult?.Episodes.Select(
-                    i => EpisodeContentV2ResponseDto.FromEntity(i, _configuration["SecuritySettings:ContentEncryptionKey"]!)) ?? []);
+                seriesResult.Episodes.Select(
+                    i => EpisodeContentV2ResponseDto.FromEntity(i, _configuration["SecuritySettings:ContentEncryptionKey"]!)));
         }
         catch (Exception ex)
         {
@@ -180,7 +182,7 @@ public class ContentV2Service(
     {
         try
         {
-            var moviesCategoriesResult = await _movieRepository.GetCategoriesWithCountAsync();
+            var moviesCategoriesResult = await _movieRepository.GetCategoriesWithCountAsync(includeDisabled: false);
             return Result<string[]>.Success([.. moviesCategoriesResult.Where(c => c.Count >= 10).Take(limit).Select(c => c.Category)]);
         }
         catch (Exception ex)
@@ -193,7 +195,7 @@ public class ContentV2Service(
     {
         try
         {
-            var seriesCategoriesResult = await _seriesRepository.GetCategoriesWithCountAsync();
+            var seriesCategoriesResult = await _seriesRepository.GetCategoriesWithCountAsync(includeDisabled: false);
             return Result<string[]>.Success([.. seriesCategoriesResult.Where(c => c.Count >= 10).Take(limit).Select(c => c.Category)]);
         }
         catch (Exception ex)
@@ -329,17 +331,17 @@ public class ContentV2Service(
         try
         {
             var encryptKey = _configuration["SecuritySettings:ContentEncryptionKey"]!;
-            // Busca a mais pra sobrar depois de tirar os desativados e os sem banner
-            var moviesTask = _movieRepository.GetAsync(currentPage: 1, limit * 2);
-            var seriesTask = _seriesRepository.GetAsync(currentPage: 1, limit * 2);
+            // Busca a mais pra sobrar depois de tirar os sem banner
+            var moviesTask = _movieRepository.GetLatestEnabledAsync(limit * 2);
+            var seriesTask = _seriesRepository.GetLatestEnabledAsync(limit * 2);
             await Task.WhenAll(moviesTask, seriesTask);
 
-            var movies = moviesTask.Result.Items
-                .Where(m => !m.Disabled && !string.IsNullOrWhiteSpace(m.BannerUrl))
+            var movies = moviesTask.Result
+                .Where(m => !string.IsNullOrWhiteSpace(m.BannerUrl))
                 .Select(m => new FeaturedContentV2ResponseDto(MovieContentV2ResponseDto.FromEntity(m, encryptKey), "movie"))
                 .ToList();
-            var series = seriesTask.Result.Items
-                .Where(s => !s.Disabled && !string.IsNullOrWhiteSpace(s.BannerUrl))
+            var series = seriesTask.Result
+                .Where(s => !string.IsNullOrWhiteSpace(s.BannerUrl))
                 .Select(s => new FeaturedContentV2ResponseDto(SeriesSummaryContentV2ResponseDto.FromEntity(s), "series"))
                 .ToList();
 
