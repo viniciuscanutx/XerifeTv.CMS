@@ -13,13 +13,64 @@ public interface ISiteProfileService
     Task<bool> IsFavoriteAsync(string userId, string movieId, string contentType = "movie");
     Task AddFavoriteAsync(string userId, string movieId, string contentType = "movie");
     Task DeleteFavoriteAsync(string userId, string movieId, string contentType = "movie");
+    Task<string> UploadImageAsync(string userId, string kind, Stream content, long length, string? contentType, string? fileName);
+    Task<SiteProfileImageEntity?> GetImageAsync(string imageId);
 }
 
 public sealed class SiteProfileService(
     ISiteUserRepository users,
     ISiteFavoriteRepository favorites,
-    IMovieRepository movies, ISeriesRepository series, ISiteBadgeService badges) : ISiteProfileService
+    IMovieRepository movies, ISeriesRepository series, ISiteBadgeService badges,
+    ISiteProfileImageRepository images) : ISiteProfileService
 {
+    public const long MaxProfileImageBytes = 5 * 1024 * 1024;
+    private static readonly string[] ImageKinds = ["avatar", "banner"];
+
+    // Content-Type aceito -> extensão equivalente (para quando o envio não informa o tipo)
+    private static readonly Dictionary<string, string> ImageTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["image/jpeg"] = ".jpg",
+        ["image/png"] = ".png",
+        ["image/webp"] = ".webp",
+        ["image/gif"] = ".gif",
+    };
+
+    // Guarda a imagem no MongoDB e devolve o id; o perfil muda quando o usuário salva (PUT)
+    public async Task<string> UploadImageAsync(string userId, string kind, Stream content, long length, string? contentType, string? fileName)
+    {
+        if (!ImageKinds.Contains(kind))
+            throw new ArgumentException("Tipo de imagem inválido.");
+        if (length <= 0)
+            throw new ArgumentException("Envie uma imagem.");
+        if (length > MaxProfileImageBytes)
+            throw new ArgumentException("A imagem deve ter no máximo 5 MB.");
+
+        var resolvedType = ResolveImageType(contentType, fileName)
+            ?? throw new ArgumentException("Envie uma imagem JPG, PNG, WEBP ou GIF.");
+
+        using var buffer = new MemoryStream();
+        await content.CopyToAsync(buffer);
+        return await images.CreateAsync(new SiteProfileImageEntity
+        {
+            SiteUserId = userId,
+            Kind = kind,
+            ContentType = resolvedType,
+            Data = buffer.ToArray(),
+        });
+    }
+
+    public Task<SiteProfileImageEntity?> GetImageAsync(string imageId) => images.GetAsync(imageId);
+
+    // Prefere o Content-Type enviado; sem ele, deduz pela extensão do arquivo
+    private static string? ResolveImageType(string? contentType, string? fileName)
+    {
+        if (contentType is not null && ImageTypes.ContainsKey(contentType))
+            return contentType;
+        var extension = Path.GetExtension(fileName ?? string.Empty).ToLowerInvariant();
+        if (extension == ".jpeg") extension = ".jpg";
+        return ImageTypes.FirstOrDefault(pair => pair.Value == extension).Key;
+    }
+
     public async Task<SiteProfileResponse> GetAsync(string userId)
     {
         var user = await users.GetAsync(userId) ?? throw new KeyNotFoundException("Perfil não encontrado.");

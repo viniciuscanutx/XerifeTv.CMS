@@ -6,6 +6,7 @@ using XerifeTv.CMS.Modules.SiteReview;
 using XerifeTv.CMS.Modules.SiteUser.Interfaces;
 using XerifeTv.CMS.Modules.SiteWatchProgress.Dtos.Response;
 using XerifeTv.CMS.Modules.SiteWatchProgress.Interfaces;
+using XerifeTv.CMS.Shared.Extensions;
 
 namespace XerifeTv.CMS.Controllers.ContentAPI;
 
@@ -19,6 +20,18 @@ public sealed class ProfileController(ISiteUserRepository users, ISiteProfileSer
     [HttpPut]
     public async Task<IActionResult> Update(UpdateSiteProfileRequest request)
         => Ok(await profiles.UpdateAsync(CurrentUserId, request));
+
+    // Foto ou banner enviados do aparelho (multipart "file"); devolve { url } para usar no PUT do perfil
+    [HttpPost("Images")]
+    [RequestSizeLimit(SiteProfileService.MaxProfileImageBytes + 64 * 1024)]
+    public async Task<IActionResult> UploadImage([FromQuery] string kind, IFormFile? file)
+    {
+        if (file is null)
+            return BadRequest(new { message = "Envie uma imagem." });
+        await using var content = file.OpenReadStream();
+        var imageId = await profiles.UploadImageAsync(CurrentUserId, kind ?? string.Empty, content, file.Length, file.ContentType, file.FileName);
+        return Ok(new { url = $"{Request.GetPublicBaseUrl()}/Api/ProfileImages/{imageId}" });
+    }
 
     [HttpPut("Badge")]
     public async Task<IActionResult> SelectBadge(SelectSiteBadgeRequest request)

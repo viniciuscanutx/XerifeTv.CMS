@@ -101,6 +101,7 @@ public static class ConfigureServices
 		services.AddScoped<ISiteRoleRepository, SiteRoleRepository>();
 		services.AddScoped<ISiteWatchProgressRepository, SiteWatchProgressRepository>();
         services.AddScoped<ISiteFavoriteRepository, SiteFavoriteRepository>();
+        services.AddScoped<ISiteProfileImageRepository, SiteProfileImageRepository>();
         services.AddScoped<ISiteReviewRepository, SiteReviewRepository>();
 		return services;
 	}
