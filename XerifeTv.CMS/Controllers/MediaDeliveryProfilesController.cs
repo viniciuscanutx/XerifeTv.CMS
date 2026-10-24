@@ -212,6 +212,32 @@ public class MediaDeliveryProfilesController(
         string urlFixed = CryptographyHelper.Decrypt(uf, _configuration["SecuritySettings:ContentEncryptionKey"]!);
         string streamFormat = CryptographyHelper.Decrypt(sf, _configuration["SecuritySettings:ContentEncryptionKey"]!);
 
+        return Ok(await BuildRawResolveResponseAsync(ToAbsoluteCatalogUrl(urlFixed), streamFormat, fr));
+    }
+
+    /// <summary>
+    /// Versao "crua" do ResolveUrlMdp para o app Android (ChelifeTV): devolve a URL do perfil
+    /// ja montada (BaseUrl + caminho + token) + provedores de catalogo, sem buscar catalogo,
+    /// sem probe e sem proxy. O app busca o catalogo no aparelho (IP do celular).
+    /// </summary>
+    [AllowAnonymous]
+    [HttpGet]
+    public async Task<IActionResult> ResolveUrlMdpRaw(string mp, string mdp)
+    {
+        string mediaDeliveryProfileId = CryptographyHelper.Decrypt(mdp, _configuration["SecuritySettings:ContentEncryptionKey"]!);
+        string mediaPath = CryptographyHelper.Decrypt(mp, _configuration["SecuritySettings:ContentEncryptionKey"]!);
+
+        var response = await _urlResolver.BuildProfileUrlAsync(mediaPath, mediaDeliveryProfileId);
+
+        if (response.IsFailure)
+            return StatusCode(int.Parse(response.Error.Code), response.Error.Description);
+
+        return Ok(await BuildRawResolveResponseAsync(response.Data!.Url, response.Data.StreamFormat, followRedirect: false));
+    }
+
+    // Resposta comum dos endpoints "Raw": URL + provedores de catálogo + Worker de cache
+    private async Task<object> BuildRawResolveResponseAsync(string url, string streamFormat, bool followRedirect)
+    {
         var providersResult = await _catalogProviderService.GetAllAsync();
         var providers = ((providersResult.IsFailure ? null : providersResult.Data)
                 ?? Enumerable.Empty<GetCatalogProviderResponseDto>())
@@ -219,16 +245,16 @@ public class MediaDeliveryProfilesController(
             .Select(p => new { baseUrl = p.BaseUrl.TrimEnd('/'), name = p.Name })
             .ToArray();
 
-        return Ok(new
+        return new
         {
-            url = ToAbsoluteCatalogUrl(urlFixed),
+            url,
             streamFormat,
-            followRedirect = fr,
+            followRedirect,
             catalogProviders = providers,
             // Worker com cache KV dos catálogos: o app consulta antes de ir no provedor
             // (catálogo "frio" do bestcine leva ~10s) e grava depois, igual ao _VideoModal.
             catalogCacheUrl = (_configuration["StreamCatalog:ProxyBaseUrl"] ?? string.Empty).TrimEnd('/')
-        });
+        };
     }
 
     // Catalogo cadastrado como caminho relativo ("stream/movie/tt...json") usa a base

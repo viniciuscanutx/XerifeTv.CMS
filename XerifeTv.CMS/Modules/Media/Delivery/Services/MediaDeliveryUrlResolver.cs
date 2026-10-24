@@ -88,6 +88,29 @@ public class MediaDeliveryUrlResolver(
     {
         try
         {
+            var buildResult = await BuildProfileUrlAsync(mediaPath, mediaDeliveryProfileId);
+
+            if (buildResult.IsFailure)
+                return buildResult;
+
+            var (resolvedUrl, streamFormat) = buildResult.Data!;
+            if (_streamCatalogResolver.CanHandle(resolvedUrl))
+                return await ResolveStreamCatalogAsync(resolvedUrl, streamFormat);
+
+            return Result<GetResolveUrlResponseDto>.Success(AvoidMixedContent(resolvedUrl, streamFormat));
+        }
+        catch (Exception ex)
+        {
+            var error = new Error("500", ex.InnerException?.Message ?? ex.Message);
+            return Result<GetResolveUrlResponseDto>.Failure(error);
+        }
+    }
+
+    // Só monta a URL do perfil (BaseUrl + caminho + token), sem buscar catálogo nem proxy
+    public async Task<Result<GetResolveUrlResponseDto>> BuildProfileUrlAsync(string mediaPath, string mediaDeliveryProfileId)
+    {
+        try
+        {
             var response = await _service.GetAsync(mediaDeliveryProfileId);
 
             if (response.IsFailure)
@@ -114,11 +137,7 @@ public class MediaDeliveryUrlResolver(
                 Query = tokenResult.Data
             };
 
-            var resolvedUrl = urlBuilder.ToString();
-            if (_streamCatalogResolver.CanHandle(resolvedUrl))
-                return await ResolveStreamCatalogAsync(resolvedUrl, mediaProfile.StreamFormat);
-
-            return Result<GetResolveUrlResponseDto>.Success(AvoidMixedContent(resolvedUrl, mediaProfile.StreamFormat));
+            return Result<GetResolveUrlResponseDto>.Success(new(urlBuilder.ToString(), mediaProfile.StreamFormat));
         }
         catch (Exception ex)
         {
