@@ -355,6 +355,28 @@ public class ContentV2Controller(
     }
 
     [HttpGet]
+    [Route("featured")]
+    public async Task<IActionResult> Featured([FromQuery] int limit = 6)
+    {
+        _logger.LogInformation("Request Content API v2 /featured");
+
+        limit = Math.Clamp(limit, 1, 20);
+        var cacheKey = $"content_v2_featured_{limit}";
+        var responseCache = _cacheService.GetValue<object>(cacheKey);
+        if (responseCache != null) return Ok(responseCache);
+
+        var response = await _service.GetFeaturedAsync(limit);
+
+        if (response.IsSuccess)
+        {
+            _cacheService.SetValue(cacheKey, response.Data);
+            return Ok(response.Data);
+        }
+
+        return BadRequest();
+    }
+
+    [HttpGet]
     [Route("movies/categories/groups")]
     public async Task<IActionResult> MoviesByCategories([FromQuery] List<string> categories, int page = 1, int pageSize = 10)
     {

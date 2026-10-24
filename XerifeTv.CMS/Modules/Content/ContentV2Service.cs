@@ -324,6 +324,43 @@ public class ContentV2Service(
         }
     }
 
+    public async Task<Result<IEnumerable<FeaturedContentV2ResponseDto>>> GetFeaturedAsync(int limit)
+    {
+        try
+        {
+            var encryptKey = _configuration["SecuritySettings:ContentEncryptionKey"]!;
+            // Busca a mais pra sobrar depois de tirar os desativados e os sem banner
+            var moviesTask = _movieRepository.GetAsync(currentPage: 1, limit * 2);
+            var seriesTask = _seriesRepository.GetAsync(currentPage: 1, limit * 2);
+            await Task.WhenAll(moviesTask, seriesTask);
+
+            var movies = moviesTask.Result.Items
+                .Where(m => !m.Disabled && !string.IsNullOrWhiteSpace(m.BannerUrl))
+                .Select(m => new FeaturedContentV2ResponseDto(MovieContentV2ResponseDto.FromEntity(m, encryptKey), "movie"))
+                .ToList();
+            var series = seriesTask.Result.Items
+                .Where(s => !s.Disabled && !string.IsNullOrWhiteSpace(s.BannerUrl))
+                .Select(s => new FeaturedContentV2ResponseDto(SeriesSummaryContentV2ResponseDto.FromEntity(s), "series"))
+                .ToList();
+
+            return Result<IEnumerable<FeaturedContentV2ResponseDto>>.Success(Interleave(movies, series).Take(limit).ToList());
+        }
+        catch (Exception ex)
+        {
+            return Result<IEnumerable<FeaturedContentV2ResponseDto>>.Failure(new("500", ex.Message));
+        }
+    }
+
+    // Filme e série alternados (mais recentes primeiro); quando uma lista acaba, segue a outra
+    private static IEnumerable<T> Interleave<T>(IReadOnlyList<T> first, IReadOnlyList<T> second)
+    {
+        for (var i = 0; i < Math.Max(first.Count, second.Count); i++)
+        {
+            if (i < first.Count) yield return first[i];
+            if (i < second.Count) yield return second[i];
+        }
+    }
+
     public async Task<Result<PagedList<ItemsByCategory<MovieContentV2ResponseDto>>>> GetMoviesByCategoriesListAsync(
         List<string> categories,
         int page,
