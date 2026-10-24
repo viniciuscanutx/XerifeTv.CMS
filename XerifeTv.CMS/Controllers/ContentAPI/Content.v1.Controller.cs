@@ -39,7 +39,7 @@ public class ContentV1Controller(
 
 		if (response.IsFailure) return BadRequest();
 
-        _cacheService.SetValue(cacheKey, response.Data);
+        _cacheService.SetContentValue(cacheKey, response.Data);
 
         return Ok(response.Data);
 	}
@@ -62,7 +62,7 @@ public class ContentV1Controller(
 
         if (response.IsFailure) return BadRequest();
 
-        _cacheService.SetValue(cacheKey, response.Data);
+        _cacheService.SetContentValue(cacheKey, response.Data);
 
         return Ok(response.Data);
 	}
@@ -90,7 +90,7 @@ public class ContentV1Controller(
 
         if (response.IsFailure) return BadRequest();
 
-        _cacheService.SetValue(cacheKey, response.Data);
+        _cacheService.SetContentValue(cacheKey, response.Data);
 
         return Ok(response.Data);
 	}
@@ -113,7 +113,7 @@ public class ContentV1Controller(
 
         if (response.IsFailure) return BadRequest();
 
-        _cacheService.SetValue(cacheKey, response.Data);
+        _cacheService.SetContentValue(cacheKey, response.Data);
 
         return Ok(response.Data);
 	}
@@ -133,7 +133,7 @@ public class ContentV1Controller(
 
         if (response.IsFailure) return BadRequest();
 
-        _cacheService.SetValue(cacheKey, response.Data);
+        _cacheService.SetContentValue(cacheKey, response.Data);
 
         return Ok(response.Data);
 	}
@@ -165,7 +165,7 @@ public class ContentV1Controller(
 
         if (response.IsFailure) return BadRequest();
 
-        _cacheService.SetValue(cacheKey, response.Data);
+        _cacheService.SetContentValue(cacheKey, response.Data);
 
         return Ok(response.Data);
 	}
@@ -188,7 +188,7 @@ public class ContentV1Controller(
 
         if (response.IsFailure) return BadRequest();
 
-        _cacheService.SetValue(cacheKey, response.Data);
+        _cacheService.SetContentValue(cacheKey, response.Data);
 
         return Ok(response.Data);
     }

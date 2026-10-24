@@ -1,3 +1,4 @@
+using XerifeTv.CMS.Modules.Abstractions.Interfaces;
 using MongoDB.Driver.Linq;
 using XerifeTv.CMS.Modules.Common;
 using XerifeTv.CMS.Modules.Franchise.Interfaces;
@@ -15,7 +16,8 @@ public class SeriesService(
     ISeriesRepository _repository,
     IWebhookService _webhookService,
     IFranchiseService _franchiseService,
-    IConfiguration _configuration) : ISeriesService
+    IConfiguration _configuration,
+    ICacheService _cacheService) : ISeriesService
 {
     public async Task<Result<PagedList<GetSeriesResponseDto>>> GetAsync(int currentPage, int limit)
     {
@@ -89,6 +91,8 @@ public class SeriesService(
                   new Error("409", $"Serie nao cadastrada. Imdb ID {entity.ImdbId} duplicado"));
 
             var response = await _repository.CreateAsync(entity);
+            // Cadastro aparece no app/site sem esperar o cache da API de conteúdo expirar
+            _cacheService.ClearContent();
 
             _ = Task.Run(() => _webhookService.DispacthWebhooksByTriggerEventAsync(EWebhookTriggerEvent.SERIES_PUBLISHED, response));
 
@@ -119,6 +123,7 @@ public class SeriesService(
 
 
             await _repository.UpdateAsync(entity);
+            _cacheService.ClearContent();
             return Result<string>.Success(entity.Id);
         }
         catch (Exception ex)
@@ -138,6 +143,7 @@ public class SeriesService(
                 return Result<bool>.Failure(new Error("404", "Conteudo nao encontrado"));
 
             await _repository.DeleteAsync(id);
+            _cacheService.ClearContent();
             return Result<bool>.Success(true);
         }
         catch (Exception ex)
@@ -223,6 +229,7 @@ public class SeriesService(
             var episode = dto.ToEntity();
 
             await _repository.CreateEpisodeAsync(seriesResponse.Id, episode);
+            _cacheService.ClearContent();
 
             return Result<string>.Success(episode.Id);
         }
@@ -256,6 +263,7 @@ public class SeriesService(
             var episode = dto.ToEntity();
 
             await _repository.UpdateEpisodeAsync(seriesResponse.Id, episode);
+            _cacheService.ClearContent();
 
             return Result<string>.Success(seriesResponse.Id);
         }
@@ -276,6 +284,7 @@ public class SeriesService(
                 return Result<bool>.Failure(new Error("404", "Serie nao encontrada"));
 
             await _repository.DeleteEpisodeAsync(serieId, id);
+            _cacheService.ClearContent();
 
             return Result<bool>.Success(true);
         }

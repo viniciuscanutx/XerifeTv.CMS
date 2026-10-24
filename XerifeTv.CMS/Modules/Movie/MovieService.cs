@@ -1,3 +1,4 @@
+using XerifeTv.CMS.Modules.Abstractions.Interfaces;
 using XerifeTv.CMS.Modules.Common;
 using XerifeTv.CMS.Modules.Franchise.Interfaces;
 using XerifeTv.CMS.Modules.Integrations.Webhook.Enums;
@@ -15,7 +16,8 @@ public sealed class MovieService(
     IMovieRepository _repository,
     IWebhookService _webhookService,
     IFranchiseService _franchiseService,
-    IImdbService _imdbService) : IMovieService
+    IImdbService _imdbService,
+    ICacheService _cacheService) : IMovieService
 {
     public async Task<Result<PagedList<GetMovieResponseDto>>> GetAsync(int currentPage, int limit)
     {
@@ -89,6 +91,8 @@ public sealed class MovieService(
                   new Error("409", $"Filme nao cadastrado. Imdb ID {entity.ImdbId} duplicado"));
 
             var response = await _repository.CreateAsync(entity);
+            // Cadastro aparece no app/site sem esperar o cache da API de conteúdo expirar
+            _cacheService.ClearContent();
 
             _ = Task.Run(() => _webhookService.DispacthWebhooksByTriggerEventAsync(EWebhookTriggerEvent.MOVIE_PUBLISHED, response));
 
@@ -119,6 +123,7 @@ public sealed class MovieService(
 
             entity.CreateAt = response.CreateAt;
             await _repository.UpdateAsync(entity);
+            _cacheService.ClearContent();
             return Result<string>.Success(entity.Id);
         }
         catch (Exception ex)
@@ -138,6 +143,7 @@ public sealed class MovieService(
                 return Result<bool>.Failure(new Error("404", "Conteudo nao encontrado"));
 
             await _repository.DeleteAsync(id);
+            _cacheService.ClearContent();
             return Result<bool>.Success(true);
         }
         catch (Exception ex)

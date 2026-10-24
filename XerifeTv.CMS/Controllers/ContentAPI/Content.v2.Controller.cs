@@ -29,7 +29,7 @@ public class ContentV2Controller(
 
         if (response.IsSuccess)
         {
-            _cacheService.SetValue(cacheKey, response.Data);
+            _cacheService.SetContentValue(cacheKey, response.Data);
             return Ok(response.Data);
         }
 
@@ -51,7 +51,7 @@ public class ContentV2Controller(
 
         if (response.IsSuccess)
         {
-            _cacheService.SetValue(cacheKey, response.Data);
+            _cacheService.SetContentValue(cacheKey, response.Data);
             return Ok(response.Data);
         }
 
@@ -72,7 +72,7 @@ public class ContentV2Controller(
 
         if (response.IsSuccess)
         {
-            _cacheService.SetValue(cacheKey, response.Data);
+            _cacheService.SetContentValue(cacheKey, response.Data);
             return Ok(response.Data);
         }
 
@@ -106,7 +106,7 @@ public class ContentV2Controller(
         {
             if (response.Data is null) return NotFound();
 
-            _cacheService.SetValue(cacheKey, response.Data);
+            _cacheService.SetContentValue(cacheKey, response.Data);
             return Ok(response.Data);
         }
 
@@ -132,7 +132,7 @@ public class ContentV2Controller(
         {
             if (response.Data is null) return NotFound();
 
-            _cacheService.SetValue(cacheKey, response.Data);
+            _cacheService.SetContentValue(cacheKey, response.Data);
             return Ok(response.Data);
         }
 
@@ -163,7 +163,7 @@ public class ContentV2Controller(
                 episodes = response.Data
             };
 
-            _cacheService.SetValue(cacheKey, result);
+            _cacheService.SetContentValue(cacheKey, result);
             return Ok(result);
         }
 
@@ -184,7 +184,7 @@ public class ContentV2Controller(
 
         if (response.IsSuccess)
         {
-            _cacheService.SetValue(cacheKey, response.Data);
+            _cacheService.SetContentValue(cacheKey, response.Data);
             return Ok(response.Data);
         }
 
@@ -205,7 +205,7 @@ public class ContentV2Controller(
 
         if (response.IsSuccess)
         {
-            _cacheService.SetValue(cacheKey, response.Data);
+            _cacheService.SetContentValue(cacheKey, response.Data);
             return Ok(response.Data);
         }
 
@@ -227,7 +227,7 @@ public class ContentV2Controller(
 
         if (response.IsSuccess)
         {
-            _cacheService.SetValue(cacheKey, response.Data);
+            _cacheService.SetContentValue(cacheKey, response.Data);
             return Ok(response.Data);
         }
 
@@ -249,7 +249,7 @@ public class ContentV2Controller(
 
         if (response.IsSuccess)
         {
-            _cacheService.SetValue(cacheKey, response.Data);
+            _cacheService.SetContentValue(cacheKey, response.Data);
             return Ok(response.Data);
         }
 
@@ -270,7 +270,7 @@ public class ContentV2Controller(
 
         if (response.IsSuccess)
         {
-            _cacheService.SetValue(cacheKey, response.Data);
+            _cacheService.SetContentValue(cacheKey, response.Data);
             return Ok(response.Data);
         }
 
@@ -290,7 +290,7 @@ public class ContentV2Controller(
         var response = await _service.GetSeriesRecommendedAsync(seriesId);
         if (response.IsSuccess)
         {
-            _cacheService.SetValue(cacheKey, response.Data);
+            _cacheService.SetContentValue(cacheKey, response.Data);
             return Ok(response.Data);
         }
 
@@ -318,7 +318,7 @@ public class ContentV2Controller(
                 series = seriesResponse.Data
             };
 
-            _cacheService.SetValue(cacheKey, result);
+            _cacheService.SetContentValue(cacheKey, result);
             return Ok(result);
         }
 
@@ -347,7 +347,7 @@ public class ContentV2Controller(
                 seriesCategories = response.Data?.SeriesCategores
             };
 
-            _cacheService.SetValue(cacheKey, result);
+            _cacheService.SetContentValue(cacheKey, result);
             return Ok(result);
         }
 
@@ -369,7 +369,7 @@ public class ContentV2Controller(
 
         if (response.IsSuccess)
         {
-            _cacheService.SetValue(cacheKey, response.Data);
+            _cacheService.SetContentValue(cacheKey, response.Data);
             return Ok(response.Data);
         }
 
@@ -391,7 +391,7 @@ public class ContentV2Controller(
 
         if (response.IsSuccess)
         {
-            _cacheService.SetValue(cacheKey, response.Data);
+            _cacheService.SetContentValue(cacheKey, response.Data);
             return Ok(response.Data);
         }
 
@@ -413,7 +413,7 @@ public class ContentV2Controller(
 
         if (response.IsSuccess)
         {
-            _cacheService.SetValue(cacheKey, response.Data);
+            _cacheService.SetContentValue(cacheKey, response.Data);
             return Ok(response.Data);
         }
 
