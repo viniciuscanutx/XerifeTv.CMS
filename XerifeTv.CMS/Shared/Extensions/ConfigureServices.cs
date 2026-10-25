@@ -53,6 +53,7 @@ using XerifeTv.CMS.Modules.User;
 using XerifeTv.CMS.Modules.User.Interfaces;
 using XerifeTv.CMS.Modules.User.Services;
 using XerifeTv.CMS.Modules.TelegramBot;
+using XerifeTv.CMS.Modules.DiscordBot;
 
 namespace XerifeTv.CMS.Shared.Extensions;
 
@@ -206,6 +207,7 @@ public static class ConfigureServices
         services.AddScoped<ISiteProfileService, SiteProfileService>();
         services.AddScoped<ISiteReviewService, SiteReviewService>();
         services.AddScoped<TelegramBotService>();
+        services.AddScoped<DiscordBotService>();
 
         services.AddHostedService<BackgroundJobQueueWorker>();
         services.AddHostedService<ContentCacheSyncWorker>();
