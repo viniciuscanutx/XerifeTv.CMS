@@ -119,7 +119,7 @@ public sealed class DiscordBotService(
                 {
                     name = "imdb",
                     description = "IMDb ID do filme (ex.: tt0111161) ou link do IMDb",
-                    type = 3
+                    type = 3,
                     required = true
                 }
             }
