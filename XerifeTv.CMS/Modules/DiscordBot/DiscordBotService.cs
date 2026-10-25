@@ -112,7 +112,7 @@ public sealed class DiscordBotService(
         {
             name = "filme",
             description = "Cadastrar um filme no CMS via IMDb",
-            default_member_permissions = "8",
+            default_member_permissions = (string?)null,
             options = new[]
             {
                 new
@@ -195,8 +195,6 @@ public sealed class DiscordBotService(
     {
         var interactionToken = interaction.GetProperty("token").GetString()!;
         var applicationId = interaction.GetProperty("application_id").GetString()!;
-        var userId = interaction.GetProperty("member").GetProperty("user").GetProperty("id").GetString()!;
-        var username = interaction.GetProperty("member").GetProperty("user").GetProperty("username").GetString()!;
 
         var options = interaction.GetProperty("data").GetProperty("options");
         var imdbInput = options[0].GetProperty("value").GetString() ?? string.Empty;
@@ -225,10 +223,22 @@ public sealed class DiscordBotService(
             + "\n\n**Qual a classificação?**";
 
         var ratingComponents = CreateRatingComponents(imdbId);
+        var embeds = string.IsNullOrWhiteSpace(imdbInfo.Data.PosterUrl)
+            ? Array.Empty<object>()
+            : new object[]
+            {
+                new
+                {
+                    title = imdbInfo.Data.Title,
+                    description = $"{imdbInfo.Data.ReleaseYear} · {imdbId}",
+                    image = new { url = imdbInfo.Data.PosterUrl }
+                }
+            };
 
         var followup = new
         {
             content = caption,
+            embeds,
             components = ratingComponents,
             flags = 64
         };
@@ -380,7 +390,7 @@ public sealed class DiscordBotService(
         var saved = await movieService.GetByImdbIdAsync(imdbId);
         var title = saved.Data?.Title ?? imdbId;
         await activityLogService.LogAsync("discord", "Filmes", "created", $"cadastrou o filme \"{title}\" pelo Discord");
-        await EditFollowupAsync(interactionToken, applicationId, messageId, $"✅ {title}\nClassificação {rating} · fonte {provider.Name}", components: null);
+        await EditFollowupAsync(interactionToken, applicationId, messageId, $"✅ Filme cadastrado com sucesso!\n**{title}**\nClassificação {rating} · fonte {provider.Name}", components: null);
     }
 
     private async Task<List<GetCatalogProviderResponseDto>> GetProvidersAsync()
