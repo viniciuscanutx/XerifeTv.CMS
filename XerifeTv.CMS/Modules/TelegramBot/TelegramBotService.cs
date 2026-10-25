@@ -52,6 +52,14 @@ public sealed class TelegramBotService(
         if (chatId != AllowedChatId) return;
 
         var text = message.TryGetProperty("text", out var t) ? t.GetString() ?? string.Empty : string.Empty;
+        var command = text.Trim().Split(' ', 2)[0];
+        if (command.Equals("/ping", StringComparison.OrdinalIgnoreCase)
+            || command.StartsWith("/ping@", StringComparison.OrdinalIgnoreCase))
+        {
+            await SendMessageAsync(chatId, "🏓 API acordada.");
+            return;
+        }
+
         var match = ImdbIdRegex.Match(text);
 
         if (!match.Success)
