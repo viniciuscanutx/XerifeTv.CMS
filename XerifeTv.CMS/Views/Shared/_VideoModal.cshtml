@@ -82,6 +82,7 @@
     .video-js .vjs-fonte-menu-button .vjs-menu-content { max-height: 20em; }
 </style>
 
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1.6.19/dist/hls.min.js"></script>
 <script defer>
     const modal = document.getElementById('videoModal')
     let player = undefined
@@ -233,6 +234,38 @@
 
         videojs.registerComponent('FonteMenuItem', FonteMenuItem)
         videojs.registerComponent('FonteMenuButton', FonteMenuButton)
+    }
+
+    // Canais ao vivo vêm em HEVC dentro de TS, que o VHS do video.js não decodifica: o HLS deles vai pelo hls.js
+    let useHlsJs = false
+    let currentHls = null
+
+    function destroyHls() {
+        if (!currentHls) return
+        currentHls.destroy()
+        currentHls = null
+    }
+
+    function registerHlsJsSourceHandler() {
+        if (typeof Hls === 'undefined' || !Hls.isSupported()) return
+        const canPlay = type => useHlsJs && /mpegurl/i.test(type || '') ? 'probably' : ''
+
+        videojs.getTech('Html5').registerSourceHandler({
+            canPlayType: canPlay,
+            canHandleSource: source => canPlay(source.type),
+            handleSource(source, tech) {
+                destroyHls()
+                const hls = new Hls()
+                // Erro fatal vira erro do player, que já cai no fallback de fontes
+                hls.on(Hls.Events.ERROR, (_, data) => {
+                    if (data.fatal && hls === currentHls) player.error({ code: 4, message: data.details })
+                })
+                hls.loadSource(source.src)
+                hls.attachMedia(tech.el())
+                currentHls = hls
+                return { dispose: () => { if (hls === currentHls) destroyHls() } }
+            }
+        }, 0)
     }
     // URL do Worker (cache KV compartilhado). Vazio = pula o Worker e vai direto no froststream.
     const streamCatalogProxyBaseUrl = '@((Configuration["StreamCatalog:ProxyBaseUrl"] ?? string.Empty).TrimEnd('/'))'
@@ -799,6 +832,7 @@
             }
 
             if (!player) {
+                registerHlsJsSourceHandler()
                 player = videojs('player', {
                     controls: true,
                     preload: 'auto',
@@ -838,6 +872,7 @@
             currentDubResolver = button.getAttribute('data-bs-video-resolver')
             currentLegResolver = button.getAttribute('data-bs-video-alternative-resolver')
             currentSubtitleUrl = button.getAttribute('data-bs-video-subtitle') || null
+            useHlsJs = button.hasAttribute('data-bs-video-live')
             currentSourceUrl = null
             removeSubtitleTrack()
             updateSourceMenu([])
@@ -885,6 +920,7 @@
             hideError()
             resetSubtitleSync()
             removeSubtitleTrack()
+            destroyHls()
             if (player) {
                 player.pause()
                 player.reset()
