@@ -100,6 +100,9 @@ app.MapScalarApiReference("/Api", options =>
 		.WithDefaultHttpClient(ScalarTarget.CSharp, ScalarClient.Axios);
 });
 
+// Endpoint leve para o keep-alive do Render
+app.MapMethods("/health", ["GET", "HEAD"], () => Results.Text("ok")).AllowAnonymous();
+
 app.MapControllerRoute(
 	name: "default",
 	pattern: "{controller=Home}/{action=Index}/{id?}");

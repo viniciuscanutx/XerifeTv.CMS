@@ -1,0 +1,9 @@
+name = "xerifetv-keep-alive"
+main = "src/index.js"
+compatibility_date = "2025-10-01"
+
+[triggers]
+crons = ["*/10 * * * *"]
+
+[vars]
+HEALTH_URL = "https://chelifetv.onrender.com/health"
