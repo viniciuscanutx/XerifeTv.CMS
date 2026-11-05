@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using XerifeTv.CMS.Modules.Abstractions.Interfaces;
 using XerifeTv.CMS.Modules.Activity.Interfaces;
@@ -142,6 +143,48 @@ public class MediaDeliveryProfilesController(
         _cacheService.SetValue<GetResolveUrlResponseDto?>(cacheKey, response.Data);
 
         return Ok(response.Data);
+    }
+
+    // Site: o navegador busca o catálogo (provedor bloqueia o Render) e aqui só testa as fontes
+    [Authorize(AuthenticationSchemes = "SiteJwt")]
+    [EnableCors("AuthApi")]
+    [HttpPost]
+    public async Task<IActionResult> ResolveUrlFxFromPayload([FromBody] ResolveUrlFxFromPayloadRequestDto dto)
+    {
+        if (dto is null || string.IsNullOrWhiteSpace(dto.Payload) || string.IsNullOrWhiteSpace(dto.CatalogUrl))
+            return BadRequest();
+
+        string urlFixed = ToAbsoluteCatalogUrl(CryptographyHelper.Decrypt(dto.Uf, _configuration["SecuritySettings:ContentEncryptionKey"]!));
+        string streamFormat = CryptographyHelper.Decrypt(dto.Sf, _configuration["SecuritySettings:ContentEncryptionKey"]!);
+
+        if (!await IsKnownCatalogUrlAsync(urlFixed, dto.CatalogUrl))
+            return BadRequest();
+
+        var providerName = await GetProviderNameForUrlAsync(dto.CatalogUrl);
+        var response = await _urlResolver.ResolveStreamCatalogFromPayloadAsync(dto.Payload, streamFormat, providerName, dto.CatalogUrl);
+
+        if (response.IsFailure)
+            return StatusCode(int.Parse(response.Error.Code), response.Error.Description);
+
+        return Ok(response.Data);
+    }
+
+    // Aceita só a URL cadastrada ou o mesmo /stream/... num provedor ativo (igual ao ResolveUrlFxRaw)
+    private async Task<bool> IsKnownCatalogUrlAsync(string urlFixed, string catalogUrl)
+    {
+        if (string.Equals(urlFixed, catalogUrl, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        var suffixIndex = urlFixed.IndexOf("/stream/", StringComparison.Ordinal);
+        if (suffixIndex < 0) return false;
+
+        var suffix = urlFixed[suffixIndex..];
+        var providersResult = await _catalogProviderService.GetAllAsync();
+        if (providersResult.IsFailure || providersResult.Data is null) return false;
+
+        return providersResult.Data
+            .Where(p => !string.IsNullOrWhiteSpace(p.BaseUrl))
+            .Any(p => string.Equals($"{p.BaseUrl.TrimEnd('/')}{suffix}", catalogUrl, StringComparison.OrdinalIgnoreCase));
     }
 
     // Descobre o nome do provedor (CMS) a partir da URL do catálogo, casando pela Base URL.
