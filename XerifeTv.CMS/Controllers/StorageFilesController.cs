@@ -40,7 +40,7 @@ public class StorageFilesController(
             uploadStream = file.OpenReadStream();
         }
 
-        // O Supabase Storage rejeita keys com espaços/colchetes/etc. Sanitiza o nome e
+        // O Blob Storage rejeita paths com colchetes/acentos/etc. Sanitiza o nome e
         // adiciona um sufixo único (evita colisão/sobrescrita de arquivos de mesmo nome).
         uploadFileName = SanitizeFileName(uploadFileName);
 
@@ -53,7 +53,7 @@ public class StorageFilesController(
         return Json(response);
     }
 
-    // Mantém só caracteres seguros pro Supabase Storage (a-z, 0-9, ponto, hífen, underscore)
+    // Mantém só caracteres seguros pro Blob Storage (a-z, 0-9, ponto, hífen, underscore)
     // e acrescenta um sufixo curto único.
     private static string SanitizeFileName(string fileName)
     {
